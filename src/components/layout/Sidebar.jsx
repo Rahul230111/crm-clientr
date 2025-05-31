@@ -1,5 +1,14 @@
 import { Menu } from 'antd';
-import { DashboardOutlined, UserOutlined } from '@ant-design/icons';
+import { 
+  DashboardOutlined,
+  UserOutlined,
+  FileTextOutlined,
+  FileAddOutlined,
+  UsergroupAddOutlined,
+  ShoppingOutlined,
+  SolutionOutlined,
+  AppstoreOutlined
+} from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import logoCollapsed from '../../assets/Submark Logo 01.png';
@@ -8,6 +17,9 @@ import logoExpanded from '../../assets/Primary Logo 01.png';
 const Sidebar = ({ collapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Get the first level path for selected keys
+  const selectedKey = '/' + location.pathname.split('/')[1];
 
   return (
     <>
@@ -32,13 +44,36 @@ const Sidebar = ({ collapsed }) => {
 
       <Menu
         mode="inline"
-        selectedKeys={[location.pathname]}
+        selectedKeys={[selectedKey]}
         onClick={({ key }) => navigate(key)}
         style={{ height: '100%', borderRight: 0 }}
         items={[
-          { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
-          { key: '/leads', icon: <UserOutlined />, label: 'Leads' },
-          { key: '/invoice', icon: <UserOutlined />, label: 'Leads' },
+          { 
+            key: '/', 
+            icon: <DashboardOutlined />, 
+            label: 'Dashboard' 
+          },
+          { 
+            key: '/leads', 
+            icon: <SolutionOutlined />, 
+            label: 'Leads' 
+          },
+         
+          { 
+            key: '/quotation', 
+            icon: <FileTextOutlined />, 
+            label: 'Quotations' 
+          },
+          { 
+            key: '/invoice', 
+            icon: <ShoppingOutlined />, 
+            label: 'Invoices' 
+          },
+          { 
+            key: '/users', 
+            icon: <UsergroupAddOutlined />, 
+            label: 'User Management' 
+          }
         ]}
       />
     </>

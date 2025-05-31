@@ -1,18 +1,13 @@
 import React from 'react';
-import { 
-  Form, 
-  Input, 
-  Button, 
-  Drawer, 
-  Row, 
-  Col, 
-  InputNumber 
-} from 'antd';
+import { Form, Input, Button, Drawer, Row, Col, InputNumber, Select } from 'antd';
+import { toast } from 'react-hot-toast';
 
 const { TextArea } = Input;
+const { Option } = Select;
 
 const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
   const [form] = Form.useForm();
+  const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
     form.resetFields();
@@ -24,11 +19,30 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
   const handleSubmit = () => {
     form.validateFields()
       .then(values => {
-        onSave(values);
+        setLoading(true);
+        const timestamp = new Date().toLocaleString();
+        const newNote = values.noteInput
+          ? { text: values.noteInput, timestamp }
+          : null;
+
+        const existingNotes = initialValues?.notes || [];
+        const updatedNotes = newNote ? [...existingNotes, newNote] : existingNotes;
+
+        const dataToSave = {
+          ...values,
+          notes: updatedNotes
+        };
+
+        delete dataToSave.noteInput;
+
+        onSave(dataToSave);
+        toast.success(`Account ${initialValues ? 'updated' : 'created'} successfully!`);
+        setLoading(false);
         onClose();
       })
       .catch(info => {
         console.log('Validate Failed:', info);
+        toast.error('Please fill all required fields correctly');
       });
   };
 
@@ -44,13 +58,13 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
           <Button onClick={onClose} style={{ marginRight: 8 }}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} type="primary">
+          <Button onClick={handleSubmit} type="primary" loading={loading}>
             Submit
           </Button>
         </div>
       }
     >
-      <Form form={form} layout="vertical" initialValues={initialValues}>
+      <Form form={form} layout="vertical">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -67,7 +81,10 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
               label="GST Number"
               rules={[
                 { required: true, message: 'Please enter GST number' },
-                { pattern: /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, message: 'Invalid GST format' }
+                {
+                  pattern: /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+                  message: 'Invalid GST format'
+                }
               ]}
             >
               <Input placeholder="22AABCU9603R12X" />
@@ -101,10 +118,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item
-              name="phoneNumber"
-              label="Phone Number"
-            >
+            <Form.Item name="phoneNumber" label="Phone Number">
               <Input placeholder="0422 264925" />
             </Form.Item>
           </Col>
@@ -127,26 +141,17 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
           <Input placeholder="Address Line 1" />
         </Form.Item>
 
-        <Form.Item
-          name="addressLine2"
-          label="Address Line 2"
-        >
+        <Form.Item name="addressLine2" label="Address Line 2">
           <Input placeholder="Address Line 2" />
         </Form.Item>
 
-        <Form.Item
-          name="addressLine3"
-          label="Address Line 3"
-        >
+        <Form.Item name="addressLine3" label="Address Line 3">
           <Input placeholder="Address Line 3" />
         </Form.Item>
 
         <Row gutter={16}>
           <Col span={8}>
-            <Form.Item
-              name="landmark"
-              label="Land Mark"
-            >
+            <Form.Item name="landmark" label="Land Mark">
               <Input placeholder="Land Mark" />
             </Form.Item>
           </Col>
@@ -198,6 +203,33 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
         >
           <Input placeholder="https://www.example.com" />
         </Form.Item>
+
+        <Form.Item
+          name="type"
+          label="Lead Type"
+          rules={[{ required: true, message: 'Please select a lead type' }]}
+        >
+          <Select placeholder="Select Type">
+            <Option value="Hot">Hot</Option>
+            <Option value="Warm">Warm</Option>
+            <Option value="Cold">Cold</Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item name="noteInput" label="Add Note">
+          <TextArea rows={3} placeholder="Add a note (it will be timestamped)" />
+        </Form.Item>
+
+        {initialValues?.notes?.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <label><strong>Previous Notes</strong></label>
+            <ul style={{ paddingLeft: 20 }}>
+              {initialValues.notes.map((note, index) => (
+                <li key={index}><strong>{note.timestamp}:</strong> {note.text}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Form>
     </Drawer>
   );

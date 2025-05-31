@@ -1,11 +1,17 @@
 import { Avatar, Dropdown, Menu, Space } from 'antd';
-import { LogoutOutlined, SettingOutlined, UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
+import {
+  LogoutOutlined,
+  SettingOutlined,
+  UserOutlined
+} from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const TopNavbar = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user'));
 
   const handleLogout = () => {
+    localStorage.clear();
     navigate('/login');
   };
 
@@ -17,7 +23,6 @@ const TopNavbar = ({ collapsed, setCollapsed }) => {
     navigate('/settings');
   };
 
-  // Dropdown Menu for Avatar
   const menu = (
     <Menu>
       <Menu.Item key="profile" icon={<UserOutlined />} onClick={handleProfile}>
@@ -33,6 +38,11 @@ const TopNavbar = ({ collapsed, setCollapsed }) => {
     </Menu>
   );
 
+  const getInitial = () => {
+    if (!user) return 'U';
+    return user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U';
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -46,25 +56,22 @@ const TopNavbar = ({ collapsed, setCollapsed }) => {
       top: 0,
       zIndex: 100
     }}>
-      {/* Sidebar Toggle Button */}
-      <div
-        style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        
+      {/* Sidebar toggle - optional */}
+      <div style={{ display: 'flex', alignItems: 'center' }} onClick={() => setCollapsed(!collapsed)}>
+        {/* Add toggle icon if needed */}
       </div>
 
-      {/* Avatar with Dropdown */}
+      {/* Avatar */}
       <Space>
         <Dropdown overlay={menu} placement="bottomRight" arrow>
           <Avatar
             style={{
-              backgroundColor: '#fde3cf',
-              color: '#f56a00',
+              backgroundColor: '#1677ff',
+              color: '#fff',
               cursor: 'pointer'
             }}
           >
-            S
+            {getInitial()}
           </Avatar>
         </Dropdown>
       </Space>
