@@ -1,12 +1,11 @@
 import React, { Suspense, useEffect } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { routes } from './routes/routes';
+import { appRoutes, loginRoutes } from './routes/routes';
 import MainLayout from './components/layout/MainLayout';
 import { Spin } from 'antd';
 import { Toaster } from 'react-hot-toast';
 import { ErrorBoundary } from 'react-error-boundary';
 
-// Fallback UI for error boundaries
 function ErrorFallback({ error, resetErrorBoundary }) {
   return (
     <div style={{
@@ -39,9 +38,8 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 
 const App = () => {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
+  const isLoginPage = location.pathname === '/login' || location.pathname === '/';
 
-  // Auto logout after 30 minutes if token expired
   useEffect(() => {
     const interval = setInterval(() => {
       const expiry = localStorage.getItem('token_expiry');
@@ -49,8 +47,7 @@ const App = () => {
         localStorage.clear();
         window.location.href = '/login';
       }
-    }, 60000); // Check every 60 seconds
-
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -101,25 +98,18 @@ const App = () => {
         >
           {isLoginPage ? (
             <Routes>
-              <Route
-                path="/login"
-                element={routes.find(r => r.path === '/login').element}
-              />
+              {loginRoutes.map((route) => (
+                <Route key={route.path} path={route.path} element={route.element} />
+              ))}
               <Route path="*" element={<Navigate to="/login" />} />
             </Routes>
           ) : (
             <MainLayout>
               <Routes>
-                {routes
-                  .filter(route => route.path !== '/login')
-                  .map(route => (
-                    <Route
-                      key={route.path}
-                      path={route.path}
-                      element={route.element}
-                    />
-                  ))}
-                <Route path="*" element={<Navigate to="/" />} />
+                {appRoutes.map((route) => (
+                  <Route key={route.path} path={route.path} element={route.element} />
+                ))}
+                <Route path="*" element={<Navigate to="/dashboard" />} />
               </Routes>
             </MainLayout>
           )}

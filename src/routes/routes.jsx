@@ -5,6 +5,7 @@ const Dashboard = React.lazy(() => import('../pages/Dashboard'));
 const Login = React.lazy(() => import('../pages/Login'));
 const Profile = React.lazy(() => import('../pages/Profile'));
 const Settings = React.lazy(() => import('../pages/Settings'));
+
 const QuotationPage = React.lazy(() => import('../pages/quotation/QuotationPage'));
 const QuotationForm = React.lazy(() => import('../pages/quotation/QuotationForm'));
 const QuotationList = React.lazy(() => import('../pages/quotation/QuotationList'));
@@ -15,22 +16,19 @@ const InvoiceList = React.lazy(() => import('../pages/Invoice/InvoiceList'));
 
 const Leads = React.lazy(() => import('../pages/leads/Leads'));
 const UserManagement = React.lazy(() => import('../pages/user/UserManagement'));
+
 const ProductList = React.lazy(() => import('../pages/product/ProductList'));
 const ProductForm = React.lazy(() => import('../pages/product/ProductForm'));
 const ProductPage = React.lazy(() => import('../pages/product/ProductPage'));
 
-export const routes = [
+export const appRoutes = [
   {
-    path: '/',
+    path: '/dashboard',
     element: (
       <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
         <Dashboard />
       </RoleGuard>
     ),
-  },
-  {
-    path: '/login',
-    element: <Login />,
   },
   {
     path: '/profile',
@@ -135,5 +133,16 @@ export const routes = [
         <ProductPage />
       </RoleGuard>
     ),
+  },
+];
+
+export const loginRoutes = [
+  {
+    path: '/login',
+    element: <Login />,
+  },
+  {
+    path: '/',
+    element: <Login />,
   },
 ];

@@ -22,7 +22,7 @@ const Login = () => {
       localStorage.setItem('token_expiry', Date.now() + 30 * 60 * 1000); // 30 mins
 
       toast.success(`Welcome ${user.name}!`);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       toast.error('Invalid credentials');
     }

@@ -49,7 +49,7 @@ const Sidebar = ({ collapsed }) => {
         style={{ height: '100%', borderRight: 0 }}
         items={[
           { 
-            key: '/', 
+            key: '/dashbord', 
             icon: <DashboardOutlined />, 
             label: 'Dashboard' 
           },
