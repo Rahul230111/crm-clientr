@@ -1,8 +1,7 @@
-// InvoiceList.jsx
 import React, { useState } from 'react';
 import {
   Table, Space, Button, Card, Input, Popconfirm, Tag, Tooltip,
-  Modal, Descriptions, Select, Typography, message, DatePicker
+  Modal, Descriptions, Select, Typography, DatePicker
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined,
@@ -12,6 +11,7 @@ import {
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import axios from '../../api/axios';
+import toast from 'react-hot-toast';
 import NotesDrawer from './NotesDrawer';
 
 const { Text } = Typography;
@@ -44,24 +44,26 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   };
 
   const handleCloseInvoice = async (id) => {
+    const toastId = toast.loading('Closing invoice...');
     try {
       await axios.patch(`/api/invoices/${id}/close`);
-      message.success('Invoice closed successfully');
+      toast.success('Invoice closed successfully', { id: toastId });
       refreshInvoices?.();
     } catch (err) {
       console.error(err);
-      message.error('Failed to close invoice');
+      toast.error('Failed to close invoice', { id: toastId });
     }
   };
 
   const handleUnlockInvoice = async (id) => {
+    const toastId = toast.loading('Unlocking invoice...');
     try {
       await axios.patch(`/api/invoices/${id}/unlock`);
-      message.success('Invoice unlocked successfully');
+      toast.success('Invoice unlocked successfully', { id: toastId });
       refreshInvoices?.();
     } catch (err) {
       console.error(err);
-      message.error('Failed to unlock invoice');
+      toast.error('Failed to unlock invoice', { id: toastId });
     }
   };
 
@@ -103,22 +105,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
     doc.save(`invoice-${invoice.invoiceNumber || 'draft'}.pdf`);
   };
 
-  const getStatusTag = (status) => {
-    const config = {
-      paid: { color: 'success', text: 'Paid' },
-      partial: { color: 'warning', text: 'Partial' },
-      pending: { color: 'error', text: 'Pending' }
-    }[status] || {};
-    return <Tag color={config.color}>{config.text}</Tag>;
-  };
-
-  const getDueStatus = (dueDate, paymentStatus) => {
-    if (!dueDate || paymentStatus === 'paid') return 'none';
-    const due = new Date(dueDate);
-    return due < new Date() ? 'overdue' : 'pending';
-  };
-
-  const filteredInvoices = (invoices || []).filter(inv => {
+  const filteredInvoices = invoices.filter(inv => {
     const matchesSearch = !searchTerm ||
       inv.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -144,6 +131,21 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   const totalPaid = filteredInvoices.filter(inv => inv.paymentStatus === 'paid')
     .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
   const totalPending = totalAmount - totalPaid;
+
+  const getStatusTag = (status) => {
+    const config = {
+      paid: { color: 'success', text: 'Paid' },
+      partial: { color: 'warning', text: 'Partial' },
+      pending: { color: 'error', text: 'Pending' }
+    }[status] || {};
+    return <Tag color={config.color}>{config.text}</Tag>;
+  };
+
+  const getDueStatus = (dueDate, paymentStatus) => {
+    if (!dueDate || paymentStatus === 'paid') return 'none';
+    const due = new Date(dueDate);
+    return due < new Date() ? 'overdue' : 'pending';
+  };
 
   const columns = [
     {
@@ -207,7 +209,20 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
               <Tooltip title="Unlock"><Button icon={<UnlockOutlined />} /></Tooltip>
             </Popconfirm>
           )}
-          <Popconfirm title="Delete invoice?" onConfirm={() => onDelete(record._id)}>
+          <Popconfirm
+            title="Delete invoice?"
+            onConfirm={() => {
+              const toastId = toast.loading('Deleting invoice...');
+              axios.delete(`/api/invoices/${record._id}`)
+                .then(() => {
+                  toast.success('Invoice deleted', { id: toastId });
+                  refreshInvoices?.();
+                })
+                .catch(() => {
+                  toast.error('Delete failed', { id: toastId });
+                });
+            }}
+          >
             <Tooltip title="Delete"><Button icon={<DeleteOutlined />} danger /></Tooltip>
           </Popconfirm>
         </Space>
