@@ -3,6 +3,8 @@ import { Form, Input, Button, Card } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import '../css/Login.css'; // Custom styles
+import loginImage from '../assets/side.png'; // Ensure this image exists
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,11 +17,9 @@ const Login = () => {
       });
 
       const { user, token } = res.data;
-
-      // ✅ Store user and token in localStorage
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
-      localStorage.setItem('token_expiry', Date.now() + 30 * 60 * 1000); // 30 min from now
+      localStorage.setItem('token_expiry', Date.now() + 30 * 60 * 1000); // 30 mins
 
       toast.success(`Welcome ${user.name}!`);
       navigate('/');
@@ -29,28 +29,46 @@ const Login = () => {
   };
 
   return (
-    <div style={{
-      height: '100vh',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      background: '#f0f2f5'
-    }}>
-      <Card title="Login" style={{ width: 320 }}>
-        <Form layout="vertical" onFinish={onFinish}>
-          <Form.Item name="email" label="Email" rules={[{ required: true }]}>
-            <Input placeholder="Enter email" />
-          </Form.Item>
-          <Form.Item name="password" label="Password" rules={[{ required: true }]}>
-            <Input.Password placeholder="Enter password" />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" block>
-              Login
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+    <div className="login-wrapper">
+      <div className="login-left">
+        <Card className="login-card" bordered={false}>
+          <h2 className="login-title">Log In</h2>
+          <p className="login-subtitle">Welcome back! Please enter your details</p>
+          <Form layout="vertical" onFinish={onFinish}>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[{ required: true, message: 'Please enter your email' }]}
+            >
+              <Input placeholder="Enter email" />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              label="Password"
+              rules={[{ required: true, message: 'Please enter your password' }]}
+            >
+              <Input.Password placeholder="Enter password" />
+            </Form.Item>
+
+            <div className="forgot-password-wrapper">
+              <a href="#" className="forgot-password">Forgot password?</a>
+            </div>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block className="login-button">
+                Log in
+              </Button>
+            </Form.Item>
+          </Form>
+
+          
+        </Card>
+      </div>
+
+      <div className="login-right">
+        <img src={loginImage} alt="Login visual" />
+      </div>
     </div>
   );
 };
