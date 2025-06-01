@@ -1,12 +1,12 @@
 import React, { Suspense, useEffect } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { routes } from './routes/routes';
-import MainLayout from '../src/components/layout/MainLayout';
+import MainLayout from './components/layout/MainLayout';
 import { Spin } from 'antd';
 import { Toaster } from 'react-hot-toast';
 import { ErrorBoundary } from 'react-error-boundary';
 
-// Fallback UI for errors
+// Fallback UI for error boundaries
 function ErrorFallback({ error, resetErrorBoundary }) {
   return (
     <div style={{
@@ -37,12 +37,11 @@ function ErrorFallback({ error, resetErrorBoundary }) {
   );
 }
 
-// Main App
 const App = () => {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
 
-  // ✅ Auto logout after 30 minutes if token expired
+  // Auto logout after 30 minutes if token expired
   useEffect(() => {
     const interval = setInterval(() => {
       const expiry = localStorage.getItem('token_expiry');
@@ -50,7 +49,7 @@ const App = () => {
         localStorage.clear();
         window.location.href = '/login';
       }
-    }, 60000); // Check every 60 sec
+    }, 60000); // Check every 60 seconds
 
     return () => clearInterval(interval);
   }, []);

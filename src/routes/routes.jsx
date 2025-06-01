@@ -9,29 +9,52 @@ const QuotationPage = React.lazy(() => import('../pages/quotation/QuotationPage'
 const QuotationForm = React.lazy(() => import('../pages/quotation/QuotationForm'));
 const QuotationList = React.lazy(() => import('../pages/quotation/QuotationList'));
 
-import InvoicePage from '../pages/Invoice/InvoicePage';
-import InvoiceForm from '../pages/Invoice/InvoiceForm';
-import InvoiceList from '../pages/Invoice/InvoiceList';
-import Leads from '../pages/leads/Leads';
-import UserManagement from '../pages/user/UserManagement';
-import ProductList from '../pages/product/ProductList';
-import ProductForm from '../pages/product/ProductForm';
-import ProductPage from '../pages/product/ProductPage';
+const InvoicePage = React.lazy(() => import('../pages/Invoice/InvoicePage'));
+const InvoiceForm = React.lazy(() => import('../pages/Invoice/InvoiceForm'));
+const InvoiceList = React.lazy(() => import('../pages/Invoice/InvoiceList'));
+
+const Leads = React.lazy(() => import('../pages/leads/Leads'));
+const UserManagement = React.lazy(() => import('../pages/user/UserManagement'));
+const ProductList = React.lazy(() => import('../pages/product/ProductList'));
+const ProductForm = React.lazy(() => import('../pages/product/ProductForm'));
+const ProductPage = React.lazy(() => import('../pages/product/ProductPage'));
 
 export const routes = [
-  { path: '/', element: <Dashboard /> },
-  { path: '/login', element: <Login /> },
-  { path: '/profile', element: <Profile /> },
-  { path: '/settings', element: <Settings /> },
-
-  // Accessible only to Admin & Superadmin
+  {
+    path: '/',
+    element: (
+      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
+        <Dashboard />
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/login',
+    element: <Login />,
+  },
+  {
+    path: '/profile',
+    element: (
+      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
+        <Profile />
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/settings',
+    element: (
+      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
+        <Settings />
+      </RoleGuard>
+    ),
+  },
   {
     path: '/leads',
     element: (
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <Leads />
       </RoleGuard>
-    )
+    ),
   },
   {
     path: '/invoice',
@@ -39,7 +62,7 @@ export const routes = [
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <InvoicePage />
       </RoleGuard>
-    )
+    ),
   },
   {
     path: '/invoice/form',
@@ -47,7 +70,7 @@ export const routes = [
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <InvoiceForm />
       </RoleGuard>
-    )
+    ),
   },
   {
     path: '/invoice/list',
@@ -55,7 +78,7 @@ export const routes = [
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <InvoiceList />
       </RoleGuard>
-    )
+    ),
   },
   {
     path: '/quotation',
@@ -63,7 +86,7 @@ export const routes = [
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <QuotationPage />
       </RoleGuard>
-    )
+    ),
   },
   {
     path: '/quotation/form',
@@ -71,7 +94,7 @@ export const routes = [
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <QuotationForm />
       </RoleGuard>
-    )
+    ),
   },
   {
     path: '/quotation/list',
@@ -79,7 +102,7 @@ export const routes = [
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <QuotationList />
       </RoleGuard>
-    )
+    ),
   },
   {
     path: '/users',
@@ -87,7 +110,7 @@ export const routes = [
       <RoleGuard allowedRoles={['Superadmin']}>
         <UserManagement />
       </RoleGuard>
-    )
+    ),
   },
   {
     path: '/products',
@@ -95,6 +118,22 @@ export const routes = [
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <ProductList />
       </RoleGuard>
-    )
+    ),
+  },
+  {
+    path: '/products/form',
+    element: (
+      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+        <ProductForm />
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/products/page',
+    element: (
+      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+        <ProductPage />
+      </RoleGuard>
+    ),
   },
 ];
