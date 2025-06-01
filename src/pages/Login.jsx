@@ -1,10 +1,11 @@
+// src/components/Login.jsx
 import React from 'react';
 import { Form, Input, Button, Card } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../api/axios'; // ✅ use configured axios
 import toast from 'react-hot-toast';
-import '../css/Login.css'; // Custom styles
-import loginImage from '../assets/side.png'; // Ensure this image exists
+import '../css/Login.css';
+import loginImage from '../assets/side.png';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -18,10 +19,9 @@ const Login = () => {
 
       const { user, token } = res.data;
 
-      // Save login data with 2-day expiry
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
-      localStorage.setItem('token_expiry', Date.now() + 2 * 24 * 60 * 60 * 1000); // 2 days
+      localStorage.setItem('token_expiry', Date.now() + 2 * 24 * 60 * 60 * 1000);
 
       toast.success(`Welcome ${user.name}!`);
       navigate('/dashboard');
@@ -34,7 +34,7 @@ const Login = () => {
     <div className="login-wrapper">
       <div className="login-left">
         <Card className="login-card" bordered={false}>
-          <h2 className="login-title">Log In</h2>
+          <h2 className="login-title">Log In 😊</h2>
           <p className="login-subtitle">Welcome back! Please enter your details</p>
           <Form layout="vertical" onFinish={onFinish}>
             <Form.Item
