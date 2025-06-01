@@ -1,7 +1,9 @@
-import { Form, Input, DatePicker, Select, InputNumber, Button, Card, Row, Col, Divider, Space } from 'antd';
+import {
+  Form, Input, DatePicker, Select, InputNumber, Button, Card, Row, Col, Divider, Space
+} from 'antd';
 import { SaveOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../api/axios';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 
@@ -16,18 +18,14 @@ const QuotationForm = ({ onCancel, onSave, initialValues }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     const toastId = toast.loading('Loading business options...');
-    
     axios.get('/api/quotations/leads/active')
       .then(res => {
         setBusinessOptions(res.data);
         toast.success('Business options loaded', { id: toastId });
-        setLoading(false);
       })
       .catch(() => {
         toast.error('Failed to load businesses', { id: toastId });
-        setLoading(false);
       });
 
     if (initialValues) {
@@ -42,7 +40,7 @@ const QuotationForm = ({ onCancel, onSave, initialValues }) => {
     }
   }, [initialValues]);
 
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
     if (!items || items.length === 0) {
       toast.error("At least one item is required.");
       return;
@@ -50,9 +48,10 @@ const QuotationForm = ({ onCancel, onSave, initialValues }) => {
 
     setLoading(true);
     const toastId = toast.loading('Saving quotation...');
-    
+
     const timestamp = new Date().toLocaleString();
     const newNote = values.noteText ? { text: values.noteText, timestamp } : null;
+
     const quotation = {
       ...values,
       date: values.date?.format('YYYY-MM-DD'),
@@ -64,12 +63,18 @@ const QuotationForm = ({ onCancel, onSave, initialValues }) => {
       total: calculateTotal(),
       createdDate: new Date().toLocaleDateString()
     };
-    
+
     try {
-      onSave(quotation);
+      if (initialValues?._id) {
+        await axios.put(`/api/quotations/${initialValues._id}`, quotation);
+      } else {
+        await axios.post('/api/quotations', quotation);
+      }
       toast.success('Quotation saved successfully', { id: toastId });
+      onSave(quotation);
     } catch (error) {
-      toast.error(`Failed to save: ${error.message}`, { id: toastId });
+      toast.error(`Failed to save: ${error?.response?.data?.message || error.message}`, { id: toastId });
+    } finally {
       setLoading(false);
     }
   };

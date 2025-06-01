@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, Col, Row, Table, Tag, Typography, Spin } from "antd";
 import { Pie } from "@ant-design/plots";
-import axios from "axios";
+import axios from "../api/axios";
 import "./Dashboard.css";
 
 const { Title } = Typography;

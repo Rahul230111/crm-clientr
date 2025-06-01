@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Drawer, 
-  List, 
-  Typography, 
-  Form, 
-  Input, 
-  Button, 
-  Popconfirm, 
-  Space, 
+import {
+  Drawer,
+  List,
+  Typography,
+  Form,
+  Input,
+  Button,
+  Popconfirm,
+  Space,
   Spin
 } from 'antd';
-import { 
-  EditOutlined, 
-  DeleteOutlined, 
-  CheckOutlined, 
+import {
+  EditOutlined,
+  DeleteOutlined,
+  CheckOutlined,
   CloseOutlined,
   SendOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
+import axios from '../../api/axios';
 import toast from 'react-hot-toast';
 
 const { TextArea } = Input;
@@ -38,18 +38,14 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
     try {
       setLoading(true);
       const toastId = toast.loading('Adding note...');
-
       const newNote = {
         text: values.note,
         timestamp: new Date().toLocaleString()
       };
-
       const updatedNotes = [...notes, newNote];
-
       await axios.put(`/api/quotations/${quotation._id}`, {
         notes: updatedNotes
       });
-
       setNotes(updatedNotes);
       toast.success('Note added successfully', { id: toastId });
       form.resetFields();
@@ -68,11 +64,9 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
       const toastId = toast.loading('Deleting note...');
       const updatedNotes = [...notes];
       updatedNotes.splice(index, 1);
-
       await axios.put(`/api/quotations/${quotation._id}`, {
         notes: updatedNotes
       });
-
       setNotes(updatedNotes);
       toast.success('Note deleted successfully', { id: toastId });
       refreshQuotations();
@@ -94,16 +88,14 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
       setLoading(true);
       const toastId = toast.loading('Updating note...');
       const updatedNotes = [...notes];
-      updatedNotes[index] = { 
-        ...updatedNotes[index], 
+      updatedNotes[index] = {
+        ...updatedNotes[index],
         text: editedNote,
         timestamp: new Date().toLocaleString()
       };
-
       await axios.put(`/api/quotations/${quotation._id}`, {
         notes: updatedNotes
       });
-
       setNotes(updatedNotes);
       toast.success('Note updated successfully', { id: toastId });
       setEditingIndex(null);
@@ -136,8 +128,8 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
             dataSource={notes}
             locale={{ emptyText: 'No notes added yet' }}
             renderItem={(note, index) => (
-              <List.Item 
-                key={index} 
+              <List.Item
+                key={index}
                 style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}
                 actions={[
                   editingIndex === index ? (
@@ -204,9 +196,9 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
           />
         </div>
 
-        <Form 
-          form={form} 
-          layout="vertical" 
+        <Form
+          form={form}
+          layout="vertical"
           style={{ marginTop: 16 }}
           onFinish={handleAddNote}
         >
@@ -216,10 +208,10 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
           >
             <TextArea rows={3} placeholder="Type your note here" />
           </Form.Item>
-          <Button 
-            type="primary" 
-            htmlType="submit" 
-            loading={loading} 
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={loading}
             block
             icon={<SendOutlined />}
           >

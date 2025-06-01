@@ -1,114 +1,203 @@
-// InvoicePage.jsx
-import { useState, useEffect } from 'react';
-import { Drawer, message } from 'antd';
-import InvoiceList from './InvoiceList';
-import InvoiceForm from './InvoiceForm';
+// NotesDrawer.jsx
+import React, { useState } from 'react';
+import { Drawer, List, Typography, Form, Input, Button, Popconfirm, Space, Divider } from 'antd';
+import { EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
+import { toast } from 'react-hot-toast';
+import axios from '../../api/axios'; // ✅ corrected import
 
-const InvoicePage = () => {
-  const [invoices, setInvoices] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [currentInvoice, setCurrentInvoice] = useState(null);
-  const [filteredInvoices, setFilteredInvoices] = useState([]);
+const { TextArea } = Input;
+const { Text, Title } = Typography;
 
-  useEffect(() => {
-    fetchInvoices();
-  }, []);
+const NotesDrawer = ({ visible, onClose, account, refreshAccounts }) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editedNote, setEditedNote] = useState('');
 
-  const fetchInvoices = async () => {
+  const handleAddNote = async () => {
     try {
-      const res = await fetch('/api/invoices');
-      const data = await res.json();
-      setInvoices(data);
-    } catch (err) {
-      message.error('Failed to fetch invoices');
-    }
-  };
+      const { note } = await form.validateFields();
+      setLoading(true);
 
-  const handleSave = async (invoiceData) => {
-    try {
-      const method = currentInvoice ? 'PUT' : 'POST';
-      const url = currentInvoice ? `/api/invoices/${currentInvoice._id}` : '/api/invoices';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(invoiceData)
+      const newNote = {
+        text: note,
+        timestamp: new Date().toLocaleString()
+      };
+
+      const updatedNotes = [...(account.notes || []), newNote];
+
+      await axios.put(`/api/accounts/${account._id}`, {
+        ...account,
+        notes: updatedNotes
       });
-      const data = await res.json();
-      if (res.ok) {
-        message.success(currentInvoice ? 'Invoice updated' : 'Invoice created');
-        fetchInvoices();
-        setShowForm(false);
-        setCurrentInvoice(null);
-      } else {
-        throw new Error(data.error || 'Failed to save');
-      }
-    } catch (err) {
-      message.error(err.message);
+
+      toast.success('Note added successfully!');
+      form.resetFields();
+      refreshAccounts();
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to add note. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (invoice) => {
-    setCurrentInvoice(invoice);
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id) => {
+  const handleDeleteNote = async (index) => {
     try {
-      await fetch(`/api/invoices/${id}`, { method: 'DELETE' });
-      message.success('Invoice deleted');
-      fetchInvoices();
-    } catch {
-      message.error('Delete failed');
+      setLoading(true);
+      const updatedNotes = [...account.notes];
+      updatedNotes.splice(index, 1);
+
+      await axios.put(`/api/accounts/${account._id}`, {
+        ...account,
+        notes: updatedNotes
+      });
+
+      toast.success('Note deleted successfully!');
+      refreshAccounts();
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to delete note. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAddNew = () => {
-    setShowForm(true);
-    setCurrentInvoice(null);
+  const handleStartEdit = (note, index) => {
+    setEditingIndex(index);
+    setEditedNote(note.text);
   };
 
-  const handleCancel = () => {
-    setShowForm(false);
-    setCurrentInvoice(null);
+  const handleSaveEdit = async (index) => {
+    try {
+      setLoading(true);
+      const updatedNotes = [...account.notes];
+      updatedNotes[index] = { ...updatedNotes[index], text: editedNote };
+
+      await axios.put(`/api/accounts/${account._id}`, {
+        ...account,
+        notes: updatedNotes
+      });
+
+      toast.success('Note updated successfully!');
+      setEditingIndex(null);
+      setEditedNote('');
+      refreshAccounts();
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to update note. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSearch = (term) => {
-    if (!term) return setFilteredInvoices([]);
-    const lower = term.toLowerCase();
-    const result = invoices.filter(inv =>
-      inv.businessName?.toLowerCase().includes(lower) ||
-      inv.invoiceNumber?.toLowerCase().includes(lower) ||
-      inv.customerName?.toLowerCase().includes(lower)
-    );
-    setFilteredInvoices(result);
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setEditedNote('');
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <InvoiceList
-        invoices={filteredInvoices.length > 0 ? filteredInvoices : invoices}
-        onAddNew={handleAddNew}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onSearch={handleSearch}
-        refreshInvoices={fetchInvoices}
-      />
-
-      <Drawer
-        title={currentInvoice ? 'Edit Invoice' : 'New Invoice'}
-        width={800}
-        open={showForm}
-        onClose={handleCancel}
-        destroyOnClose
-      >
-        <InvoiceForm
-          onCancel={handleCancel}
-          onSave={handleSave}
-          initialValues={currentInvoice}
+    <Drawer
+      title={<Title level={4} style={{ margin: 0 }}>Notes for {account.businessName}</Title>}
+      open={visible}
+      onClose={onClose}
+      width={420}
+      bodyStyle={{ padding: '24px' }}
+    >
+      {account.notes && account.notes.length > 0 ? (
+        <List
+          size="small"
+          bordered
+          dataSource={account.notes}
+          renderItem={(note, index) => (
+            <List.Item
+              key={index}
+              style={{
+                padding: '12px 16px',
+                borderRadius: 4,
+                backgroundColor: '#fafafa',
+                marginBottom: 8
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>{note.timestamp}</Text>
+                <Space size="middle">
+                  {editingIndex === index ? (
+                    <>
+                      <Button
+                        icon={<CheckOutlined />}
+                        type="link"
+                        onClick={() => handleSaveEdit(index)}
+                        loading={loading}
+                      />
+                      <Button
+                        icon={<CloseOutlined />}
+                        type="link"
+                        onClick={handleCancelEdit}
+                        disabled={loading}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        icon={<EditOutlined />}
+                        type="link"
+                        onClick={() => handleStartEdit(note, index)}
+                        disabled={loading}
+                      />
+                      <Popconfirm
+                        title="Delete this note?"
+                        okText="Yes"
+                        cancelText="No"
+                        onConfirm={() => handleDeleteNote(index)}
+                        disabled={loading}
+                      >
+                        <Button icon={<DeleteOutlined />} type="link" danger disabled={loading} />
+                      </Popconfirm>
+                    </>
+                  )}
+                </Space>
+              </div>
+              {editingIndex === index ? (
+                <TextArea
+                  value={editedNote}
+                  onChange={(e) => setEditedNote(e.target.value)}
+                  rows={2}
+                  style={{ marginTop: 4 }}
+                  disabled={loading}
+                />
+              ) : (
+                <div style={{ marginTop: 4 }}>{note.text}</div>
+              )}
+            </List.Item>
+          )}
         />
-      </Drawer>
-    </div>
+      ) : (
+        <Text type="secondary">No notes to show</Text>
+      )}
+
+      <Divider />
+
+      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form.Item
+          name="note"
+          label="Add Note"
+          rules={[{ required: true, message: 'Please enter a note' }]}
+        >
+          <TextArea rows={3} placeholder="Type your note here..." disabled={loading} />
+        </Form.Item>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAddNote}
+          loading={loading}
+          block
+        >
+          Add Note
+        </Button>
+      </Form>
+    </Drawer>
   );
 };
 
-export default InvoicePage;
+export default NotesDrawer;

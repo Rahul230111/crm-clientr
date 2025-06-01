@@ -1,8 +1,9 @@
+// NotesDrawer.jsx
 import React, { useState } from 'react';
 import { Drawer, List, Typography, Form, Input, Button, Popconfirm, Space, Divider } from 'antd';
 import { EditOutlined, DeleteOutlined, CheckOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { toast } from 'react-hot-toast';
-import axios from 'axios';
+import axios from '../../api/axios'; // ✅ corrected import
 
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -17,7 +18,7 @@ const NotesDrawer = ({ visible, onClose, account, refreshAccounts }) => {
     try {
       const { note } = await form.validateFields();
       setLoading(true);
-      
+
       const newNote = {
         text: note,
         timestamp: new Date().toLocaleString()
@@ -177,11 +178,7 @@ const NotesDrawer = ({ visible, onClose, account, refreshAccounts }) => {
 
       <Divider />
 
-      <Form
-        form={form}
-        layout="vertical"
-        style={{ marginTop: 16 }}
-      >
+      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
         <Form.Item
           name="note"
           label="Add Note"

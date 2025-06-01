@@ -1,3 +1,4 @@
+// InvoiceList.jsx
 import React, { useState } from 'react';
 import {
   Table, Space, Button, Card, Input, Popconfirm, Tag, Tooltip,
@@ -10,7 +11,7 @@ import {
 } from '@ant-design/icons';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import axios from 'axios';
+import axios from '../../api/axios';
 import NotesDrawer from './NotesDrawer';
 
 const { Text } = Typography;

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import dayjs from 'dayjs';
-import axios from 'axios';
+import axios from '../../api/axios';
 import { toast } from 'react-hot-toast';
 
 const { Option } = Select;

@@ -1,5 +1,6 @@
+// Leads.jsx
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../api/axios'; // ✅ fixed import
 import {
   Card, Input, Button, Table, Tabs, Switch, Typography, Empty, Modal, Tag
 } from 'antd';
@@ -46,17 +47,17 @@ const Leads = () => {
 
   const handleSave = (values) => {
     setLoading(true);
-    const promise = currentAccount?._id
+    const request = currentAccount?._id
       ? axios.put(`${API_URL}/${currentAccount._id}`, values)
       : axios.post(API_URL, values);
 
-    promise
+    request
       .then(() => {
         toast.success(`Account ${currentAccount?._id ? 'updated' : 'created'} successfully!`);
         fetchAccounts();
       })
       .catch(() => {
-        toast.error(`Failed to ${currentAccount?._id ? 'update' : 'create'} account. Please try again.`);
+        toast.error(`Failed to ${currentAccount?._id ? 'update' : 'create'} account.`);
       })
       .finally(() => {
         setLoading(false);
@@ -112,14 +113,10 @@ const Leads = () => {
 
   const typeTag = (type) => {
     switch (type) {
-      case 'Hot':
-        return <Tag color="red">Hot</Tag>;
-      case 'Warm':
-        return <Tag color="orange">Warm</Tag>;
-      case 'Cold':
-        return <Tag color="blue">Cold</Tag>;
-      default:
-        return <Tag>Unknown</Tag>;
+      case 'Hot': return <Tag color="red">Hot</Tag>;
+      case 'Warm': return <Tag color="orange">Warm</Tag>;
+      case 'Cold': return <Tag color="blue">Cold</Tag>;
+      default: return <Tag>Unknown</Tag>;
     }
   };
 
@@ -128,11 +125,7 @@ const Leads = () => {
     { title: 'Business Name', dataIndex: 'businessName' },
     { title: 'Contact Name', dataIndex: 'contactName' },
     { title: 'Email Id', dataIndex: 'email' },
-    {
-      title: 'Type',
-      dataIndex: 'type',
-      render: (type) => typeTag(type)
-    },
+    { title: 'Type', dataIndex: 'type', render: typeTag },
     {
       title: 'Latest Note',
       render: (_, record) => {
@@ -175,14 +168,10 @@ const Leads = () => {
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
           <Title level={4}>Business Accounts</Title>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setCurrentAccount(null);
-              setFormVisible(true);
-            }}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            setCurrentAccount(null);
+            setFormVisible(true);
+          }}>
             Add Account
           </Button>
         </div>
@@ -235,11 +224,7 @@ const Leads = () => {
         cancelText="No"
         confirmLoading={loading}
       >
-        <p>
-          Are you sure you want to change the status of{' '}
-          <strong>{accountToUpdate?.businessName}</strong> to{' '}
-          <strong>{newStatus}</strong>?
-        </p>
+        <p>Are you sure you want to change the status of <strong>{accountToUpdate?.businessName}</strong> to <strong>{newStatus}</strong>?</p>
       </Modal>
 
       {selectedAccount && (

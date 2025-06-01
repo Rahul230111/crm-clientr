@@ -8,6 +8,7 @@ import {
   EditOutlined, DeleteOutlined, CheckOutlined,
   CloseOutlined, SendOutlined
 } from '@ant-design/icons';
+import axios from '../../api/axios';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -33,10 +34,9 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
 
     try {
       setLoading(true);
-      await fetch(`/api/invoices/${invoice._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...invoice, notes: updatedNotes })
+      await axios.put(`/api/invoices/${invoice._id}`, {
+        ...invoice,
+        notes: updatedNotes
       });
       message.success('Note added');
       setNotes(updatedNotes);
@@ -53,10 +53,9 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
     const updated = notes.filter((_, i) => i !== index);
     try {
       setLoading(true);
-      await fetch(`/api/invoices/${invoice._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...invoice, notes: updated })
+      await axios.put(`/api/invoices/${invoice._id}`, {
+        ...invoice,
+        notes: updated
       });
       message.success('Note deleted');
       setNotes(updated);
@@ -78,10 +77,9 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
     };
     try {
       setLoading(true);
-      await fetch(`/api/invoices/${invoice._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...invoice, notes: updated })
+      await axios.put(`/api/invoices/${invoice._id}`, {
+        ...invoice,
+        notes: updated
       });
       message.success('Note updated');
       setNotes(updated);
