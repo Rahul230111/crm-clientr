@@ -17,9 +17,11 @@ const Login = () => {
       });
 
       const { user, token } = res.data;
+
+      // Save login data with 2-day expiry
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
-      localStorage.setItem('token_expiry', Date.now() + 30 * 60 * 1000); // 30 mins
+      localStorage.setItem('token_expiry', Date.now() + 2 * 24 * 60 * 60 * 1000); // 2 days
 
       toast.success(`Welcome ${user.name}!`);
       navigate('/dashboard');
@@ -61,8 +63,6 @@ const Login = () => {
               </Button>
             </Form.Item>
           </Form>
-
-          
         </Card>
       </div>
 
