@@ -18,7 +18,7 @@ const Sidebar = ({ collapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get the first level path for selected keys
+  // Get the first segment of the current path to highlight active menu
   const selectedKey = '/' + location.pathname.split('/')[1];
 
   return (
@@ -42,6 +42,7 @@ const Sidebar = ({ collapsed }) => {
         />
       </div>
 
+      {/* Menu Items */}
       <Menu
         mode="inline"
         selectedKeys={[selectedKey]}
@@ -49,7 +50,7 @@ const Sidebar = ({ collapsed }) => {
         style={{ height: '100%', borderRight: 0 }}
         items={[
           { 
-            key: '/dashbord', 
+            key: '/dashboard', 
             icon: <DashboardOutlined />, 
             label: 'Dashboard' 
           },
@@ -58,7 +59,6 @@ const Sidebar = ({ collapsed }) => {
             icon: <SolutionOutlined />, 
             label: 'Leads' 
           },
-         
           { 
             key: '/quotation', 
             icon: <FileTextOutlined />, 
@@ -68,6 +68,11 @@ const Sidebar = ({ collapsed }) => {
             key: '/invoice', 
             icon: <ShoppingOutlined />, 
             label: 'Invoices' 
+          },
+          { 
+            key: '/products', 
+            icon: <AppstoreOutlined />, 
+            label: 'Products' 
           },
           { 
             key: '/users', 

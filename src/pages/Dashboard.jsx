@@ -124,7 +124,8 @@ const Dashboard = () => {
     data: pieData,
     angleField: "value",
     colorField: "type",
-    radius: 1, height: 250, 
+    radius: 1,
+    height: 250,
     innerRadius: 0.6,
     label: {
       type: "inner",
@@ -146,22 +147,22 @@ const Dashboard = () => {
     <div style={{ padding: 24 }}>
       <Title level={2}>Dashboard</Title>
 
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} lg={8}>
           <Card title="Total Invoice Amount" bordered>
             <Title level={3} style={{ color: "#1890ff" }}>
               ₹{invoiceSummary.total.toFixed(2)}
             </Title>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={24} sm={12} lg={8}>
           <Card title="Paid Amount" bordered>
             <Title level={3} style={{ color: "#52c41a" }}>
               ₹{invoiceSummary.paid.toFixed(2)}
             </Title>
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={24} sm={24} lg={8}>
           <Card title="Pending Amount" bordered>
             <Title level={3} style={{ color: "#faad14" }}>
               ₹{invoiceSummary.pending.toFixed(2)}
@@ -170,74 +171,69 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-      <Col span={12}>
-  <Card
-    title="Invoice Summary Chart"
-    bordered
-    className="invoice-summary-card"
-  >
-    <div className="chart-wrapper">
-      <Pie {...pieConfig} />
-    </div>
-    <div className="invoice-summary-info">
-      <p>
-        <strong>Total Invoices:</strong> {invoiceDetails.length}
-      </p>
-      <p>
-        <strong>Quotations:</strong> {latestQuotations.length}
-      </p>
-    </div>
-  </Card>
-</Col>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} lg={12}>
+          <Card title="Invoice Summary Chart" bordered>
+            <div className="chart-wrapper">
+              <Pie {...pieConfig} />
+            </div>
+            <div className="invoice-summary-info">
+              <p><strong>Total Invoices:</strong> {invoiceDetails.length}</p>
+              <p><strong>Quotations:</strong> {latestQuotations.length}</p>
+            </div>
+          </Card>
+        </Col>
 
-          <Col span={12}>
+        <Col xs={24} lg={12}>
           <Card
             title="Latest Business Leads"
             bordered
             extra={<a href="/leads">View All</a>}
           >
-            <Table
-              columns={columnsAccounts}
-              dataSource={latestAccounts}
-              rowKey="_id"
-              pagination={false}
-            />
+            <div className="responsive-table">
+              <Table
+                columns={columnsAccounts}
+                dataSource={latestAccounts}
+                rowKey="_id"
+                pagination={false}
+              />
+            </div>
           </Card>
         </Col>
-         
       </Row>
 
-      <Row gutter={16}>
-
-        <Col span={12}>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
           <Card
             title="Latest Quotations"
             bordered
             extra={<a href="/quotation">View All</a>}
           >
-            <Table
-              columns={columnsQuotations}
-              dataSource={latestQuotations}
-              rowKey="_id"
-              pagination={false}
-            />
+            <div className="responsive-table">
+              <Table
+                columns={columnsQuotations}
+                dataSource={latestQuotations}
+                rowKey="_id"
+                pagination={false}
+              />
+            </div>
           </Card>
         </Col>
-      
-       
-        <Col span={12} style={{ marginTop: 16 }}>
+
+        <Col xs={24} lg={12}>
           <Card
             title="Latest Invoices"
             bordered
             extra={<a href="/invoice">View All</a>}
           >
-            <Table
-              columns={columnsInvoices}
-              dataSource={invoiceDetails.slice(0, 5)}
-              rowKey="_id"
-              pagination={false}
-            />
+            <div className="responsive-table">
+              <Table
+                columns={columnsInvoices}
+                dataSource={invoiceDetails.slice(0, 5)}
+                rowKey="_id"
+                pagination={false}
+              />
+            </div>
           </Card>
         </Col>
       </Row>

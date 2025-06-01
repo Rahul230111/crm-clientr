@@ -1,0 +1,104 @@
+/* ============================
+   Layout Wrapper Styles
+============================ */
+.main-layout {
+  min-height: 100vh;
+}
+
+/* ============================
+   Sidebar Styles
+============================ */
+.sidebar {
+  background: #fff;
+}
+
+.sidebar-logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.sidebar-logo-img {
+  height: 40px;
+  width: auto;
+  transition: all 0.3s;
+}
+
+.sidebar-menu {
+  height: 100%;
+  border-right: 0;
+}
+
+/* ============================
+   Top Navbar Styles
+============================ */
+.top-navbar {
+  padding: 0;
+  background: #fff;
+}
+
+.navbar-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  height: 64px;
+  padding: 0 16px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.menu-toggle:hover {
+  background-color: #f0f0f0;
+}
+
+/* ============================
+   Content Styles
+============================ */
+.main-content {
+  margin: 16px;
+}
+
+.inner-content {
+  padding: 24px;
+  background: #fff;
+  min-height: 360px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+/* ============================
+   Responsive Fixes
+============================ */
+@media (max-width: 768px) {
+  .navbar-wrapper {
+    padding: 0 12px;
+  }
+
+  .main-content {
+    margin: 8px;
+  }
+
+  .inner-content {
+    padding: 16px;
+  }
+
+  .sidebar-logo-img {
+    height: 32px;
+  }
+}

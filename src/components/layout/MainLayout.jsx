@@ -2,6 +2,7 @@ import { Layout } from 'antd';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
 import { useState } from 'react';
+import './layout.css';
 
 const { Sider, Content, Header } = Layout;
 
@@ -9,22 +10,23 @@ const MainLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className="main-layout">
       <Sider
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
+        breakpoint="md"
+        collapsedWidth="0"
+        className="sidebar"
       >
         <Sidebar collapsed={collapsed} />
       </Sider>
       <Layout>
-        <Header style={{ padding: 0 }}>
-          <TopNavbar collapsed={collapsed} />
+        <Header className="top-navbar">
+          <TopNavbar collapsed={collapsed} setCollapsed={setCollapsed} />
         </Header>
-        <Content style={{ margin: '16px' }}>
-          <div style={{ padding: 24, background: '#fff', minHeight: 360 }}>
-            {children}
-          </div>
+        <Content className="main-content">
+          <div className="inner-content">{children}</div>
         </Content>
       </Layout>
     </Layout>

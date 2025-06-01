@@ -1,73 +1,31 @@
-/* Base styling */
-.dashboard-container {
-  padding: 24px;
+.chart-wrapper {
+  width: 100%;
+  height: auto;
+  overflow: hidden;
 }
 
-/* Cards and tables spacing */
-.dashboard-card {
-  margin-bottom: 24px;
-}
-
-/* Chart section adjustments */
-.invoice-summary-info p {
-  margin: 0;
+.invoice-summary-info {
+  margin-top: 16px;
   font-size: 14px;
+  line-height: 1.6;
 }
 
-/* Responsive tweaks */
-@media (max-width: 992px) {
-  .dashboard-row {
-    flex-direction: column;
-  }
+/* Make tables scroll on small screens */
+.responsive-table {
+  overflow-x: auto;
+  width: 100%;
+}
 
-  .dashboard-card {
-    margin-bottom: 16px;
-  }
-
-  .ant-card {
-    width: 100%;
-  }
-
-  .ant-typography h2 {
-    font-size: 20px;
-  }
+.responsive-table .ant-table {
+  min-width: 600px;
 }
 
 @media (max-width: 768px) {
-  .dashboard-container {
-    padding: 16px;
-  }
-
-  .ant-typography h2 {
-    font-size: 18px;
-  }
-
-  .ant-card-head-title {
-    font-size: 16px;
+  .chart-wrapper {
+    height: 240px;
   }
 
   .invoice-summary-info {
     font-size: 13px;
   }
-
-  .ant-table-cell {
-    font-size: 12px;
-  }
-}
-.invoice-summary-card {
-  height: 500px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.chart-container {
-  flex-grow: 1;
-  min-height: 350px;
-  max-height: 400px;
-  overflow: hidden;
-}
-
-.invoice-summary-info {
-  margin-top: 12px;
 }
