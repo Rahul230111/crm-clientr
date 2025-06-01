@@ -69,11 +69,7 @@ const Sidebar = ({ collapsed }) => {
             icon: <ShoppingOutlined />, 
             label: 'Invoices' 
           },
-          { 
-            key: '/products', 
-            icon: <AppstoreOutlined />, 
-            label: 'Products' 
-          },
+         
           { 
             key: '/users', 
             icon: <UsergroupAddOutlined />, 
