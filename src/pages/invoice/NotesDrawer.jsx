@@ -1,4 +1,3 @@
-// NotesDrawer.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Drawer, List, Typography, Form, Input, Button, Popconfirm,
@@ -24,11 +23,20 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
     setNotes(invoice?.notes || []);
   }, [invoice]);
 
+  const getCurrentUser = () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      return user?.email || 'Unknown';
+    } catch {
+      return 'Unknown';
+    }
+  };
+
   const handleAddNote = async ({ note }) => {
     const newNote = {
       text: note,
       timestamp: new Date().toISOString(),
-      author: 'User'
+      author: getCurrentUser()
     };
     const updatedNotes = [...notes, newNote];
 
@@ -72,8 +80,7 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
     updated[index] = {
       ...updated[index],
       text: editedNote,
-      timestamp: new Date().toISOString(),
-      updated: true
+      timestamp: new Date().toISOString()
     };
     try {
       setLoading(true);
@@ -92,9 +99,18 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
     }
   };
 
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setEditedNote('');
+  };
+
   return (
     <Drawer
-      title={<><div>Notes for Invoice <Tag color="blue">#{invoice?.invoiceNumber}</Tag></div></>}
+      title={
+        <div>
+          Notes for Invoice <Tag color="blue">#{invoice?.invoiceNumber}</Tag>
+        </div>
+      }
       open={visible}
       onClose={onClose}
       width={450}
@@ -103,13 +119,14 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
       <Spin spinning={loading}>
         <List
           dataSource={notes}
+          locale={{ emptyText: 'No notes added yet' }}
           renderItem={(note, index) => (
             <List.Item
               actions={[
                 editingIndex === index ? (
                   <Space>
                     <Button icon={<CheckOutlined />} onClick={() => handleSaveEdit(index)} />
-                    <Button icon={<CloseOutlined />} onClick={() => setEditingIndex(null)} />
+                    <Button icon={<CloseOutlined />} onClick={handleCancelEdit} />
                   </Space>
                 ) : (
                   <Space>
@@ -117,7 +134,10 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
                       setEditedNote(note.text);
                       setEditingIndex(index);
                     }} />
-                    <Popconfirm title="Delete note?" onConfirm={() => handleDelete(index)}>
+                    <Popconfirm
+                      title="Delete note?"
+                      onConfirm={() => handleDelete(index)}
+                    >
                       <Button icon={<DeleteOutlined />} danger />
                     </Popconfirm>
                   </Space>
@@ -127,15 +147,18 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
               <List.Item.Meta
                 description={
                   <>
-                    <Text type="secondary">{note.author} • {new Date(note.timestamp).toLocaleString()}</Text>
+                    <Text type="secondary">
+                      {note.author} • {new Date(note.timestamp).toLocaleString()}
+                    </Text>
                     {editingIndex === index ? (
                       <TextArea
                         rows={2}
                         value={editedNote}
                         onChange={e => setEditedNote(e.target.value)}
+                        style={{ marginTop: 8 }}
                       />
                     ) : (
-                      <div style={{ whiteSpace: 'pre-wrap' }}>{note.text}</div>
+                      <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{note.text}</div>
                     )}
                   </>
                 }
@@ -143,11 +166,27 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
             </List.Item>
           )}
         />
-        <Form form={form} layout="vertical" onFinish={handleAddNote} style={{ marginTop: 16 }}>
-          <Form.Item name="note" rules={[{ required: true, message: 'Enter note' }]}>
+
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleAddNote}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            name="note"
+            rules={[{ required: true, message: 'Enter note' }]}
+          >
             <TextArea rows={3} placeholder="Type your note here..." />
           </Form.Item>
-          <Button htmlType="submit" type="primary" icon={<SendOutlined />} block>Add Note</Button>
+          <Button
+            htmlType="submit"
+            type="primary"
+            icon={<SendOutlined />}
+            block
+          >
+            Add Note
+          </Button>
         </Form>
       </Spin>
     </Drawer>

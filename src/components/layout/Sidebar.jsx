@@ -1,3 +1,4 @@
+// Sidebar.jsx
 import { Menu } from 'antd';
 import { 
   DashboardOutlined,
@@ -18,12 +19,10 @@ const Sidebar = ({ collapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get the first segment of the current path to highlight active menu
   const selectedKey = '/' + location.pathname.split('/')[1];
 
   return (
     <>
-      {/* Logo Area */}
       <div style={{
         height: 64,
         display: 'flex',
@@ -42,39 +41,18 @@ const Sidebar = ({ collapsed }) => {
         />
       </div>
 
-      {/* Menu Items */}
       <Menu
         mode="inline"
         selectedKeys={[selectedKey]}
         onClick={({ key }) => navigate(key)}
         style={{ height: '100%', borderRight: 0 }}
         items={[
-          { 
-            key: '/dashboard', 
-            icon: <DashboardOutlined />, 
-            label: 'Dashboard' 
-          },
-          { 
-            key: '/leads', 
-            icon: <SolutionOutlined />, 
-            label: 'Leads' 
-          },
-          { 
-            key: '/quotation', 
-            icon: <FileTextOutlined />, 
-            label: 'Quotations' 
-          },
-          { 
-            key: '/invoice', 
-            icon: <ShoppingOutlined />, 
-            label: 'Invoices' 
-          },
-         
-          { 
-            key: '/users', 
-            icon: <UsergroupAddOutlined />, 
-            label: 'User Management' 
-          }
+          { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+          { key: '/leads', icon: <SolutionOutlined />, label: 'Leads' },
+          { key: '/customers', icon: <UserOutlined />, label: 'Customers' }, // ✅ ADDED
+          { key: '/quotation', icon: <FileTextOutlined />, label: 'Quotations' },
+          { key: '/invoice', icon: <ShoppingOutlined />, label: 'Invoices' },
+          { key: '/users', icon: <UsergroupAddOutlined />, label: 'User Management' }
         ]}
       />
     </>

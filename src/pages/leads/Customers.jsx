@@ -1,73 +1,75 @@
-// Leads.jsx
 import React, { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import {
-  Card, Input, Button, Table, Tabs, Switch, Typography, Empty, Modal, Tag
+  Card, Input, Button, Table, Tabs, Typography, Empty, Tag, Switch, Modal
 } from 'antd';
-import { PlusOutlined, EditOutlined, SearchOutlined, MessageOutlined } from '@ant-design/icons';
+import { SearchOutlined, EditOutlined, MessageOutlined } from '@ant-design/icons';
 import { toast } from 'react-hot-toast';
 import BusinessAccountForm from './BusinessAccountForm';
 import NotesDrawer from './NotesDrawer';
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
-const API_URL = '/api/accounts';
 
-const Leads = () => {
-  const [formVisible, setFormVisible] = useState(false);
-  const [currentAccount, setCurrentAccount] = useState(null);
+const Customers = () => {
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('active');
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const [formVisible, setFormVisible] = useState(false);
+  const [currentCustomer, setCurrentCustomer] = useState(null);
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [accountToUpdate, setAccountToUpdate] = useState(null);
   const [newStatus, setNewStatus] = useState(null);
-  const [accounts, setAccounts] = useState([]);
+
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  const [loading, setLoading] = useState(false);
 
-  const fetchAccounts = () => {
+  const fetchCustomers = () => {
     setLoading(true);
-    axios.get(API_URL)
+    axios.get('/api/accounts/customers')
       .then(res => {
-        const leadsOnly = res.data.filter(a => !a.isCustomer);
-        setAccounts(leadsOnly);
-        toast.success('Leads loaded successfully');
+        const data = Array.isArray(res.data) ? res.data : [];
+        setCustomers(data);
+        toast.success('Customers loaded');
       })
       .catch(() => {
-        toast.error('Failed to load leads');
+        toast.error('Failed to load customers');
+        setCustomers([]);
       })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchAccounts();
+    fetchCustomers();
   }, []);
+
+  const handleEdit = (record) => {
+    setCurrentCustomer(record);
+    setFormVisible(true);
+  };
 
   const handleSave = (values) => {
     setLoading(true);
-    const request = currentAccount?._id
-      ? axios.put(`${API_URL}/${currentAccount._id}`, values)
-      : axios.post(API_URL, values);
+    const request = currentCustomer?._id
+      ? axios.put(`/api/accounts/${currentCustomer._id}`, values)
+      : axios.post('/api/accounts', values);
 
     request
       .then(() => {
-        toast.success(`Account ${currentAccount?._id ? 'updated' : 'created'} successfully`);
-        fetchAccounts();
+        toast.success(`Customer ${currentCustomer?._id ? 'updated' : 'created'} successfully`);
+        fetchCustomers();
       })
       .catch(() => {
-        toast.error(`Failed to ${currentAccount?._id ? 'update' : 'create'} account`);
+        toast.error(`Failed to ${currentCustomer?._id ? 'update' : 'create'} customer`);
       })
       .finally(() => {
         setFormVisible(false);
-        setCurrentAccount(null);
+        setCurrentCustomer(null);
         setLoading(false);
       });
-  };
-
-  const handleEdit = (record) => {
-    setCurrentAccount(record);
-    setFormVisible(true);
   };
 
   const handleOpenNotesDrawer = (account) => {
@@ -84,10 +86,10 @@ const Leads = () => {
   const confirmStatusChange = () => {
     setLoading(true);
     const updated = { ...accountToUpdate, status: newStatus };
-    axios.put(`${API_URL}/${accountToUpdate._id}`, updated)
+    axios.put(`/api/accounts/${accountToUpdate._id}`, updated)
       .then(() => {
         toast.success('Status updated');
-        fetchAccounts();
+        fetchCustomers();
       })
       .catch(() => {
         toast.error('Failed to update status');
@@ -98,23 +100,7 @@ const Leads = () => {
       });
   };
 
-  const handleConvertToCustomer = (record) => {
-    setLoading(true);
-    axios.put(`${API_URL}/${record._id}`, {
-      ...record,
-      isCustomer: true
-    })
-      .then(() => {
-        toast.success('Converted to customer');
-        fetchAccounts();
-      })
-      .catch(() => {
-        toast.error('Failed to convert');
-      })
-      .finally(() => setLoading(false));
-  };
-
-  const filteredAccounts = accounts.filter(account => {
+  const filtered = customers.filter(account => {
     const search = searchText.toLowerCase();
     return (
       account.businessName?.toLowerCase().includes(search) ||
@@ -123,8 +109,8 @@ const Leads = () => {
     );
   });
 
-  const activeAccounts = filteredAccounts.filter(a => a.status === 'Active');
-  const inactiveAccounts = filteredAccounts.filter(a => a.status === 'Inactive');
+  const active = filtered.filter(a => a.status === 'Active');
+  const inactive = filtered.filter(a => a.status === 'Inactive');
 
   const typeTag = (type) => {
     switch (type) {
@@ -136,7 +122,7 @@ const Leads = () => {
   };
 
   const columns = [
-    { title: 'Sno.', render: (_, __, index) => index + 1, width: 60 },
+    { title: 'Sno.', render: (_, __, i) => i + 1, width: 60 },
     { title: 'Business Name', dataIndex: 'businessName' },
     { title: 'Contact Name', dataIndex: 'contactName' },
     { title: 'Email Id', dataIndex: 'email' },
@@ -144,11 +130,11 @@ const Leads = () => {
     {
       title: 'Latest Note',
       render: (_, record) => {
-        const lastNote = record.notes?.at(-1);
-        return lastNote ? (
+        const note = record.notes?.[record.notes.length - 1];
+        return note ? (
           <div>
-            <small style={{ color: '#888' }}>{lastNote.timestamp}</small><br />
-            {lastNote.text}
+            <small style={{ color: '#888' }}>{note.timestamp}</small><br />
+            {note.text}
           </div>
         ) : <em>No notes</em>;
       }
@@ -173,15 +159,6 @@ const Leads = () => {
         <>
           <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} type="link" />
           <Button icon={<MessageOutlined />} onClick={() => handleOpenNotesDrawer(record)} type="link" />
-          {!record.isCustomer && (
-            <Button
-              type="link"
-              style={{ color: 'green' }}
-              onClick={() => handleConvertToCustomer(record)}
-            >
-              Convert to Customer
-            </Button>
-          )}
         </>
       )
     }
@@ -191,13 +168,7 @@ const Leads = () => {
     <div style={{ padding: '24px' }}>
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <Title level={4}>Leads</Title>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-            setCurrentAccount(null);
-            setFormVisible(true);
-          }}>
-            Add Lead
-          </Button>
+          <Title level={4}>Customers</Title>
         </div>
 
         <Input
@@ -209,24 +180,24 @@ const Leads = () => {
         />
 
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab={`Active (${activeAccounts.length})`} key="active">
+          <TabPane tab={`Active (${active.length})`} key="active">
             <Table
               columns={columns}
-              dataSource={activeAccounts}
-              pagination={false}
+              dataSource={active}
               rowKey="_id"
+              pagination={false}
               loading={loading}
-              locale={{ emptyText: <Empty description="No active leads" /> }}
+              locale={{ emptyText: <Empty description="No active customers" /> }}
             />
           </TabPane>
-          <TabPane tab={`Inactive (${inactiveAccounts.length})`} key="inactive">
+          <TabPane tab={`Inactive (${inactive.length})`} key="inactive">
             <Table
               columns={columns}
-              dataSource={inactiveAccounts}
-              pagination={false}
+              dataSource={inactive}
               rowKey="_id"
+              pagination={false}
               loading={loading}
-              locale={{ emptyText: <Empty description="No inactive leads" /> }}
+              locale={{ emptyText: <Empty description="No inactive customers" /> }}
             />
           </TabPane>
         </Tabs>
@@ -236,7 +207,7 @@ const Leads = () => {
         visible={formVisible}
         onClose={() => setFormVisible(false)}
         onSave={handleSave}
-        initialValues={currentAccount}
+        initialValues={currentCustomer}
       />
 
       <Modal
@@ -256,11 +227,11 @@ const Leads = () => {
           visible={notesDrawerVisible}
           onClose={() => setNotesDrawerVisible(false)}
           account={selectedAccount}
-          refreshAccounts={fetchAccounts}
+          refreshAccounts={fetchCustomers}
         />
       )}
     </div>
   );
 };
 
-export default Leads;
+export default Customers;

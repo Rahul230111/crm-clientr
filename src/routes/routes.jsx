@@ -1,3 +1,4 @@
+// routes.jsx
 import React from 'react';
 import RoleGuard from '../components/auth/RoleGuard';
 
@@ -15,6 +16,7 @@ const InvoiceForm = React.lazy(() => import('../pages/Invoice/InvoiceForm'));
 const InvoiceList = React.lazy(() => import('../pages/Invoice/InvoiceList'));
 
 const Leads = React.lazy(() => import('../pages/leads/Leads'));
+const Customers = React.lazy(() => import('../pages/leads/Customers')); // ✅ ADD THIS
 const UserManagement = React.lazy(() => import('../pages/user/UserManagement'));
 
 const ProductList = React.lazy(() => import('../pages/product/ProductList'));
@@ -51,6 +53,14 @@ export const appRoutes = [
     element: (
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <Leads />
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/customers', // ✅ ADD THIS
+    element: (
+      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+        <Customers />
       </RoleGuard>
     ),
   },
