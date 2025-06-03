@@ -159,7 +159,13 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
             <Form.Item label="Business Type" name="businessType"><Input readOnly /></Form.Item>
           </Col>
         </Row>
-
+ <Form.Item label="Invoice Type" name="invoiceType" rules={[{ required: true, message: 'Please select invoice type' }]}>
+  <Select placeholder="Select invoice type">
+    {invoiceTypes.map(type => (
+      <Option key={type} value={type}>{type}</Option>
+    ))}
+  </Select>
+</Form.Item>
         <Row gutter={16}>
           {initialValues?.invoiceNumber && (
             <Col span={12}>
@@ -201,13 +207,7 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
           <TextArea rows={2} />
         </Form.Item>
 
-        <Form.Item label="Invoice Type" name="invoiceType" rules={[{ required: true }]}>
-          <Radio.Group>
-            {invoiceTypes.map(type => (
-              <Radio.Button key={type} value={type}>{type}</Radio.Button>
-            ))}
-          </Radio.Group>
-        </Form.Item>
+        
 
         <Form.Item label="Payment Status" name="paymentStatus">
           <Radio.Group value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>

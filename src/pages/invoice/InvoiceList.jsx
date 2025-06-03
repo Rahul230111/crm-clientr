@@ -333,6 +333,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       })}
     </Space>
   );
+  
 
   const columns = [
     {
@@ -349,16 +350,22 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       dataIndex: 'invoiceType',
       render: (type) => <Tag color={type === 'Proforma' ? 'purple' : 'cyan'}>{type}</Tag>
     },
-    {
-      title: 'Business',
-      dataIndex: 'businessName',
-      render: (text) => <Tooltip title={text}><Text strong>{text}</Text></Tooltip>
-    },
-    {
-      title: 'Customer',
-      dataIndex: 'customerName',
-      render: (text) => <Tooltip title={text}>{text}</Tooltip>
-    },
+  {
+  title: 'Business',
+  render: (_, record) => {
+    const name = record.businessId?.businessName || record.businessName;
+    return <Tooltip title={name}><Text strong>{name}</Text></Tooltip>;
+  }
+},
+{
+  title: 'Customer',
+  render: (_, record) => {
+    const customer = record.businessId || {};
+    const name = customer.businessName || record.customerName || 'N/A';
+    return <Tooltip title={name}><Text>{name}</Text></Tooltip>;
+  }
+},
+
     {
       title: 'Amount',
       dataIndex: 'totalAmount',
@@ -415,6 +422,18 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
               <Select.Option value="pending">Pending</Select.Option>
               <Select.Option value="partial">Partial</Select.Option>
               <Select.Option value="overdue">Overdue</Select.Option>
+            </Select>
+            <Select
+              value={businessFilter}
+              onChange={setBusinessFilter}
+              placeholder="Filter by Business"
+              style={{ width: 200 }}
+              allowClear
+            >
+              <Select.Option value="all">All Businesses</Select.Option>
+              {uniqueBusinessNames.map(name => (
+                <Select.Option key={name} value={name}>{name}</Select.Option>
+              ))}
             </Select>
             <Select
               value={businessFilter}
