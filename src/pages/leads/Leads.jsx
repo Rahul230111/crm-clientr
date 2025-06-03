@@ -32,6 +32,8 @@ const Leads = () => {
   const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isConvertModalVisible, setIsConvertModalVisible] = useState(false);
+  const [accountToConvert, setAccountToConvert] = useState(null);
 
   const fetchAccounts = () => {
     setLoading(true);
@@ -145,9 +147,14 @@ const Leads = () => {
   };
 
   const handleConvertToCustomer = (record) => {
+    setAccountToConvert(record);
+    setIsConvertModalVisible(true);
+  };
+
+  const confirmConvertToCustomer = () => {
     setLoading(true);
-    axios.put(`${API_URL}/${record._id}`, {
-      ...record,
+    axios.put(`${API_URL}/${accountToConvert._id}`, {
+      ...accountToConvert,
       isCustomer: true
     })
       .then(() => {
@@ -155,7 +162,10 @@ const Leads = () => {
         fetchAccounts();
       })
       .catch(() => toast.error('Failed to convert'))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setIsConvertModalVisible(false);
+        setLoading(false);
+      });
   };
 
   const filteredAccounts = accounts.filter(account => {
@@ -295,6 +305,19 @@ const Leads = () => {
         confirmLoading={loading}
       >
         <p>Are you sure you want to change the status of <strong>{accountToUpdate?.businessName}</strong> to <strong>{newStatus}</strong>?</p>
+      </Modal>
+
+      <Modal
+        title="Confirm Conversion"
+        open={isConvertModalVisible}
+        onOk={confirmConvertToCustomer}
+        onCancel={() => setIsConvertModalVisible(false)}
+        okText="Yes, Convert"
+        cancelText="Cancel"
+        confirmLoading={loading}
+      >
+        <p>Are you sure you want to convert <strong>{accountToConvert?.businessName}</strong> to a customer?</p>
+        <p>This action cannot be undone.</p>
       </Modal>
 
       {selectedAccount && (

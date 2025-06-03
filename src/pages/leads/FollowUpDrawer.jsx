@@ -22,9 +22,8 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
 
   const fetchFollowUps = async () => {
     try {
-      const res = await axios.get(`/api/accounts`);
-      const fresh = res.data.find(a => a._id === account._id);
-      setFollowUps(fresh.followUps || []);
+      const res = await axios.get(`/api/accounts/${account._id}/followups`);
+      setFollowUps(res.data || []);
     } catch {
       toast.error('Failed to fetch follow-ups');
     }
@@ -36,7 +35,8 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
       return;
     }
 
-    const addedBy = JSON.parse(localStorage.getItem('user'))?._id;
+    const user = JSON.parse(localStorage.getItem('user'));
+    const addedBy = user?._id;
     if (!addedBy) {
       toast.error('User not found');
       return;
@@ -44,7 +44,11 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
 
     setLoading(true);
 
-    const payload = { comment, followupDate, addedBy };
+    const payload = {
+      date: followupDate.format('YYYY-MM-DD'),
+      note: comment,
+      addedBy
+    };
 
     const request = editingIndex === null
       ? axios.post(`/api/accounts/${account._id}/followups`, payload)
@@ -59,14 +63,16 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
         fetchFollowUps();
         refreshAccounts();
       })
-      .catch(() => toast.error('Failed to save follow-up'))
+      .catch((err) => {
+        toast.error(err?.response?.data?.message || 'Failed to save follow-up');
+      })
       .finally(() => setLoading(false));
   };
 
   const handleEdit = (index) => {
     const f = followUps[index];
-    setComment(f.comment);
-    setFollowupDate(moment(f.followupDate));
+    setComment(f.note);
+    setFollowupDate(moment(f.date));
     setEditingIndex(index);
   };
 
@@ -75,6 +81,8 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
       title: 'Delete Follow-up',
       content: 'Are you sure you want to delete this follow-up?',
       okText: 'Yes',
+      cancelText: 'No',
+      okButtonProps: { danger: true },
       onOk: () => {
         axios.delete(`/api/accounts/${account._id}/followups/${index}`)
           .then(() => {
@@ -88,18 +96,16 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
   };
 
   const today = moment().format('YYYY-MM-DD');
-  const sorted = [...followUps].sort((a, b) =>
-    new Date(b.followupDate) - new Date(a.followupDate)
-  );
+  const sorted = [...followUps].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const todayFollowUps = sorted.filter(f =>
-    moment(f.followupDate).format('YYYY-MM-DD') === today
+    moment(f.date).format('YYYY-MM-DD') === today
   );
   const upcoming = sorted.filter(f =>
-    moment(f.followupDate).isAfter(today, 'day')
+    moment(f.date).isAfter(today, 'day')
   );
   const past = sorted.filter(f =>
-    moment(f.followupDate).isBefore(today, 'day')
+    moment(f.date).isBefore(today, 'day')
   );
 
   const renderFollowUpItem = (item, index) => (
@@ -111,11 +117,11 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
     >
       <div>
         <Typography.Text strong>
-          {moment(item.followupDate).format('DD-MM-YYYY')}
+          {moment(item.date).format('DD-MM-YYYY')}
         </Typography.Text><br />
-        {item.comment}<br />
+        {item.note}<br />
         <Typography.Text type="secondary">
-          By {item.addedBy?.name || 'Unknown'}
+          By {item.addedBy?.name || item.addedBy?.email || 'Unknown'}
         </Typography.Text>
       </div>
     </List.Item>
@@ -142,7 +148,7 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
         />
         <TextArea
           rows={4}
-          placeholder="Enter follow-up comment"
+          placeholder="Enter follow-up note"
           value={comment}
           onChange={(e) => setComment(e.target.value)}
         />

@@ -1,7 +1,7 @@
-// routes.jsx
 import React from 'react';
 import RoleGuard from '../components/auth/RoleGuard';
 
+// Lazy-loaded pages
 const Dashboard = React.lazy(() => import('../pages/Dashboard'));
 const Login = React.lazy(() => import('../pages/Login'));
 const Profile = React.lazy(() => import('../pages/Profile'));
@@ -16,13 +16,16 @@ const InvoiceForm = React.lazy(() => import('../pages/Invoice/InvoiceForm'));
 const InvoiceList = React.lazy(() => import('../pages/Invoice/InvoiceList'));
 
 const Leads = React.lazy(() => import('../pages/leads/Leads'));
-const Customers = React.lazy(() => import('../pages/leads/Customers')); // ✅ ADD THIS
+const Customers = React.lazy(() => import('../pages/leads/Customers'));
+const CustomerProfile = React.lazy(() => import('../components/CustomerProfile')); // ✅ NEW
+
 const UserManagement = React.lazy(() => import('../pages/user/UserManagement'));
 
 const ProductList = React.lazy(() => import('../pages/product/ProductList'));
 const ProductForm = React.lazy(() => import('../pages/product/ProductForm'));
 const ProductPage = React.lazy(() => import('../pages/product/ProductPage'));
 
+// Protected app routes
 export const appRoutes = [
   {
     path: '/dashboard',
@@ -57,10 +60,18 @@ export const appRoutes = [
     ),
   },
   {
-    path: '/customers', // ✅ ADD THIS
+    path: '/customers',
     element: (
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <Customers />
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/customers/:id', // ✅ Customer profile route
+    element: (
+      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+        <CustomerProfile />
       </RoleGuard>
     ),
   },
@@ -146,6 +157,7 @@ export const appRoutes = [
   },
 ];
 
+// Public login routes
 export const loginRoutes = [
   {
     path: '/login',

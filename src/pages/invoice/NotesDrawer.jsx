@@ -1,55 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Drawer, List, Typography, Form, Input, Button, Popconfirm,
-  Space, Spin, Tag, message
+  Drawer, Typography, Form, Input, Button, Spin, message
 } from 'antd';
 import {
-  EditOutlined, DeleteOutlined, CheckOutlined,
-  CloseOutlined, SendOutlined
+  SendOutlined
 } from '@ant-design/icons';
 import axios from '../../api/axios';
+import './NotesDrawer.css';
 
 const { TextArea } = Input;
-const { Text } = Typography;
 
-const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
+const NotesDrawer = ({ visible, onClose, account, invoice, refreshInvoices, refreshAccounts }) => {
   const [form] = Form.useForm();
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [editedNote, setEditedNote] = useState('');
 
   useEffect(() => {
-    setNotes(invoice?.notes || []);
-  }, [invoice]);
+    setNotes((invoice || account)?.notes || []);
+  }, [invoice, account]);
 
   const getCurrentUser = () => {
     try {
       const user = JSON.parse(localStorage.getItem('user'));
-      return user?.email || 'Unknown';
+      return user?.name || user?.email || 'Unknown';
     } catch {
       return 'Unknown';
     }
+  };
+
+  const getEndpoint = () => {
+    return invoice
+      ? `/api/invoices/${invoice._id}`
+      : `/api/accounts/${account._id}`;
   };
 
   const handleAddNote = async ({ note }) => {
     const newNote = {
       text: note,
       timestamp: new Date().toISOString(),
-      author: getCurrentUser()
+      addedBy: getCurrentUser()
     };
     const updatedNotes = [...notes, newNote];
 
     try {
       setLoading(true);
-      await axios.put(`/api/invoices/${invoice._id}`, {
-        ...invoice,
+      await axios.put(getEndpoint(), {
+        ...(invoice || account),
         notes: updatedNotes
       });
       message.success('Note added');
       setNotes(updatedNotes);
       form.resetFields();
-      refreshInvoices();
+      invoice ? refreshInvoices?.() : refreshAccounts?.();
     } catch {
       message.error('Failed to add note');
     } finally {
@@ -57,58 +59,26 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
     }
   };
 
-  const handleDelete = async (index) => {
-    const updated = notes.filter((_, i) => i !== index);
-    try {
-      setLoading(true);
-      await axios.put(`/api/invoices/${invoice._id}`, {
-        ...invoice,
-        notes: updated
-      });
-      message.success('Note deleted');
-      setNotes(updated);
-      refreshInvoices();
-    } catch {
-      message.error('Failed to delete note');
-    } finally {
-      setLoading(false);
-    }
+  const groupByDate = (notesArray) => {
+    const grouped = {};
+    notesArray.forEach(note => {
+      const date = new Date(note.timestamp).toLocaleDateString();
+      if (!grouped[date]) grouped[date] = [];
+      grouped[date].push(note);
+    });
+    return grouped;
   };
 
-  const handleSaveEdit = async (index) => {
-    const updated = [...notes];
-    updated[index] = {
-      ...updated[index],
-      text: editedNote,
-      timestamp: new Date().toISOString()
-    };
-    try {
-      setLoading(true);
-      await axios.put(`/api/invoices/${invoice._id}`, {
-        ...invoice,
-        notes: updated
-      });
-      message.success('Note updated');
-      setNotes(updated);
-      setEditingIndex(null);
-      refreshInvoices();
-    } catch {
-      message.error('Update failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingIndex(null);
-    setEditedNote('');
-  };
+  const groupedNotes = groupByDate(notes);
 
   return (
     <Drawer
       title={
         <div>
-          Notes for Invoice <Tag color="blue">#{invoice?.invoiceNumber}</Tag>
+          Notes for {invoice ? 'Invoice' : 'Account'}{' '}
+          <Typography.Text code>
+            #{invoice?.invoiceNumber || account?.businessName}
+          </Typography.Text>
         </div>
       }
       open={visible}
@@ -117,55 +87,21 @@ const NotesDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
       destroyOnClose
     >
       <Spin spinning={loading}>
-        <List
-          dataSource={notes}
-          locale={{ emptyText: 'No notes added yet' }}
-          renderItem={(note, index) => (
-            <List.Item
-              actions={[
-                editingIndex === index ? (
-                  <Space>
-                    <Button icon={<CheckOutlined />} onClick={() => handleSaveEdit(index)} />
-                    <Button icon={<CloseOutlined />} onClick={handleCancelEdit} />
-                  </Space>
-                ) : (
-                  <Space>
-                    <Button icon={<EditOutlined />} onClick={() => {
-                      setEditedNote(note.text);
-                      setEditingIndex(index);
-                    }} />
-                    <Popconfirm
-                      title="Delete note?"
-                      onConfirm={() => handleDelete(index)}
-                    >
-                      <Button icon={<DeleteOutlined />} danger />
-                    </Popconfirm>
-                  </Space>
-                )
-              ]}
-            >
-              <List.Item.Meta
-                description={
-                  <>
-                    <Text type="secondary">
-                      {note.author} • {new Date(note.timestamp).toLocaleString()}
-                    </Text>
-                    {editingIndex === index ? (
-                      <TextArea
-                        rows={2}
-                        value={editedNote}
-                        onChange={e => setEditedNote(e.target.value)}
-                        style={{ marginTop: 8 }}
-                      />
-                    ) : (
-                      <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{note.text}</div>
-                    )}
-                  </>
-                }
-              />
-            </List.Item>
-          )}
-        />
+        <div style={{ padding: '0 8px' }}>
+          {Object.entries(groupedNotes).map(([date, notes]) => (
+            <div key={date}>
+              <div className="note-date-header">{date}</div>
+              {notes.map((note, index) => (
+                <div key={index} className="note-bubble">
+                  <div className="note-meta">
+                    {note.addedBy || 'Unknown'} • {new Date(note.timestamp).toLocaleTimeString()}
+                  </div>
+                  <div className="note-text">{note.text}</div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
 
         <Form
           form={form}

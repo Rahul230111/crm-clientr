@@ -1,9 +1,9 @@
 import {
   Form, Input, DatePicker, Select, InputNumber, Button, Card, Row, Col,
-  Divider, Space, Alert, Radio
+  Divider, Space, Radio
 } from 'antd';
 import {
-  SaveOutlined, DeleteOutlined, PrinterOutlined
+  SaveOutlined, PrinterOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
@@ -33,13 +33,9 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
   };
 
   useEffect(() => {
-    const toastId = toast.loading('Loading business options...');
     axios.get('/api/invoices/leads/active')
-      .then(res => {
-        setBusinessOptions(res.data);
-        toast.success('Business options loaded', { id: toastId });
-      })
-      .catch(() => toast.error('Failed to load businesses', { id: toastId }));
+      .then(res => setBusinessOptions(res.data))
+      .catch(() => toast.error('Failed to load businesses'));
   }, []);
 
   useEffect(() => {
@@ -50,27 +46,66 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
 
   useEffect(() => {
     if (initialValues) {
+      const selectedBusinessId = initialValues.businessId?._id || initialValues.businessId;
+      const selectedBusiness = businessOptions.find(b => b._id === selectedBusinessId);
+
       form.setFieldsValue({
         ...initialValues,
         date: initialValues.date ? dayjs(initialValues.date) : null,
         dueDate: initialValues.dueDate ? dayjs(initialValues.dueDate) : null,
         paymentStatus: initialValues.paymentStatus || 'pending',
         invoiceType: initialValues.invoiceType || 'Invoice',
-        paymentHistory: initialValues.paymentHistory?.map(p => ({
-          ...p,
-          date: p.date ? dayjs(p.date) : null,
-        })) || [],
+        businessName: selectedBusiness?.businessName,
+        businessType: selectedBusiness?.type,
+        businessInfo: selectedBusiness ? [
+          selectedBusiness.addressLine1,
+          selectedBusiness.addressLine2,
+          selectedBusiness.addressLine3,
+          selectedBusiness.city,
+          selectedBusiness.state,
+          selectedBusiness.pincode,
+          selectedBusiness.country
+        ].filter(Boolean).join(', ') : '',
+        gstin: selectedBusiness?.gstNumber || '',
+        businessId: selectedBusiness?._id,
       });
+
       setItems(initialValues.items || []);
       setPaymentStatus(initialValues.paymentStatus || 'pending');
       setDueDate(initialValues.dueDate ? dayjs(initialValues.dueDate) : null);
     }
-  }, [initialValues]);
+  }, [initialValues, businessOptions]);
+
+  const addItem = () => {
+    const nextId = Math.max(0, ...items.map(i => i.id)) + 1;
+    setItems([...items, { id: nextId, description: '', hsnSac: '', quantity: 1, rate: 0 }]);
+  };
+
+  const updateItem = (id, key, value) => {
+    setItems(items.map(item => item.id === id ? { ...item, [key]: value } : item));
+  };
+
+  const removeItem = (id) => {
+    setItems(items.filter(item => item.id !== id));
+  };
+
+  const calculateSubTotal = () => items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+  const calculateGST = () => calculateSubTotal() * 0.18;
+  const calculateTotal = () => calculateSubTotal() + calculateGST();
 
   const onFinish = (values) => {
     const subTotal = calculateSubTotal();
     const tax = calculateGST();
     const totalAmount = calculateTotal();
+
+    const newPayment = {
+      amount: values.newPaymentAmount,
+      method: values.newPaymentMethod,
+      reference: values.newPaymentReference,
+      date: values.newPaymentDate?.format('YYYY-MM-DD'),
+      addedBy: getCurrentUser()
+    };
+
     const invoiceData = {
       ...values,
       date: values.date?.format('YYYY-MM-DD'),
@@ -80,51 +115,21 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
       subTotal,
       tax,
       totalAmount,
-      paymentHistory: values.paymentHistory?.filter(p => p.amount) || []
     };
+
+    if (newPayment.amount && newPayment.method) {
+      invoiceData.paymentHistory = [
+        ...(initialValues?.paymentHistory || []),
+        newPayment
+      ];
+    }
+
+    delete invoiceData.newPaymentAmount;
+    delete invoiceData.newPaymentMethod;
+    delete invoiceData.newPaymentReference;
+    delete invoiceData.newPaymentDate;
+
     onSave(invoiceData);
-  };
-
-  const addItem = () => setItems([...items, { id: Date.now(), description: '', hsnSac: '', quantity: 1, rate: 0 }]);
-  const removeItem = (id) => items.length > 1 && setItems(items.filter(item => item.id !== id));
-  const updateItem = (id, field, value) => setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
-
-  const calculateSubTotal = () => items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-  const calculateGST = () => calculateSubTotal() * 0.18;
-  const calculateTotal = () => calculateSubTotal() + calculateGST();
-
-  const generatePDF = () => {
-    const values = form.getFieldsValue();
-    const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text('TAX INVOICE', 14, 20);
-    doc.setFontSize(12);
-    doc.text(`Business: ${values.businessName || ''}`, 14, 35);
-    doc.text(`Type: ${values.businessType || ''}`, 14, 42);
-    doc.text(`Address: ${values.businessInfo || ''}`, 14, 50);
-    doc.text(`GSTIN: ${values.gstin || ''}`, 14, 58);
-    doc.text(`Invoice No: ${initialValues?.invoiceNumber || 'Generated on save'}`, 120, 35);
-    doc.text(`Date: ${values.date?.format('DD/MM/YYYY') || ''}`, 120, 43);
-    doc.text(`Due Date: ${dueDate?.format('DD/MM/YYYY') || ''}`, 120, 51);
-    doc.text(`Status: ${paymentStatus}`, 120, 59);
-    doc.text(`Bill To: ${values.customerName || ''}`, 14, 75);
-    doc.text(`Address: ${values.customerAddress || ''}`, 14, 83);
-    const tableData = items.map(i => [
-      i.description || '', i.hsnSac || '', i.quantity, `₹${i.rate.toFixed(2)}`, `₹${(i.quantity * i.rate).toFixed(2)}`
-    ]);
-    doc.autoTable({
-      head: [['Description', 'HSN/SAC', 'Qty', 'Rate (₹)', 'Amount (₹)']],
-      body: tableData,
-      startY: 100,
-      theme: 'grid'
-    });
-    const finalY = doc.lastAutoTable.finalY + 10;
-    doc.text(`Sub Total: ₹${calculateSubTotal().toFixed(2)}`, 120, finalY);
-    doc.text(`GST (18%): ₹${calculateGST().toFixed(2)}`, 120, finalY + 10);
-    doc.setFontSize(14);
-    doc.text(`Total: ₹${calculateTotal().toFixed(2)}`, 120, finalY + 20);
-    doc.text(`Payment Status: ${paymentStatus}`, 14, finalY + 30);
-    doc.save(`invoice-${initialValues?.invoiceNumber || 'draft'}.pdf`);
   };
 
   return (
@@ -133,21 +138,24 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item label="Business Name" name="businessName" rules={[{ required: true }]}>
-              <Select placeholder="Select business" onChange={(value) => {
-                const selected = businessOptions.find(b => b.businessName === value);
-                if (selected) {
-                  const address = [
-                    selected.addressLine1, selected.addressLine2, selected.addressLine3,
-                    selected.city, selected.state, selected.pincode, selected.country
-                  ].filter(Boolean).join(', ');
-                  form.setFieldsValue({
-                    businessType: selected.type || '',
-                    businessInfo: address,
-                    gstin: selected.gstNumber || '',
-                    businessId: selected._id
-                  });
-                }
-              }}>
+              <Select
+                placeholder="Select business"
+                onChange={(value) => {
+                  const selected = businessOptions.find(b => b.businessName === value);
+                  if (selected) {
+                    const address = [
+                      selected.addressLine1, selected.addressLine2, selected.addressLine3,
+                      selected.city, selected.state, selected.pincode, selected.country
+                    ].filter(Boolean).join(', ');
+                    form.setFieldsValue({
+                      businessType: selected.type || '',
+                      businessInfo: address,
+                      gstin: selected.gstNumber || '',
+                      businessId: selected._id,
+                    });
+                  }
+                }}
+              >
                 {businessOptions.map(b => (
                   <Option key={b._id} value={b.businessName}>{b.businessName}</Option>
                 ))}
@@ -159,19 +167,19 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
             <Form.Item label="Business Type" name="businessType"><Input readOnly /></Form.Item>
           </Col>
         </Row>
- <Form.Item label="Invoice Type" name="invoiceType" rules={[{ required: true, message: 'Please select invoice type' }]}>
-  <Select placeholder="Select invoice type">
-    {invoiceTypes.map(type => (
-      <Option key={type} value={type}>{type}</Option>
-    ))}
-  </Select>
-</Form.Item>
+
+        <Form.Item label="Invoice Type" name="invoiceType" rules={[{ required: true }]}>
+          <Select placeholder="Select invoice type">
+            {invoiceTypes.map(type => (
+              <Option key={type} value={type}>{type}</Option>
+            ))}
+          </Select>
+        </Form.Item>
+
         <Row gutter={16}>
           {initialValues?.invoiceNumber && (
             <Col span={12}>
-              <Form.Item label="Invoice Number">
-                <Input value={initialValues.invoiceNumber} readOnly />
-              </Form.Item>
+              <Form.Item label="Invoice Number"><Input value={initialValues.invoiceNumber} readOnly /></Form.Item>
             </Col>
           )}
           <Col span={12}>
@@ -197,9 +205,7 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
             <Form.Item label="GSTIN" name="gstin"><Input /></Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label="Customer Name" name="customerName" rules={[{ required: true }]}>
-              <Input />
-            </Form.Item>
+            <Form.Item label="Customer Name" name="customerName" rules={[{ required: true }]}><Input /></Form.Item>
           </Col>
         </Row>
 
@@ -207,90 +213,63 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
           <TextArea rows={2} />
         </Form.Item>
 
-        
-
         <Form.Item label="Payment Status" name="paymentStatus">
           <Radio.Group value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
             <Radio.Button value="pending">Pending</Radio.Button>
-            <Radio.Button value="paid">Paid</Radio.Button>
             <Radio.Button value="partial">Partial</Radio.Button>
+            <Radio.Button value="paid">Paid</Radio.Button>
           </Radio.Group>
         </Form.Item>
 
-        <Divider>Invoice Items</Divider>
+        <Divider>Items</Divider>
         {items.map(item => (
           <Row key={item.id} gutter={16} style={{ marginBottom: 12 }}>
-            <Col span={8}><Input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} placeholder="Description" /></Col>
-            <Col span={4}><Input value={item.hsnSac} onChange={(e) => updateItem(item.id, 'hsnSac', e.target.value)} placeholder="HSN/SAC" /></Col>
-            <Col span={3}><InputNumber value={item.quantity} min={1} onChange={(val) => updateItem(item.id, 'quantity', val)} style={{ width: '100%' }} /></Col>
-            <Col span={3}><InputNumber value={item.rate} min={0} onChange={(val) => updateItem(item.id, 'rate', val)} style={{ width: '100%' }} /></Col>
-            <Col span={4}><Input value={`₹ ${(item.quantity * item.rate).toFixed(2)}`} readOnly /></Col>
-            <Col span={2}><Button icon={<DeleteOutlined />} danger onClick={() => removeItem(item.id)} disabled={items.length === 1} /></Col>
+            <Col span={6}><Input placeholder="Description" value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} /></Col>
+            <Col span={4}><Input placeholder="HSN/SAC" value={item.hsnSac} onChange={(e) => updateItem(item.id, 'hsnSac', e.target.value)} /></Col>
+            <Col span={4}><InputNumber placeholder="Qty" value={item.quantity} onChange={(val) => updateItem(item.id, 'quantity', val)} style={{ width: '100%' }} /></Col>
+            <Col span={4}><InputNumber placeholder="Rate" value={item.rate} onChange={(val) => updateItem(item.id, 'rate', val)} style={{ width: '100%' }} /></Col>
+            <Col span={4}><Input value={`₹${(item.quantity * item.rate).toFixed(2)}`} readOnly /></Col>
+            <Col span={2}><Button icon={<DeleteOutlined />} danger onClick={() => removeItem(item.id)} /></Col>
           </Row>
         ))}
-
-        <Button type="dashed" onClick={addItem} block style={{ marginBottom: 24 }}>+ Add Item</Button>
-
-        <Divider>Payment History</Divider>
-        <Form.List name="paymentHistory">
-          {(fields, { add, remove }) => (
-            <>
-              {fields.map(({ key, name }) => (
-                <Row key={key} gutter={16} style={{ marginBottom: 12 }}>
-                  <Col span={4}>
-                    <Form.Item name={[name, 'amount']} rules={[{ required: true }]}>
-                      <InputNumber placeholder="Amount" style={{ width: '100%' }} />
-                    </Form.Item>
-                  </Col>
-                  <Col span={4}>
-                    <Form.Item name={[name, 'method']} rules={[{ required: true }]}>
-                      <Select placeholder="Method">
-                        <Option value="Cash">Cash</Option>
-                        <Option value="UPI">UPI</Option>
-                        <Option value="Card">Card</Option>
-                        <Option value="Bank Transfer">Bank</Option>
-                      </Select>
-                    </Form.Item>
-                  </Col>
-                  <Col span={5}>
-                    <Form.Item name={[name, 'reference']} rules={[{ required: true }]}>
-                      <Input placeholder="Reference" />
-                    </Form.Item>
-                  </Col>
-                  <Col span={5}>
-                    <Form.Item name={[name, 'date']} rules={[{ required: true }]}>
-                      <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
-                    </Form.Item>
-                  </Col>
-                  <Col span={4}>
-                    <Form.Item name={[name, 'addedBy']} initialValue={getCurrentUser()}>
-                      <Input placeholder="Added By" readOnly />
-                    </Form.Item>
-                  </Col>
-                  <Col span={2}>
-                    <Button onClick={() => remove(name)} danger>Remove</Button>
-                  </Col>
-                </Row>
-              ))}
-              <Form.Item>
-                <Button type="dashed" onClick={() => add()} block>
-                  + Add Payment
-                </Button>
-              </Form.Item>
-            </>
-          )}
-        </Form.List>
+        <Button onClick={addItem} block>+ Add Item</Button>
 
         <Divider>Summary</Divider>
         <Row gutter={16}>
-          <Col span={8}><Input readOnly value={`₹ ${calculateSubTotal().toFixed(2)}`} addonBefore="Sub Total" /></Col>
-          <Col span={8}><Input readOnly value={`₹ ${calculateGST().toFixed(2)}`} addonBefore="GST (18%)" /></Col>
-          <Col span={8}><Input readOnly value={`₹ ${calculateTotal().toFixed(2)}`} addonBefore="Total" style={{ fontWeight: 'bold' }} /></Col>
+          <Col span={8}><Input readOnly value={`₹${calculateSubTotal().toFixed(2)}`} addonBefore="Sub Total" /></Col>
+          <Col span={8}><Input readOnly value={`₹${calculateGST().toFixed(2)}`} addonBefore="GST (18%)" /></Col>
+          <Col span={8}><Input readOnly value={`₹${calculateTotal().toFixed(2)}`} addonBefore="Total" style={{ fontWeight: 'bold' }} /></Col>
         </Row>
 
-        <Form.Item name="noteText" label="Note">
-          <TextArea rows={2} placeholder="Add a note" />
-        </Form.Item>
+        <Divider>Payment History</Divider>
+        {initialValues?.paymentHistory?.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            {initialValues.paymentHistory.map((p, i) => (
+              <Card key={i} size="small" style={{ marginBottom: 8 }}>
+                <p><strong>Amount:</strong> ₹{p.amount}</p>
+                <p><strong>Method:</strong> {p.method}</p>
+                <p><strong>Date:</strong> {p.date}</p>
+                <p><strong>Reference:</strong> {p.reference}</p>
+                <p><strong>Added By:</strong> {p.addedBy}</p>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <Divider>Add Payment Entry</Divider>
+        <Row gutter={16}>
+          <Col span={6}><Form.Item label="Amount" name="newPaymentAmount"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item></Col>
+          <Col span={6}><Form.Item label="Method" name="newPaymentMethod">
+            <Select placeholder="Select method">
+              <Option value="Cash">Cash</Option>
+              <Option value="Bank">Bank</Option>
+              <Option value="UPI">UPI</Option>
+              <Option value="Cheque">Cheque</Option>
+            </Select>
+          </Form.Item></Col>
+          <Col span={6}><Form.Item label="Reference" name="newPaymentReference"><Input /></Form.Item></Col>
+          <Col span={6}><Form.Item label="Date" name="newPaymentDate"><DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" /></Form.Item></Col>
+        </Row>
 
         <Form.Item style={{ marginTop: 24 }}>
           <Space>
@@ -298,7 +277,7 @@ const InvoiceForm = ({ onCancel, onSave, initialValues }) => {
               {initialValues ? 'Update Invoice' : 'Save Invoice'}
             </Button>
             <Button onClick={onCancel} size="large">Cancel</Button>
-            <Button onClick={generatePDF} icon={<PrinterOutlined />} size="large">Generate PDF</Button>
+            <Button icon={<PrinterOutlined />} size="large" onClick={() => window.print()}>Print</Button>
           </Space>
         </Form.Item>
       </Form>

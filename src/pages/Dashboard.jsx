@@ -1,20 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Card, Col, Row, Table, Tag, Typography, Spin } from "antd";
+import {
+  Card, Col, Row, Table, Tag, Typography, Spin, Select
+} from "antd";
 import { Pie } from "@ant-design/plots";
 import axios from "../api/axios";
 import "./Dashboard.css";
 
 const { Title } = Typography;
+const { Option } = Select;
 
 const Dashboard = () => {
   const [latestQuotations, setLatestQuotations] = useState([]);
   const [latestAccounts, setLatestAccounts] = useState([]);
-  const [invoiceSummary, setInvoiceSummary] = useState({
-    total: 0,
-    paid: 0,
-    pending: 0,
-  });
+  const [invoiceSummary, setInvoiceSummary] = useState({ total: 0, paid: 0, pending: 0 });
   const [invoiceDetails, setInvoiceDetails] = useState([]);
+  const [allAccounts, setAllAccounts] = useState([]);
+  const [filteredFollowups, setFilteredFollowups] = useState([]);
+  const [followUpFilter, setFollowUpFilter] = useState("today");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,12 +37,14 @@ const Dashboard = () => {
           .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
 
         const allTotal = invRes.data.reduce(
-          (sum, inv) => sum + (inv.totalAmount || 0),
-          0
+          (sum, inv) => sum + (inv.totalAmount || 0), 0
         );
-        const pending = allTotal - paidTotal;
 
+        const pending = allTotal - paidTotal;
         setInvoiceSummary({ total: allTotal, paid: paidTotal, pending });
+
+        setAllAccounts(accRes.data);
+        applyFollowUpFilter("today", accRes.data); // Initial load
       } catch (err) {
         console.error("Failed to load dashboard data", err);
       } finally {
@@ -50,6 +54,43 @@ const Dashboard = () => {
 
     fetchDashboardData();
   }, []);
+
+  const applyFollowUpFilter = (filterType, accounts) => {
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+
+    const filtered = accounts
+      .map((acc) => {
+        let filteredFollowUps = [];
+
+        if (filterType === "today") {
+          filteredFollowUps = (acc.followUps || []).filter((f) =>
+            f.followupDate?.startsWith(todayStr)
+          );
+        } else if (filterType === "upcoming") {
+          filteredFollowUps = (acc.followUps || []).filter((f) =>
+            new Date(f.followupDate) > today
+          );
+        } else if (filterType === "past") {
+          filteredFollowUps = (acc.followUps || []).filter((f) =>
+            new Date(f.followupDate) < today
+          );
+        }
+
+        return {
+          ...acc,
+          followUps: filteredFollowUps,
+        };
+      })
+      .filter((acc) => acc.followUps.length > 0);
+
+    setFilteredFollowups(filtered);
+  };
+
+  const handleFollowUpFilterChange = (value) => {
+    setFollowUpFilter(value);
+    applyFollowUpFilter(value, allAccounts);
+  };
 
   const renderStatusTag = (status) => (
     <Tag color={status === "Active" ? "green" : "red"}>{status}</Tag>
@@ -111,6 +152,28 @@ const Dashboard = () => {
       title: "Date",
       dataIndex: "date",
       render: (d) => new Date(d).toLocaleDateString(),
+    },
+  ];
+
+  const columnsFollowups = [
+    { title: "S.No", render: (_, __, i) => i + 1 },
+    { title: "Business Name", dataIndex: "businessName" },
+    {
+      title: "Follow-up",
+      render: (_, record) =>
+        record.followUps[0]?.comment || record.followUps[0]?.note || "No comment",
+    },
+    {
+      title: "Added By",
+      render: (_, record) =>
+        record.followUps[0]?.addedBy?.name ||
+        record.followUps[0]?.addedBy?.email ||
+        "Unknown",
+    },
+    {
+      title: "Date",
+      render: (_, record) =>
+        new Date(record.followUps[0]?.followupDate).toLocaleDateString(),
     },
   ];
 
@@ -190,14 +253,12 @@ const Dashboard = () => {
             bordered
             extra={<a href="/leads">View All</a>}
           >
-            <div className="responsive-table">
-              <Table
-                columns={columnsAccounts}
-                dataSource={latestAccounts}
-                rowKey="_id"
-                pagination={false}
-              />
-            </div>
+            <Table
+              columns={columnsAccounts}
+              dataSource={latestAccounts}
+              rowKey="_id"
+              pagination={false}
+            />
           </Card>
         </Col>
       </Row>
@@ -209,14 +270,12 @@ const Dashboard = () => {
             bordered
             extra={<a href="/quotation">View All</a>}
           >
-            <div className="responsive-table">
-              <Table
-                columns={columnsQuotations}
-                dataSource={latestQuotations}
-                rowKey="_id"
-                pagination={false}
-              />
-            </div>
+            <Table
+              columns={columnsQuotations}
+              dataSource={latestQuotations}
+              rowKey="_id"
+              pagination={false}
+            />
           </Card>
         </Col>
 
@@ -226,14 +285,43 @@ const Dashboard = () => {
             bordered
             extra={<a href="/invoice">View All</a>}
           >
-            <div className="responsive-table">
-              <Table
-                columns={columnsInvoices}
-                dataSource={invoiceDetails.slice(0, 5)}
-                rowKey="_id"
-                pagination={false}
-              />
-            </div>
+            <Table
+              columns={columnsInvoices}
+              dataSource={invoiceDetails.slice(0, 5)}
+              rowKey="_id"
+              pagination={false}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+        <Col span={24}>
+          <Card
+            title={
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{followUpFilter.charAt(0).toUpperCase() + followUpFilter.slice(1)} Follow-ups</span>
+                <Select
+                  value={followUpFilter}
+                  onChange={handleFollowUpFilterChange}
+                  style={{ width: 180 }}
+                >
+                  <Option value="today">Today</Option>
+                  <Option value="upcoming">Upcoming</Option>
+                  <Option value="past">Past</Option>
+                </Select>
+              </div>
+            }
+            bordered
+            extra={<a href="/leads">View All Leads</a>}
+          >
+            <Table
+              columns={columnsFollowups}
+              dataSource={filteredFollowups}
+              rowKey="_id"
+              pagination={false}
+              locale={{ emptyText: "No follow-ups in this category" }}
+            />
           </Card>
         </Col>
       </Row>

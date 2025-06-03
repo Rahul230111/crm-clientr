@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from '../../api/axios';
 import {
   Card, Input, Button, Table, Tabs, Typography, Empty, Tag, Switch, Modal
 } from 'antd';
-import { SearchOutlined, EditOutlined, MessageOutlined } from '@ant-design/icons';
+import {
+  SearchOutlined, EditOutlined, MessageOutlined, EyeOutlined
+} from '@ant-design/icons';
 import { toast } from 'react-hot-toast';
 import BusinessAccountForm from './BusinessAccountForm';
 import NotesDrawer from './NotesDrawer';
+import FollowUpDrawer from './FollowUpDrawer';
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
@@ -24,13 +28,20 @@ const Customers = () => {
   const [accountToUpdate, setAccountToUpdate] = useState(null);
   const [newStatus, setNewStatus] = useState(null);
 
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState(null);
+
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
+  const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
+
+  const navigate = useNavigate();
 
   const fetchCustomers = () => {
     setLoading(true);
-    axios.get('/api/accounts/customers')
-      .then(res => {
+    axios
+      .get('/api/accounts/customers')
+      .then((res) => {
         const data = Array.isArray(res.data) ? res.data : [];
         setCustomers(data);
         toast.success('Customers loaded');
@@ -72,11 +83,6 @@ const Customers = () => {
       });
   };
 
-  const handleOpenNotesDrawer = (account) => {
-    setSelectedAccount(account);
-    setNotesDrawerVisible(true);
-  };
-
   const handleStatusChange = (checked, record) => {
     setAccountToUpdate(record);
     setNewStatus(checked ? 'Active' : 'Inactive');
@@ -86,7 +92,8 @@ const Customers = () => {
   const confirmStatusChange = () => {
     setLoading(true);
     const updated = { ...accountToUpdate, status: newStatus };
-    axios.put(`/api/accounts/${accountToUpdate._id}`, updated)
+    axios
+      .put(`/api/accounts/${accountToUpdate._id}`, updated)
       .then(() => {
         toast.success('Status updated');
         fetchCustomers();
@@ -100,7 +107,45 @@ const Customers = () => {
       });
   };
 
-  const filtered = customers.filter(account => {
+  const handleDelete = (record) => {
+    setCustomerToDelete(record);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = () => {
+    if (!customerToDelete?._id) return;
+    setLoading(true);
+    axios
+      .delete(`/api/accounts/${customerToDelete._id}`)
+      .then(() => {
+        toast.success('Customer deleted successfully');
+        fetchCustomers();
+      })
+      .catch(() => {
+        toast.error('Failed to delete customer');
+      })
+      .finally(() => {
+        setDeleteModalVisible(false);
+        setCustomerToDelete(null);
+        setLoading(false);
+      });
+  };
+
+  const handleOpenNotesDrawer = (account) => {
+    setSelectedAccount(account);
+    setNotesDrawerVisible(true);
+  };
+
+  const handleOpenFollowUpDrawer = (account) => {
+    setSelectedAccount(account);
+    setFollowUpDrawerVisible(true);
+  };
+
+  const goToCustomerProfile = (record) => {
+    navigate(`/customers/${record._id}`);
+  };
+
+  const filtered = customers.filter((account) => {
     const search = searchText.toLowerCase();
     return (
       account.businessName?.toLowerCase().includes(search) ||
@@ -109,15 +154,19 @@ const Customers = () => {
     );
   });
 
-  const active = filtered.filter(a => a.status === 'Active');
-  const inactive = filtered.filter(a => a.status === 'Inactive');
+  const active = filtered.filter((a) => a.status === 'Active');
+  const inactive = filtered.filter((a) => a.status === 'Inactive');
 
   const typeTag = (type) => {
     switch (type) {
-      case 'Hot': return <Tag color="red">Hot</Tag>;
-      case 'Warm': return <Tag color="orange">Warm</Tag>;
-      case 'Cold': return <Tag color="blue">Cold</Tag>;
-      default: return <Tag>Unknown</Tag>;
+      case 'Hot':
+        return <Tag color="red">Hot</Tag>;
+      case 'Warm':
+        return <Tag color="orange">Warm</Tag>;
+      case 'Cold':
+        return <Tag color="blue">Cold</Tag>;
+      default:
+        return <Tag>Unknown</Tag>;
     }
   };
 
@@ -159,6 +208,9 @@ const Customers = () => {
         <>
           <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} type="link" />
           <Button icon={<MessageOutlined />} onClick={() => handleOpenNotesDrawer(record)} type="link" />
+          <Button icon={<EyeOutlined />} onClick={() => goToCustomerProfile(record)} type="link">View</Button>
+          <Button onClick={() => handleOpenFollowUpDrawer(record)} type="link">Follow-ups</Button>
+          <Button danger onClick={() => handleDelete(record)} type="link">Delete</Button>
         </>
       )
     }
@@ -175,7 +227,7 @@ const Customers = () => {
           placeholder="Search by Business Name, Contact Name or Email"
           prefix={<SearchOutlined />}
           value={searchText}
-          onChange={e => setSearchText(e.target.value)}
+          onChange={(e) => setSearchText(e.target.value)}
           style={{ width: 400, marginBottom: 16 }}
         />
 
@@ -219,8 +271,34 @@ const Customers = () => {
         cancelText="No"
         confirmLoading={loading}
       >
-        <p>Are you sure you want to change the status of <strong>{accountToUpdate?.businessName}</strong> to <strong>{newStatus}</strong>?</p>
+        <p>
+          Are you sure you want to change the status of <strong>{accountToUpdate?.businessName}</strong> to <strong>{newStatus}</strong>?
+        </p>
       </Modal>
+
+      <Modal
+        title="Confirm Delete"
+        open={deleteModalVisible}
+        onOk={confirmDelete}
+        onCancel={() => setDeleteModalVisible(false)}
+        okText="Delete"
+        okButtonProps={{ danger: true }}
+        cancelText="Cancel"
+        confirmLoading={loading}
+      >
+        <p>
+          Are you sure you want to delete <strong>{customerToDelete?.businessName}</strong>?
+        </p>
+      </Modal>
+
+      {selectedAccount && (
+        <FollowUpDrawer
+          visible={followUpDrawerVisible}
+          onClose={() => setFollowUpDrawerVisible(false)}
+          account={selectedAccount}
+          refreshAccounts={fetchCustomers}
+        />
+      )}
 
       {selectedAccount && (
         <NotesDrawer

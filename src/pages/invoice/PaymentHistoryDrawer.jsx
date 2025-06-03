@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Drawer, Table, Form, Input, Button,
-  DatePicker, Select, Space, Modal
+  DatePicker, Select, Space, Modal, Popconfirm
 } from 'antd';
 import toast from 'react-hot-toast';
 import axios from '../../api/axios';
@@ -13,7 +13,7 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
   const [loading, setLoading] = useState(false);
   const [invoiceData, setInvoiceData] = useState(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editRecordIndex, setEditRecordIndex] = useState(null);
+  const [currentEditingPaymentId, setCurrentEditingPaymentId] = useState(null);
 
   const getCurrentUser = () => {
     try {
@@ -38,20 +38,6 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
     if (visible) fetchInvoice();
   }, [visible]);
 
-  const columns = [
-    { title: 'Amount', dataIndex: 'amount' },
-    { title: 'Method', dataIndex: 'method' },
-    { title: 'Reference', dataIndex: 'reference' },
-    { title: 'Date', dataIndex: 'date' },
-    { title: 'Added By', dataIndex: 'addedBy' },
-    {
-      title: 'Actions',
-      render: (_, record, index) => (
-        <Button type="link" onClick={() => openEditModal(record, index)}>Edit</Button>
-      )
-    }
-  ];
-
   const handleAddPayment = async (values) => {
     setLoading(true);
     try {
@@ -60,7 +46,6 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
         date: values.date.format('YYYY-MM-DD'),
         addedBy: getCurrentUser()
       };
-
       await axios.patch(`/api/invoices/${invoice._id}/payments`, payload);
       toast.success('Payment added');
       form.resetFields();
@@ -73,8 +58,8 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
     }
   };
 
-  const openEditModal = (record, index) => {
-    setEditRecordIndex(index);
+  const openEditModal = (record) => {
+    setCurrentEditingPaymentId(record._id);
     editForm.setFieldsValue({
       ...record,
       date: dayjs(record.date)
@@ -83,19 +68,14 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
   };
 
   const handleEditSubmit = async (values) => {
-    if (editRecordIndex === null) return;
+    if (!currentEditingPaymentId) return;
     try {
-      const updatedPayments = [...(invoiceData?.paymentHistory || [])];
-      updatedPayments[editRecordIndex] = {
+      const payload = {
         ...values,
         date: values.date.format('YYYY-MM-DD'),
         addedBy: getCurrentUser()
       };
-
-      await axios.put(`/api/invoices/${invoice._id}/paymentHistory`, {
-        paymentHistory: updatedPayments
-      });
-
+      await axios.put(`/api/invoices/${invoice._id}/payments/${currentEditingPaymentId}`, payload);
       toast.success('Payment updated');
       setEditModalVisible(false);
       fetchInvoice();
@@ -104,6 +84,45 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
       toast.error('Failed to update payment');
     }
   };
+
+  const handleDeletePayment = async (paymentId) => {
+    try {
+      await axios.delete(`/api/invoices/${invoice._id}/payments/${paymentId}`);
+      toast.success('Payment deleted');
+      fetchInvoice();
+      refreshInvoices?.();
+    } catch {
+      toast.error('Failed to delete payment');
+    }
+  };
+
+  const columns = [
+    { title: 'Amount', dataIndex: 'amount' },
+    { title: 'Method', dataIndex: 'method' },
+    { title: 'Reference', dataIndex: 'reference' },
+    {
+      title: 'Date',
+      dataIndex: 'date',
+      render: (text) => dayjs(text).format('YYYY-MM-DD')
+    },
+    { title: 'Added By', dataIndex: 'addedBy' },
+    {
+      title: 'Actions',
+      render: (_, record) => (
+        <Space>
+          <Button type="link" onClick={() => openEditModal(record)}>Edit</Button>
+          <Popconfirm
+            title="Delete this payment?"
+            onConfirm={() => handleDeletePayment(record._id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button type="link" danger>Delete</Button>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ];
 
   return (
     <Drawer
@@ -115,7 +134,7 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
       <Table
         dataSource={invoiceData?.paymentHistory || []}
         columns={columns}
-        rowKey={(record, index) => index}
+        rowKey="_id"
         pagination={false}
         style={{ marginBottom: 24 }}
       />
