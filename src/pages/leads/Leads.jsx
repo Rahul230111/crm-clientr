@@ -1,13 +1,19 @@
-// Leads.jsx
 import React, { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import {
-  Card, Input, Button, Table, Tabs, Switch, Typography, Empty, Modal, Tag
+  Card, Input, Button, Table, Tabs, Switch, Typography,
+  Empty, Modal, Tag
 } from 'antd';
-import { PlusOutlined, EditOutlined, SearchOutlined, MessageOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined, EditOutlined, SearchOutlined,
+  MessageOutlined, PrinterOutlined
+} from '@ant-design/icons';
 import { toast } from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import BusinessAccountForm from './BusinessAccountForm';
 import NotesDrawer from './NotesDrawer';
+import FollowUpDrawer from './FollowUpDrawer';
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
@@ -23,6 +29,7 @@ const Leads = () => {
   const [newStatus, setNewStatus] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
+  const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -34,15 +41,51 @@ const Leads = () => {
         setAccounts(leadsOnly);
         toast.success('Leads loaded successfully');
       })
-      .catch(() => {
-        toast.error('Failed to load leads');
-      })
+      .catch(() => toast.error('Failed to load leads'))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchAccounts();
   }, []);
+
+  const generateLeadPDF = async (record) => {
+    try {
+      const toastId = toast.loading('Generating Lead PDF...');
+      const source = document.getElementById(`lead-${record._id}`);
+      if (!source) {
+        toast.error('Lead content not found', { id: toastId });
+        return;
+      }
+
+      const clone = source.cloneNode(true);
+      clone.style.position = 'fixed';
+      clone.style.top = '0';
+      clone.style.left = '0';
+      clone.style.width = '210mm';
+      clone.style.background = 'white';
+      clone.style.zIndex = '-1';
+      clone.style.display = 'block';
+      document.body.appendChild(clone);
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      const canvas = await html2canvas(clone, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const width = pdf.internal.pageSize.getWidth();
+      const height = (canvas.height * width) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, width, height);
+
+      pdf.save(`${record.businessName || 'lead'}.pdf`);
+      toast.success('PDF downloaded', { id: toastId });
+
+      document.body.removeChild(clone);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate PDF');
+    }
+  };
 
   const handleSave = (values) => {
     setLoading(true);
@@ -75,6 +118,11 @@ const Leads = () => {
     setNotesDrawerVisible(true);
   };
 
+  const handleOpenFollowUpDrawer = (account) => {
+    setSelectedAccount(account);
+    setFollowUpDrawerVisible(true);
+  };
+
   const handleStatusChange = (checked, record) => {
     setAccountToUpdate(record);
     setNewStatus(checked ? 'Active' : 'Inactive');
@@ -89,9 +137,7 @@ const Leads = () => {
         toast.success('Status updated');
         fetchAccounts();
       })
-      .catch(() => {
-        toast.error('Failed to update status');
-      })
+      .catch(() => toast.error('Failed to update status'))
       .finally(() => {
         setIsModalVisible(false);
         setLoading(false);
@@ -108,9 +154,7 @@ const Leads = () => {
         toast.success('Converted to customer');
         fetchAccounts();
       })
-      .catch(() => {
-        toast.error('Failed to convert');
-      })
+      .catch(() => toast.error('Failed to convert'))
       .finally(() => setLoading(false));
   };
 
@@ -173,6 +217,8 @@ const Leads = () => {
         <>
           <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} type="link" />
           <Button icon={<MessageOutlined />} onClick={() => handleOpenNotesDrawer(record)} type="link" />
+          <Button icon={<PlusOutlined />} onClick={() => handleOpenFollowUpDrawer(record)} type="link" title="Add Follow-up" />
+          <Button icon={<PrinterOutlined />} onClick={() => generateLeadPDF(record)} type="link" title="Download PDF" />
           {!record.isCustomer && (
             <Button
               type="link"
@@ -252,13 +298,46 @@ const Leads = () => {
       </Modal>
 
       {selectedAccount && (
-        <NotesDrawer
-          visible={notesDrawerVisible}
-          onClose={() => setNotesDrawerVisible(false)}
-          account={selectedAccount}
-          refreshAccounts={fetchAccounts}
-        />
+        <>
+          <NotesDrawer
+            visible={notesDrawerVisible}
+            onClose={() => setNotesDrawerVisible(false)}
+            account={selectedAccount}
+            refreshAccounts={fetchAccounts}
+          />
+          <FollowUpDrawer
+            visible={followUpDrawerVisible}
+            onClose={() => setFollowUpDrawerVisible(false)}
+            account={selectedAccount}
+            refreshAccounts={fetchAccounts}
+          />
+        </>
       )}
+
+      {/* Hidden PDF DOM for each lead */}
+      {accounts.map(account => (
+        <div key={account._id} id={`lead-${account._id}`} style={{ display: 'none' }}>
+          <Card title={`Lead: ${account.businessName}`} bordered={false}>
+            <p><strong>Contact Name:</strong> {account.contactName}</p>
+            <p><strong>Email:</strong> {account.email}</p>
+            <p><strong>Phone:</strong> {account.phone || 'N/A'}</p>
+            <p><strong>Type:</strong> {account.type}</p>
+            <p><strong>Status:</strong> {account.status}</p>
+            <p><strong>Address:</strong><br />{account.addressLines?.join(', ') || 'N/A'}</p>
+            <p><strong>Notes:</strong></p>
+            {account.notes && account.notes.length > 0 ? (
+              account.notes.map((note, idx) => (
+                <p key={idx}>
+                  <small style={{ color: '#999' }}>{note.timestamp}</small><br />
+                  {note.text}
+                </p>
+              ))
+            ) : (
+              <em>No notes available</em>
+            )}
+          </Card>
+        </div>
+      ))}
     </div>
   );
 };
