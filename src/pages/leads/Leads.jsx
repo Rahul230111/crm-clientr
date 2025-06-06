@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import {
   Card, Input, Button, Table, Tabs, Switch, Typography,
-  Empty, Modal, Tag
+  Empty, Modal, Tag, Popconfirm, Space
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, SearchOutlined,
-  MessageOutlined, PrinterOutlined
+  MessageOutlined, PrinterOutlined, CustomerServiceOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import { toast } from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -31,294 +31,306 @@ const Leads = () => {
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
   const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [isConvertModalVisible, setIsConvertModalVisible] = useState(false);
-  const [accountToConvert, setAccountToConvert] = useState(null);
-
-  const fetchAccounts = () => {
-    setLoading(true);
-    axios.get(API_URL)
-      .then(res => {
-        const leadsOnly = res.data.filter(a => !a.isCustomer);
-        setAccounts(leadsOnly);
-        toast.success('Leads loaded successfully');
-      })
-      .catch(() => toast.error('Failed to load leads'))
-      .finally(() => setLoading(false));
-  };
 
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [activeTab]); // Refetch when tab changes
 
-  const generateLeadPDF = async (record) => {
+  const fetchAccounts = async () => {
     try {
-      const toastId = toast.loading('Generating Lead PDF...');
-      const source = document.getElementById(`lead-${record._id}`);
-      if (!source) {
-        toast.error('Lead content not found', { id: toastId });
-        return;
+      let endpoint = '';
+      if (activeTab === 'active') {
+        endpoint = `${API_URL}/leads/active`;
+      } else if (activeTab === 'customers') {
+        endpoint = `${API_URL}/customers`;
+      } else {
+        endpoint = API_URL; // All accounts, if you implement such a tab
       }
 
-      const clone = source.cloneNode(true);
-      clone.style.position = 'fixed';
-      clone.style.top = '0';
-      clone.style.left = '0';
-      clone.style.width = '210mm';
-      clone.style.background = 'white';
-      clone.style.zIndex = '-1';
-      clone.style.display = 'block';
-      document.body.appendChild(clone);
-
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      const canvas = await html2canvas(clone, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const width = pdf.internal.pageSize.getWidth();
-      const height = (canvas.height * width) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, width, height);
-
-      pdf.save(`${record.businessName || 'lead'}.pdf`);
-      toast.success('PDF downloaded', { id: toastId });
-
-      document.body.removeChild(clone);
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to generate PDF');
+      const response = await axios.get(endpoint);
+      setAccounts(response.data);
+    } catch (error) {
+      toast.error('Failed to fetch accounts.');
+      console.error('Fetch accounts error:', error);
     }
   };
 
-  const handleSave = (values) => {
-    setLoading(true);
-    const request = currentAccount?._id
-      ? axios.put(`${API_URL}/${currentAccount._id}`, values)
-      : axios.post(API_URL, values);
-
-    request
-      .then(() => {
-        toast.success(`Account ${currentAccount?._id ? 'updated' : 'created'} successfully`);
-        fetchAccounts();
-      })
-      .catch(() => {
-        toast.error(`Failed to ${currentAccount?._id ? 'update' : 'create'} account`);
-      })
-      .finally(() => {
-        setFormVisible(false);
-        setCurrentAccount(null);
-        setLoading(false);
-      });
+  const handleSaveAccount = async (values) => {
+    try {
+      if (currentAccount) {
+        // Update existing account
+        await axios.put(`${API_URL}/${currentAccount._id}`, values);
+        toast.success('Account updated successfully!');
+      } else {
+        // Create new account
+        await axios.post(API_URL, values);
+        toast.success('Account created successfully!');
+      }
+      setFormVisible(false);
+      fetchAccounts(); // Refresh the list
+    } catch (error) {
+      toast.error('Failed to save account.');
+      console.error('Save account error:', error.response?.data || error.message);
+    }
   };
 
-  const handleEdit = (record) => {
-    setCurrentAccount(record);
+  const showEditForm = (account) => {
+    setCurrentAccount(account);
     setFormVisible(true);
   };
 
-  const handleOpenNotesDrawer = (account) => {
+  const handleDeleteAccount = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/${id}`);
+      toast.success('Account deleted successfully (soft delete)!');
+      fetchAccounts();
+    } catch (error) {
+      toast.error('Failed to delete account.');
+      console.error('Delete account error:', error.response?.data || error.message);
+    }
+  };
+
+
+  const showNotesDrawer = (account) => {
     setSelectedAccount(account);
     setNotesDrawerVisible(true);
   };
 
-  const handleOpenFollowUpDrawer = (account) => {
+  const showFollowUpDrawer = (account) => {
     setSelectedAccount(account);
     setFollowUpDrawerVisible(true);
   };
 
-  const handleStatusChange = (checked, record) => {
-    setAccountToUpdate(record);
-    setNewStatus(checked ? 'Active' : 'Inactive');
+  const handleStatusChange = (checked, account) => {
+    setAccountToUpdate(account);
+    setNewStatus(checked);
     setIsModalVisible(true);
   };
 
-  const confirmStatusChange = () => {
-    setLoading(true);
-    const updated = { ...accountToUpdate, status: newStatus };
-    axios.put(`${API_URL}/${accountToUpdate._id}`, updated)
-      .then(() => {
-        toast.success('Status updated');
-        fetchAccounts();
-      })
-      .catch(() => toast.error('Failed to update status'))
-      .finally(() => {
-        setIsModalVisible(false);
-        setLoading(false);
-      });
-  };
-
-  const handleConvertToCustomer = (record) => {
-    setAccountToConvert(record);
-    setIsConvertModalVisible(true);
-  };
-
-  const confirmConvertToCustomer = () => {
-    setLoading(true);
-    axios.put(`${API_URL}/${accountToConvert._id}`, {
-      ...accountToConvert,
-      isCustomer: true
-    })
-      .then(() => {
-        toast.success('Converted to customer');
-        fetchAccounts();
-      })
-      .catch(() => toast.error('Failed to convert'))
-      .finally(() => {
-        setIsConvertModalVisible(false);
-        setLoading(false);
-      });
-  };
-
-  const filteredAccounts = accounts.filter(account => {
-    const search = searchText.toLowerCase();
-    return (
-      account.businessName?.toLowerCase().includes(search) ||
-      account.contactName?.toLowerCase().includes(search) ||
-      account.email?.toLowerCase().includes(search)
-    );
-  });
-
-  const activeAccounts = filteredAccounts.filter(a => a.status === 'Active');
-  const inactiveAccounts = filteredAccounts.filter(a => a.status === 'Inactive');
-
-  const typeTag = (type) => {
-    switch (type) {
-      case 'Hot': return <Tag color="red">Hot</Tag>;
-      case 'Warm': return <Tag color="orange">Warm</Tag>;
-      case 'Cold': return <Tag color="blue">Cold</Tag>;
-      default: return <Tag>Unknown</Tag>;
+  const handleConfirmStatusChange = async () => {
+    try {
+      const updatedAccount = { ...accountToUpdate, isCustomer: newStatus };
+      await axios.put(`${API_URL}/${accountToUpdate._id}`, updatedAccount);
+      toast.success(`Account status changed to ${newStatus ? 'Customer' : 'Lead'}!`);
+      fetchAccounts(); // Refresh list to reflect changes
+    } catch (error) {
+      toast.error('Failed to update account status.');
+      console.error('Status update error:', error.response?.data || error.message);
+    } finally {
+      setIsModalVisible(false);
+      setAccountToUpdate(null);
+      setNewStatus(null);
     }
   };
 
-  const columns = [
-    { title: 'Sno.', render: (_, __, index) => index + 1, width: 60 },
-    { title: 'Business Name', dataIndex: 'businessName' },
-    { title: 'Contact Name', dataIndex: 'contactName' },
-    { title: 'Email Id', dataIndex: 'email' },
-    { title: 'Type', dataIndex: 'type', render: typeTag },
-    {
-      title: 'Latest Note',
-      render: (_, record) => {
-        const lastNote = record.notes?.at(-1);
-        return lastNote ? (
-          <div>
-            <small style={{ color: '#888' }}>{lastNote.timestamp}</small><br />
-            {lastNote.text}
-          </div>
-        ) : <em>No notes</em>;
+  const handleCancelStatusChange = () => {
+    setIsModalVisible(false);
+    setAccountToUpdate(null);
+    setNewStatus(null);
+  };
+
+  const generatePdf = async (account) => {
+    const input = document.getElementById(`lead-${account._id}`);
+    if (!input) {
+      toast.error('PDF content not found.');
+      return;
+    }
+
+    toast.loading('Generating PDF...', { id: 'pdf-toast' });
+
+    try {
+      const canvas = await html2canvas(input, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
       }
+      pdf.save(`${account.businessName}-details.pdf`);
+      toast.success('PDF generated!', { id: 'pdf-toast' });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error('Failed to generate PDF.', { id: 'pdf-toast' });
+    }
+  };
+
+
+  const columns = [
+    {
+      title: 'S.No',
+      key: 'sno',
+      render: (text, record, index) => index + 1,
+    },
+    {
+      title: 'Business Name',
+      dataIndex: 'businessName',
+      key: 'businessName',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="Search Business Name"
+            value={selectedKeys[0]}
+            onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Button
+            type="primary"
+            onClick={() => confirm()}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{ width: 90, marginRight: 8 }}
+          >
+            Search
+          </Button>
+          <Button onClick={() => clearFilters()} size="small" style={{ width: 90 }}>
+            Reset
+          </Button>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.businessName.toLowerCase().includes(value.toLowerCase()),
+    },
+    {
+      title: 'Contact Name',
+      dataIndex: 'contactName',
+      key: 'contactName',
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+    },
+    {
+      title: 'Mobile Number',
+      dataIndex: 'mobileNumber',
+      key: 'mobileNumber',
+    },
+    {
+      title: 'Lead Type',
+      dataIndex: 'type',
+      key: 'type',
+      filters: [
+        { text: 'Hot', value: 'Hot' },
+        { text: 'Warm', value: 'Warm' },
+        { text: 'Cold', value: 'Cold' },
+      ],
+      onFilter: (value, record) => record.type.indexOf(value) === 0,
     },
     {
       title: 'Status',
-      render: (_, record) => (
-        <span style={{ color: record.status === 'Inactive' ? 'red' : 'inherit' }}>
-          <Switch
-            checked={record.status === 'Active'}
-            onChange={(checked) => handleStatusChange(checked, record)}
-            checkedChildren="Active"
-            unCheckedChildren="Inactive"
-          />
-          <span style={{ marginLeft: 8 }}>{record.status}</span>
-        </span>
-      )
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => (
+        <Tag color={status === 'Active' ? 'green' : 'red'}>
+          {status}
+        </Tag>
+      ),
+      filters: [
+        { text: 'Active', value: 'Active' },
+        { text: 'Inactive', value: 'Inactive' },
+      ],
+      onFilter: (value, record) => record.status.indexOf(value) === 0,
     },
     {
-      title: 'Actions',
-      render: (_, record) => (
-        <>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} type="link" />
-          <Button icon={<MessageOutlined />} onClick={() => handleOpenNotesDrawer(record)} type="link" />
-          <Button icon={<PlusOutlined />} onClick={() => handleOpenFollowUpDrawer(record)} type="link" title="Add Follow-up" />
-          <Button icon={<PrinterOutlined />} onClick={() => generateLeadPDF(record)} type="link" title="Download PDF" />
-          {!record.isCustomer && (
-            <Button
-              type="link"
-              style={{ color: 'green' }}
-              onClick={() => handleConvertToCustomer(record)}
-            >
-              Convert to Customer
-            </Button>
-          )}
-        </>
-      )
-    }
+      title: 'Source Type',
+      dataIndex: 'sourceType',
+      key: 'sourceType',
+      filters: [
+        { text: 'Direct', value: 'Direct' },
+        { text: 'Facebook Referral', value: 'Facebook Referral' },
+        { text: 'Google Ads', value: 'Google Ads' },
+        { text: 'Website', value: 'Website' },
+        { text: 'Cold Call', value: 'Cold Call' },
+        { text: 'Other', value: 'Other' },
+      ],
+      onFilter: (value, record) => record.sourceType?.indexOf(value) === 0,
+    },
+    {
+      title: 'Referral Person',
+      dataIndex: 'referralPersonName',
+      key: 'referralPersonName',
+      render: (text) => text || 'N/A',
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (text, record) => (
+        <Space size="middle">
+          <Button icon={<EditOutlined />} onClick={() => showEditForm(record)} />
+          <Button icon={<MessageOutlined />} onClick={() => showNotesDrawer(record)} />
+          <Button icon={<CustomerServiceOutlined />} onClick={() => showFollowUpDrawer(record)} />
+          <Switch
+            checkedChildren="Customer"
+            unCheckedChildren="Lead"
+            checked={record.isCustomer}
+            onChange={(checked) => handleStatusChange(checked, record)}
+          />
+          <Popconfirm
+            title="Are you sure you want to delete this account?"
+            onConfirm={() => handleDeleteAccount(record._id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button icon={<DeleteOutlined />} danger />
+          </Popconfirm>
+        </Space>
+      ),
+    },
   ];
 
+  const filteredAccounts = accounts.filter(account =>
+    account.businessName.toLowerCase().includes(searchText.toLowerCase()) ||
+    account.contactName.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+
   return (
-    <div style={{ padding: '24px' }}>
-      <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <Title level={4}>Leads</Title>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-            setCurrentAccount(null);
-            setFormVisible(true);
-          }}>
-            Add Lead
-          </Button>
-        </div>
-
+    <Card title={<Title level={2}>Manage Leads & Customers</Title>}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Input
-          placeholder="Search by Business Name, Contact Name or Email"
-          prefix={<SearchOutlined />}
+          placeholder="Search by business or contact name"
+          efix={<SearchOutlined />}
+          style={{ width: 300 }}
           value={searchText}
-          onChange={e => setSearchText(e.target.value)}
-          style={{ width: 400, marginBottom: 16 }}
+          onChange={(e) => setSearchText(e.target.value)}
         />
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+          setCurrentAccount(null);
+          setFormVisible(true);
+        }}>
+          Add New Account
+        </Button>
+      </div>
 
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab={`Active (${activeAccounts.length})`} key="active">
-            <Table
-              columns={columns}
-              dataSource={activeAccounts}
-              pagination={false}
-              rowKey="_id"
-              loading={loading}
-              locale={{ emptyText: <Empty description="No active leads" /> }}
-            />
-          </TabPane>
-          <TabPane tab={`Inactive (${inactiveAccounts.length})`} key="inactive">
-            <Table
-              columns={columns}
-              dataSource={inactiveAccounts}
-              pagination={false}
-              rowKey="_id"
-              loading={loading}
-              locale={{ emptyText: <Empty description="No inactive leads" /> }}
-            />
-          </TabPane>
-        </Tabs>
-      </Card>
+      <Tabs defaultActiveKey="active" onChange={setActiveTab}>
+        <TabPane tab="Active Leads" key="active" />
+        <TabPane tab="Customers" key="customers" />
+      </Tabs>
+
+      {filteredAccounts.length > 0 ? (
+        <Table columns={columns} dataSource={filteredAccounts} rowKey="_id" scroll={{ x: 'max-content' }} />
+      ) : (
+        <Empty description="No accounts found." />
+      )}
 
       <BusinessAccountForm
         visible={formVisible}
         onClose={() => setFormVisible(false)}
-        onSave={handleSave}
+        onSave={handleSaveAccount}
         initialValues={currentAccount}
       />
-
-      <Modal
-        title="Confirm Status Change"
-        open={isModalVisible}
-        onOk={confirmStatusChange}
-        onCancel={() => setIsModalVisible(false)}
-        okText="Yes"
-        cancelText="No"
-        confirmLoading={loading}
-      >
-        <p>Are you sure you want to change the status of <strong>{accountToUpdate?.businessName}</strong> to <strong>{newStatus}</strong>?</p>
-      </Modal>
-
-      <Modal
-        title="Confirm Conversion"
-        open={isConvertModalVisible}
-        onOk={confirmConvertToCustomer}
-        onCancel={() => setIsConvertModalVisible(false)}
-        okText="Yes, Convert"
-        cancelText="Cancel"
-        confirmLoading={loading}
-      >
-        <p>Are you sure you want to convert <strong>{accountToConvert?.businessName}</strong> to a customer?</p>
-        <p>This action cannot be undone.</p>
-      </Modal>
 
       {selectedAccount && (
         <>
@@ -337,31 +349,19 @@ const Leads = () => {
         </>
       )}
 
-      {/* Hidden PDF DOM for each lead */}
-      {accounts.map(account => (
-        <div key={account._id} id={`lead-${account._id}`} style={{ display: 'none' }}>
-          <Card title={`Lead: ${account.businessName}`} bordered={false}>
-            <p><strong>Contact Name:</strong> {account.contactName}</p>
-            <p><strong>Email:</strong> {account.email}</p>
-            <p><strong>Phone:</strong> {account.phone || 'N/A'}</p>
-            <p><strong>Type:</strong> {account.type}</p>
-            <p><strong>Status:</strong> {account.status}</p>
-            <p><strong>Address:</strong><br />{account.addressLines?.join(', ') || 'N/A'}</p>
-            <p><strong>Notes:</strong></p>
-            {account.notes && account.notes.length > 0 ? (
-              account.notes.map((note, idx) => (
-                <p key={idx}>
-                  <small style={{ color: '#999' }}>{note.timestamp}</small><br />
-                  {note.text}
-                </p>
-              ))
-            ) : (
-              <em>No notes available</em>
-            )}
-          </Card>
-        </div>
-      ))}
-    </div>
+      <Modal
+        title="Change Account Status"
+        visible={isModalVisible}
+        onOk={handleConfirmStatusChange}
+        onCancel={handleCancelStatusChange}
+        okText="Yes"
+        cancelText="No"
+      >
+        <p>Are you sure you want to change this account's status to {newStatus ? 'Customer' : 'Lead'}?</p>
+      </Modal>
+
+     
+    </Card>
   );
 };
 

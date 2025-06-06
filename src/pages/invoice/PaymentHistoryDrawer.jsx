@@ -11,7 +11,7 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [invoiceData, setInvoiceData] = useState(null);
+  const [invoiceData, setInvoiceData] = useState({ paymentHistory: [] });
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [currentEditingPaymentId, setCurrentEditingPaymentId] = useState(null);
 
@@ -28,7 +28,12 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
     if (!invoice?._id) return;
     try {
       const res = await axios.get(`/api/invoices/${invoice._id}`);
-      setInvoiceData(res.data);
+      setInvoiceData({
+        ...res.data,
+        paymentHistory: Array.isArray(res.data.paymentHistory) 
+          ? res.data.paymentHistory 
+          : []
+      });
     } catch {
       toast.error('Failed to refresh invoice');
     }
@@ -39,11 +44,15 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
   }, [visible]);
 
   const handleAddPayment = async (values) => {
+    if (!values) return;
+    
     setLoading(true);
     try {
       const payload = {
-        ...values,
-        date: values.date.format('YYYY-MM-DD'),
+        amount: parseFloat(values.amount) || 0,
+        method: values.method || 'Cash',
+        reference: values.reference || '',
+        date: values.date?.format('YYYY-MM-DD') || dayjs().format('YYYY-MM-DD'),
         addedBy: getCurrentUser()
       };
       await axios.patch(`/api/invoices/${invoice._id}/payments`, payload);
@@ -59,10 +68,13 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
   };
 
   const openEditModal = (record) => {
+    if (!record) return;
     setCurrentEditingPaymentId(record._id);
     editForm.setFieldsValue({
-      ...record,
-      date: dayjs(record.date)
+      amount: record.amount || 0,
+      method: record.method || 'Cash',
+      reference: record.reference || '',
+      date: record.date ? dayjs(record.date) : dayjs()
     });
     setEditModalVisible(true);
   };
@@ -71,8 +83,10 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
     if (!currentEditingPaymentId) return;
     try {
       const payload = {
-        ...values,
-        date: values.date.format('YYYY-MM-DD'),
+        amount: parseFloat(values.amount) || 0,
+        method: values.method || 'Cash',
+        reference: values.reference || '',
+        date: values.date?.format('YYYY-MM-DD') || dayjs().format('YYYY-MM-DD'),
         addedBy: getCurrentUser()
       };
       await axios.put(`/api/invoices/${invoice._id}/payments/${currentEditingPaymentId}`, payload);
@@ -86,6 +100,7 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
   };
 
   const handleDeletePayment = async (paymentId) => {
+    if (!paymentId) return;
     try {
       await axios.delete(`/api/invoices/${invoice._id}/payments/${paymentId}`);
       toast.success('Payment deleted');
@@ -97,15 +112,31 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
   };
 
   const columns = [
-    { title: 'Amount', dataIndex: 'amount' },
-    { title: 'Method', dataIndex: 'method' },
-    { title: 'Reference', dataIndex: 'reference' },
+    { 
+      title: 'Amount', 
+      dataIndex: 'amount',
+      render: amount => `₹${(typeof amount === 'number' ? amount : 0).toFixed(2)}`
+    },
+    { 
+      title: 'Method', 
+      dataIndex: 'method',
+      render: method => method || 'N/A'
+    },
+    { 
+      title: 'Reference', 
+      dataIndex: 'reference',
+      render: reference => reference || 'N/A'
+    },
     {
       title: 'Date',
       dataIndex: 'date',
-      render: (text) => dayjs(text).format('YYYY-MM-DD')
+      render: text => text ? dayjs(text).format('YYYY-MM-DD') : 'N/A'
     },
-    { title: 'Added By', dataIndex: 'addedBy' },
+    { 
+      title: 'Added By', 
+      dataIndex: 'addedBy',
+      render: addedBy => addedBy || 'Unknown'
+    },
     {
       title: 'Actions',
       render: (_, record) => (
@@ -128,11 +159,11 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
     <Drawer
       open={visible}
       onClose={onClose}
-      title={`Payment History - ${invoice?.invoiceNumber}`}
+      title={`Payment History - ${invoice?.invoiceNumber || 'Invoice'}`}
       width={800}
     >
       <Table
-        dataSource={invoiceData?.paymentHistory || []}
+        dataSource={invoiceData.paymentHistory}
         columns={columns}
         rowKey="_id"
         pagination={false}

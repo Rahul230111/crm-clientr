@@ -1,100 +1,159 @@
-import React from 'react';
-import { Form, Input, InputNumber, Select, Button, Modal } from 'antd';
+import React, { useEffect } from 'react';
+import {
+  Drawer, Form, Input, Button, Space, Row, Col, DatePicker, Switch
+} from 'antd';
+import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import axios from '../../api/axios';
+import toast from 'react-hot-toast';
+import dayjs from 'dayjs';
 
-const { Option } = Select;
-const { TextArea } = Input;
-
-const ProductForm = ({ visible, onCancel, onSave, initialValues }) => {
+const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
   const [form] = Form.useForm();
 
-  React.useEffect(() => {
-    if (initialValues) {
-      form.setFieldsValue(initialValues);
+  useEffect(() => {
+    if (visible && initialValues) {
+      form.setFieldsValue({
+        ...initialValues,
+        stockLoadDate: initialValues.stockLoadDate ? dayjs(initialValues.stockLoadDate) : null,
+        options: initialValues.options || []
+      });
     } else {
       form.resetFields();
     }
-  }, [initialValues, form]);
+  }, [visible, initialValues]);
 
-  const onFinish = (values) => {
-    onSave(values);
+  const handleSubmit = async (values) => {
+    // ✅ Strip product_id, productId, and _id to avoid backend conflicts
+    const { product_id, productId, _id, ...rest } = values;
+
+    const payload = {
+      ...rest,
+      price: Number(rest.price) || 0,
+      quantity: Number(rest.quantity) || 0,
+      inStock: Number(rest.inStock) || 0,
+      outStock: Number(rest.outStock) || 0,
+      stockLoadDate: rest.stockLoadDate ? rest.stockLoadDate.toISOString() : null,
+      isActive: rest.isActive || false,
+      options: (rest.options || []).filter(opt => opt?.type?.trim() && opt?.description?.trim())
+    };
+
+    try {
+      if (initialValues?._id) {
+        await axios.put(`/api/products/${initialValues._id}`, payload);
+        toast.success('Product updated');
+      } else {
+        await axios.post('/api/products', payload);
+        toast.success('Product added');
+      }
+      onSave();
+      onClose();
+    } catch (err) {
+      toast.error('Failed to save product');
+      console.error(err?.response?.data || err.message);
+    }
   };
 
   return (
-    <Modal
-      title={initialValues ? 'Edit Product' : 'Add New Product'}
-      visible={visible}
-      onCancel={onCancel}
-      footer={null}
+    <Drawer
+      title={initialValues ? 'Edit Product' : 'Add Product'}
+      open={visible}
+      onClose={onClose}
+      width={640}
       destroyOnClose
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={onFinish}
-        initialValues={{
-          status: 'Active',
-          quantity: 1,
-          ...initialValues
-        }}
-      >
-        <Form.Item
-          name="name"
-          label="Product Name"
-          rules={[{ required: true, message: 'Please enter product name' }]}
-        >
-          <Input placeholder="Enter product name" />
+      <Form layout="vertical" form={form} onFinish={handleSubmit}>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="productName"
+              label="Product Name"
+              rules={[{ required: true, message: 'Enter product name' }]}
+            >
+              <Input placeholder="Product name" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="price"
+              label="Price (INR)"
+              rules={[{ required: true, message: 'Enter price' }]}
+            >
+              <Input type="number" placeholder="Price" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="quantity" label="Quantity">
+              <Input type="number" placeholder="Quantity" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="inStock" label="In Stock">
+              <Input type="number" placeholder="In Stock" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="outStock" label="Out Stock">
+              <Input type="number" placeholder="Out Stock" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="stockLoadDate" label="Stock Load Date">
+              <DatePicker style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item name="description" label="Description">
+          <Input.TextArea rows={2} placeholder="Description" />
         </Form.Item>
 
-        <Form.Item
-          name="description"
-          label="Description"
-        >
-          <TextArea rows={3} placeholder="Product description" />
-        </Form.Item>
+        <Form.List name="options">
+          {(fields, { add, remove }) => (
+            <>
+              <label style={{ fontWeight: 600 }}>Product Options</label>
+              {fields.map(({ key, name }) => (
+                <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="start">
+                  <Form.Item
+                    name={[name, 'type']}
+                    rules={[{ required: true, message: 'Enter type' }]}
+                  >
+                    <Input placeholder="Type" />
+                  </Form.Item>
+                  <Form.Item
+                    name={[name, 'description']}
+                    rules={[{ required: true, message: 'Enter description' }]}
+                  >
+                    <Input placeholder="Description" />
+                  </Form.Item>
+                  <MinusCircleOutlined onClick={() => remove(name)} />
+                </Space>
+              ))}
+              <Form.Item>
+                <Button onClick={() => add()} icon={<PlusOutlined />}>
+                  Add Option
+                </Button>
+              </Form.Item>
+            </>
+          )}
+        </Form.List>
 
-        <Form.Item
-          name="quantity"
-          label="Quantity"
-          rules={[{ required: true, message: 'Please enter quantity' }]}
-        >
-          <InputNumber min={1} style={{ width: '100%' }} />
-        </Form.Item>
-
-        <Form.Item
-          name="price"
-          label="Price (₹)"
-          rules={[{ required: true, message: 'Please enter price' }]}
-        >
-          <InputNumber
-            min={0}
-            step={0.01}
-            style={{ width: '100%' }}
-            formatter={value => `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={value => value.replace(/₹\s?|(,*)/g, '')}
-          />
-        </Form.Item>
-
-        <Form.Item
-          name="status"
-          label="Status"
-          rules={[{ required: true }]}
-        >
-          <Select>
-            <Option value="Active">Active</Option>
-            <Option value="Inactive">Inactive</Option>
-          </Select>
+        <Form.Item name="isActive" label="Active" valuePropName="checked">
+          <Switch />
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit">
-            {initialValues ? 'Update' : 'Save'}
-          </Button>
-          <Button onClick={onCancel} style={{ marginLeft: 8 }}>
-            Cancel
+          <Button type="primary" htmlType="submit" block>
+            {initialValues ? 'Update' : 'Create'}
           </Button>
         </Form.Item>
       </Form>
-    </Modal>
+    </Drawer>
   );
 };
 

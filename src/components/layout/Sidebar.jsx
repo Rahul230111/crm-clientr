@@ -52,7 +52,8 @@ const Sidebar = ({ collapsed }) => {
           { key: '/customers', icon: <UserOutlined />, label: 'Customers' }, // ✅ ADDED
           { key: '/quotation', icon: <FileTextOutlined />, label: 'Quotations' },
           { key: '/invoice', icon: <ShoppingOutlined />, label: 'Invoices' },
-          { key: '/users', icon: <UsergroupAddOutlined />, label: 'User Management' }
+          { key: '/users', icon: <UsergroupAddOutlined />, label: 'User Management' },
+          { key: '/products', icon: <UsergroupAddOutlined />, label: 'product' }
         ]}
       />
     </>

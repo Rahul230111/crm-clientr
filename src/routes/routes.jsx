@@ -17,13 +17,11 @@ const InvoiceList = React.lazy(() => import('../pages/Invoice/InvoiceList'));
 
 const Leads = React.lazy(() => import('../pages/leads/Leads'));
 const Customers = React.lazy(() => import('../pages/leads/Customers'));
-const CustomerProfile = React.lazy(() => import('../components/CustomerProfile')); // ✅ NEW
+const CustomerProfile = React.lazy(() => import('../components/CustomerProfile'));
 
 const UserManagement = React.lazy(() => import('../pages/user/UserManagement'));
 
-const ProductList = React.lazy(() => import('../pages/product/ProductList'));
-const ProductForm = React.lazy(() => import('../pages/product/ProductForm'));
-const ProductPage = React.lazy(() => import('../pages/product/ProductPage'));
+const Product = React.lazy(() => import('../pages/product/Product'));
 
 // Protected app routes
 export const appRoutes = [
@@ -68,7 +66,7 @@ export const appRoutes = [
     ),
   },
   {
-    path: '/customers/:id', // ✅ Customer profile route
+    path: '/customers/:id',
     element: (
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <CustomerProfile />
@@ -83,6 +81,23 @@ export const appRoutes = [
       </RoleGuard>
     ),
   },
+  {
+    path: '/products',  // Use plural route here for product list
+    element: (
+      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+        <Product />
+      </RoleGuard>
+    ),
+  },
+  // You can remove or keep this alias if you want:
+  // {
+  //   path: '/product',
+  //   element: (
+  //     <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+  //       <Product />
+  //     </RoleGuard>
+  //   ),
+  // },
   {
     path: '/invoice/form',
     element: (
@@ -131,30 +146,6 @@ export const appRoutes = [
       </RoleGuard>
     ),
   },
-  {
-    path: '/products',
-    element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
-        <ProductList />
-      </RoleGuard>
-    ),
-  },
-  {
-    path: '/products/form',
-    element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
-        <ProductForm />
-      </RoleGuard>
-    ),
-  },
-  {
-    path: '/products/page',
-    element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
-        <ProductPage />
-      </RoleGuard>
-    ),
-  },
 ];
 
 // Public login routes
@@ -165,6 +156,6 @@ export const loginRoutes = [
   },
   {
     path: '/',
-    element: <Login />,
+    element: <Login />
   },
 ];

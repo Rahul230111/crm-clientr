@@ -16,7 +16,8 @@ const NotesDrawer = ({ visible, onClose, account, invoice, refreshInvoices, refr
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setNotes((invoice || account)?.notes || []);
+    const initialNotes = (invoice || account)?.notes || [];
+    setNotes(Array.isArray(initialNotes) ? initialNotes : []);
   }, [invoice, account]);
 
   const getCurrentUser = () => {
@@ -35,6 +36,8 @@ const NotesDrawer = ({ visible, onClose, account, invoice, refreshInvoices, refr
   };
 
   const handleAddNote = async ({ note }) => {
+    if (!note) return;
+    
     const newNote = {
       text: note,
       timestamp: new Date().toISOString(),
@@ -52,7 +55,8 @@ const NotesDrawer = ({ visible, onClose, account, invoice, refreshInvoices, refr
       setNotes(updatedNotes);
       form.resetFields();
       invoice ? refreshInvoices?.() : refreshAccounts?.();
-    } catch {
+    } catch (error) {
+      console.error('Failed to add note:', error);
       message.error('Failed to add note');
     } finally {
       setLoading(false);
@@ -62,7 +66,8 @@ const NotesDrawer = ({ visible, onClose, account, invoice, refreshInvoices, refr
   const groupByDate = (notesArray) => {
     const grouped = {};
     notesArray.forEach(note => {
-      const date = new Date(note.timestamp).toLocaleDateString();
+      if (!note || typeof note !== 'object') return;
+      const date = note.timestamp ? new Date(note.timestamp).toLocaleDateString() : 'Unknown Date';
       if (!grouped[date]) grouped[date] = [];
       grouped[date].push(note);
     });
@@ -94,9 +99,11 @@ const NotesDrawer = ({ visible, onClose, account, invoice, refreshInvoices, refr
               {notes.map((note, index) => (
                 <div key={index} className="note-bubble">
                   <div className="note-meta">
-                    {note.addedBy || 'Unknown'} • {new Date(note.timestamp).toLocaleTimeString()}
+                    {note.addedBy || 'Unknown'} • {note.timestamp ? new Date(note.timestamp).toLocaleTimeString() : ''}
                   </div>
-                  <div className="note-text">{note.text}</div>
+                  <div className="note-text">
+                    {typeof note.text === 'string' ? note.text : JSON.stringify(note.text)}
+                  </div>
                 </div>
               ))}
             </div>
