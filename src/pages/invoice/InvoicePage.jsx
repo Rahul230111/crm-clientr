@@ -95,7 +95,7 @@ const InvoicePage = () => {
         title={currentInvoice ? 'Edit Invoice' : 'Create Invoice'}
         open={showForm}
         onClose={handleClose}
-        width={800}
+        width="80%"
         destroyOnClose
       >
         <InvoiceForm

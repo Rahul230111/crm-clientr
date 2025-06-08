@@ -31,24 +31,43 @@ const Leads = () => {
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
   const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
+  // NEW STATE: For storing counts for tabs
+  const [activeLeadsCount, setActiveLeadsCount] = useState(0);
+  const [customersCount, setCustomersCount] = useState(0);
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchAccounts();
   }, [activeTab]); // Refetch when tab changes
 
   const fetchAccounts = async () => {
     try {
-      let endpoint = '';
+      let activeLeadsEndpoint = `${API_URL}/leads/active`;
+      let customersEndpoint = `${API_URL}/customers`;
+
+      // Fetch both active leads and customers regardless of the active tab
+      // This ensures we always have accurate counts for both tabs
+      const [leadsResponse, customersResponse] = await Promise.all([
+        axios.get(activeLeadsEndpoint),
+        axios.get(customersEndpoint)
+      ]);
+
+      const leadsData = leadsResponse.data;
+      const customersData = customersResponse.data;
+
+      // Update counts
+      setActiveLeadsCount(leadsData.length);
+      setCustomersCount(customersData.length);
+
+      // Set accounts based on active tab
       if (activeTab === 'active') {
-        endpoint = `${API_URL}/leads/active`;
+        setAccounts(leadsData);
       } else if (activeTab === 'customers') {
-        endpoint = `${API_URL}/customers`;
+        setAccounts(customersData);
       } else {
-        endpoint = API_URL; // All accounts, if you implement such a tab
+        // Fallback for an 'All' tab, though not explicitly defined in current tabs
+        setAccounts([...leadsData, ...customersData]);
       }
 
-      const response = await axios.get(endpoint);
-      setAccounts(response.data);
     } catch (error) {
       toast.error('Failed to fetch accounts.');
       console.error('Fetch accounts error:', error);
@@ -301,7 +320,7 @@ const Leads = () => {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Input
           placeholder="Search by business or contact name"
-          efix={<SearchOutlined />}
+          prefix={<SearchOutlined />}
           style={{ width: 300 }}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
@@ -315,8 +334,9 @@ const Leads = () => {
       </div>
 
       <Tabs defaultActiveKey="active" onChange={setActiveTab}>
-        <TabPane tab="Active Leads" key="active" />
-        <TabPane tab="Customers" key="customers" />
+        {/* UPDATED: Added counts to tab titles */}
+        <TabPane tab={`Active Leads (${activeLeadsCount})`} key="active" />
+        <TabPane tab={`Customers (${customersCount})`} key="customers" />
       </Tabs>
 
       {filteredAccounts.length > 0 ? (
@@ -360,7 +380,7 @@ const Leads = () => {
         <p>Are you sure you want to change this account's status to {newStatus ? 'Customer' : 'Lead'}?</p>
       </Modal>
 
-     
+
     </Card>
   );
 };
