@@ -1,67 +1,158 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  Table, Space, Button, Card, Input, Popconfirm, Tag, Tooltip,
-  Modal, Descriptions, Select, Typography, DatePicker, List, Divider
-} from 'antd'; // Added Divider for visual separation
+  Table,
+  Space,
+  Button,
+  Card,
+  Input,
+  Popconfirm, // Popconfirm is still imported but not used directly in dropdown for delete/lock/unlock
+  Tag,
+  Tooltip,
+  Modal,      // Modal is now explicitly used for confirmation
+  Descriptions,
+  Select,
+  Typography,
+  DatePicker,
+  List,
+  Divider,
+  Dropdown, // NEW IMPORT: Dropdown for the 3-dot menu
+  Menu,     // NEW IMPORT: Menu for dropdown items
+} from "antd";
 import {
-  PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined,
-  FileTextOutlined, PrinterOutlined, SearchOutlined,
-  MessageOutlined, LockOutlined, UnlockOutlined, DollarOutlined,
-  SwapOutlined // NEW IMPORT: SwapOutlined for the convert button
-} from '@ant-design/icons';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { saveAs } from 'file-saver';
-import toast from 'react-hot-toast';
-import * as XLSX from 'xlsx';
-import NotesDrawer from './NotesDrawer';
-import PaymentHistoryDrawer from './PaymentHistoryDrawer';
-import axios from '../../api/axios'; // Make sure this import path is correct for your project
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  PrinterOutlined,
+  SearchOutlined,
+  MessageOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  DollarOutlined,
+  SwapOutlined,
+  ScheduleOutlined,
+  MoreOutlined, // NEW IMPORT: for the 3-dot icon
+} from "@ant-design/icons";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { saveAs } from "file-saver";
+import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
+import NotesDrawer from "./NotesDrawer";
+import PaymentHistoryDrawer from "./PaymentHistoryDrawer";
+import FollowUpDrawer from "./FollowUpDrawer";
+import axios from "../../api/axios";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
-const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshInvoices }) => {
+const InvoiceList = ({
+  invoices,
+  onAddNew,
+  onEdit,
+  onDelete,
+  onSearch,
+  refreshInvoices,
+}) => {
   // State management
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState("all");
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
+  const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [paymentDrawerVisible, setPaymentDrawerVisible] = useState(false);
   const [dateRange, setDateRange] = useState(null);
-  const [businessFilter, setBusinessFilter] = useState('all');
-  const [invoiceTypeFilter, setInvoiceTypeFilter] = useState('Invoice');
-  const [itemViewModalVisible, setItemViewModalVisible] = useState(false); // New state for item spec view
+  const [businessFilter, setBusinessFilter] = useState("all");
+  const [invoiceTypeFilter, setInvoiceTypeFilter] = useState("Invoice");
+  const [itemViewModalVisible, setItemViewModalVisible] = useState(false);
 
   // NEW STATE: For filtering Proforma conversion status
-  const [conversionStatusFilter, setConversionStatusFilter] = useState('all');
+  const [conversionStatusFilter, setConversionStatusFilter] = useState("all");
 
   // Get unique business names for filter dropdown
-  const uniqueBusinessNames = [...new Set(invoices.map(inv => inv.businessName))];
+  const uniqueBusinessNames = [
+    ...new Set(invoices.map((inv) => inv.businessName)),
+  ];
 
   // Convert number to words for amount in words section
   const numberToWords = (num) => {
-    const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const tens = ['', 'Ten', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const units = [
+      "",
+      "One",
+      "Two",
+      "Three",
+      "Four",
+      "Five",
+      "Six",
+      "Seven",
+      "Eight",
+      "Nine",
+    ];
+    const teens = [
+      "Ten",
+      "Eleven",
+      "Twelve",
+      "Thirteen",
+      "Fourteen",
+      "Fifteen",
+      "Sixteen",
+      "Seventeen",
+      "Eighteen",
+      "Nineteen",
+    ];
+    const tens = [
+      "",
+      "Ten",
+      "Twenty",
+      "Thirty",
+      "Forty",
+      "Fifty",
+      "Sixty",
+      "Seventy",
+      "Eighty",
+      "Ninety",
+    ];
 
-    if (num === 0) return 'Zero';
+    if (num === 0) return "Zero";
     if (num < 10) return units[num];
     if (num < 20) return teens[num - 10];
-    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + units[num % 10] : '');
-    if (num < 1000) return units[Math.floor(num / 100)] + ' Hundred' + (num % 100 ? ' and ' + numberToWords(num % 100) : '');
-    if (num < 100000) return numberToWords(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 ? ' ' + numberToWords(num % 1000) : '');
-    if (num < 10000000) return numberToWords(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 ? ' ' + numberToWords(num % 100000) : '');
-    return numberToWords(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 ? ' ' + numberToWords(num % 10000000) : '');
+    if (num < 100)
+      return (
+        tens[Math.floor(num / 10)] + (num % 10 ? " " + units[num % 10] : "")
+      );
+    if (num < 1000)
+      return (
+        units[Math.floor(num / 100)] +
+        " Hundred" +
+        (num % 100 ? " and " + numberToWords(num % 100) : "")
+      );
+    if (num < 100000)
+      return (
+        numberToWords(Math.floor(num / 1000)) +
+        " Thousand" +
+        (num % 1000 ? " " + numberToWords(num % 1000) : "")
+      );
+    if (num < 10000000)
+      return (
+        numberToWords(Math.floor(num / 100000)) +
+        " Lakh" +
+        (num % 100000 ? " " + numberToWords(num % 100000) : "")
+      );
+    return (
+      numberToWords(Math.floor(num / 10000000)) +
+      " Crore" +
+      (num % 10000000 ? " " + numberToWords(num % 10000000) : "")
+    );
   };
 
   // Format currency in Indian style
   const formatIndianCurrency = (num) => {
-    if (isNaN(num)) return '0.00';
-    return num.toLocaleString('en-IN', {
+    if (isNaN(num)) return "0.00";
+    return num.toLocaleString("en-IN", {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     });
   };
 
@@ -69,18 +160,20 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   const generatePDF = (invoice) => {
     try {
       const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       });
 
       // Set document properties
       doc.setProperties({
-        title: `${invoice.invoiceType} - ${invoice.invoiceNumber || invoice.proformaNumber}`, // Use appropriate number
-        subject: 'Invoice',
-        author: 'Your Company Name',
-        keywords: 'invoice, billing',
-        creator: 'Invoice Management System'
+        title: `${invoice.invoiceType} - ${
+          invoice.invoiceNumber || invoice.proformaNumber
+        }`, // Use appropriate number
+        subject: "Invoice",
+        author: "Your Company Name",
+        keywords: "invoice, billing",
+        creator: "Invoice Management System",
       });
 
       // Set margins and initial position
@@ -90,58 +183,79 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       // Invoice title (centered)
       doc.setFontSize(16);
       doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont("helvetica", "bold");
       doc.text(
-        invoice.invoiceType === 'Proforma' ? 'PROFORMA INVOICE' : 'TAX INVOICE',
+        invoice.invoiceType === "Proforma" ? "PROFORMA INVOICE" : "TAX INVOICE",
         105,
         yPos,
-        { align: 'center' }
+        { align: "center" }
       );
       yPos += 10;
 
       // Company address (left aligned)
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Your Company Name', margin, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Your Company Address Line 1', margin, yPos + 5);
-      doc.text('Your Company Address Line 2', margin, yPos + 10);
-      doc.text('City, State - PIN, Country', margin, yPos + 15);
-      doc.text(`GSTIN: ${invoice.companyGSTIN || 'XXXXXXXXXXXXXXX'}`, margin, yPos + 20);
+      doc.setFont("helvetica", "bold");
+      doc.text("Your Company Name", margin, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text("Your Company Address Line 1", margin, yPos + 5);
+      doc.text("Your Company Address Line 2", margin, yPos + 10);
+      doc.text("City, State - PIN, Country", margin, yPos + 15);
+      doc.text(
+        `GSTIN: ${invoice.companyGSTIN || "XXXXXXXXXXXXXXX"}`,
+        margin,
+        yPos + 20
+      );
       yPos += 30;
 
       // Customer details and invoice info (two columns)
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Bill To: ${invoice.customerName || 'N/A'}`, margin, yPos);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Bill To: ${invoice.customerName || "N/A"}`, margin, yPos);
       // Conditionally display Invoice No or Proforma No
-      doc.text(`${invoice.invoiceType === 'Proforma' ? 'Proforma No' : 'Invoice No'}: ${invoice.invoiceType === 'Proforma' ? invoice.proformaNumber : invoice.invoiceNumber || 'N/A'}`, 140, yPos);
+      doc.text(
+        `${
+          invoice.invoiceType === "Proforma" ? "Proforma No" : "Invoice No"
+        }: ${
+          invoice.invoiceType === "Proforma"
+            ? invoice.proformaNumber
+            : invoice.invoiceNumber || "N/A"
+        }`,
+        140,
+        yPos
+      );
       yPos += 5;
 
-      doc.text(`Contact: ${invoice.contactPerson || 'N/A'}`, margin, yPos);
-      doc.text(`Date: ${invoice.date || new Date().toLocaleDateString()}`, 140, yPos);
+      doc.text(`Contact: ${invoice.contactPerson || "N/A"}`, margin, yPos);
+      doc.text(
+        `Date: ${invoice.date || new Date().toLocaleDateString()}`,
+        140,
+        yPos
+      );
       yPos += 5;
 
-      doc.text(`Phone: ${invoice.contactNumber || 'N/A'}`, margin, yPos);
-      doc.text(`Due Date: ${invoice.dueDate || 'N/A'}`, 140, yPos);
+      doc.text(`Phone: ${invoice.contactNumber || "N/A"}`, margin, yPos);
+      doc.text(`Due Date: ${invoice.dueDate || "N/A"}`, 140, yPos);
       yPos += 5;
 
-      doc.text(`GSTIN: ${invoice.customerGSTIN || 'N/A'}`, margin, yPos);
+      doc.text(`GSTIN: ${invoice.customerGSTIN || "N/A"}`, margin, yPos);
       yPos += 5;
 
-      doc.text(`Address: ${invoice.customerAddress || 'N/A'}`, margin, yPos);
+      doc.text(`Address: ${invoice.customerAddress || "N/A"}`, margin, yPos);
       yPos += 10;
 
       // Items table - ensure all values are properly formatted
       const tableData = (invoice.items || []).map((item, index) => {
-        const description = item?.description?.toString() || 'N/A';
+        const description = item?.description?.toString() || "N/A";
         // Concatenate specifications for display in PDF
-        const specifications = item?.specifications && item.specifications.length > 0
-          ? item.specifications.map(spec => `${spec.name}: ${spec.value}`).join(', ')
-          : 'N/A';
-        const quantity = item?.quantity?.toString() || '1';
-        const rate = item?.rate?.toString() || '0';
+        const specifications =
+          item?.specifications && item.specifications.length > 0
+            ? item.specifications
+                .map((spec) => `${spec.name}: ${spec.value}`)
+                .join(", ")
+            : "N/A";
+        const quantity = item?.quantity?.toString() || "1";
+        const rate = item?.rate?.toString() || "0";
         const total = (parseFloat(quantity) * parseFloat(rate)).toFixed(2);
 
         return [
@@ -150,25 +264,34 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
           specifications, // Include concatenated specifications in table data
           quantity,
           `₹${formatIndianCurrency(parseFloat(rate))}`,
-          `₹${formatIndianCurrency(parseFloat(total))}`
+          `₹${formatIndianCurrency(parseFloat(total))}`,
         ];
       });
 
       // Add items table using autoTable
       autoTable(doc, {
-        head: [['S.No', 'Description', 'Specification', 'Qty', 'Unit Price (₹)', 'Total (₹)']], // Add 'Specification' header
+        head: [
+          [
+            "S.No",
+            "Description",
+            "Specification",
+            "Qty",
+            "Unit Price (₹)",
+            "Total (₹)",
+          ],
+        ], // Add 'Specification' header
         body: tableData,
         startY: yPos,
-        theme: 'grid',
+        theme: "grid",
         headStyles: {
           fillColor: [41, 128, 185],
           textColor: 255,
-          fontStyle: 'bold'
+          fontStyle: "bold",
         },
         styles: {
           fontSize: 9,
           cellPadding: 3,
-          overflow: 'linebreak'
+          overflow: "linebreak",
         },
         columnStyles: {
           0: { cellWidth: 10 },
@@ -176,8 +299,8 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
           2: { cellWidth: 35 }, // New column for Specification
           3: { cellWidth: 15 },
           4: { cellWidth: 25 },
-          5: { cellWidth: 25 }
-        }
+          5: { cellWidth: 25 },
+        },
       });
 
       // Get final Y position after table
@@ -185,8 +308,8 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
 
       // Amount summary section
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Amount Summary:', margin, yPos);
+      doc.setFont("helvetica", "bold");
+      doc.text("Amount Summary:", margin, yPos);
       yPos += 5;
 
       const subTotal = parseFloat(invoice.subTotal) || 0; // Use subTotal from invoice data
@@ -197,71 +320,106 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       const grandTotal = parseFloat(invoice.totalAmount) || 0; // Grand total is already calculated in InvoiceForm
 
       doc.text(`Sub Total:`, 140, yPos);
-      doc.text(`₹${formatIndianCurrency(subTotal)}`, 200 - margin, yPos, { align: 'right' });
+      doc.text(`₹${formatIndianCurrency(subTotal)}`, 200 - margin, yPos, {
+        align: "right",
+      });
       yPos += 5;
 
-      if (invoice.gstType === 'interstate') {
+      if (invoice.gstType === "interstate") {
         doc.text(`IGST (${invoice.gstPercentage || 0}%):`, 140, yPos);
-        doc.text(`₹${formatIndianCurrency(igstAmount)}`, 200 - margin, yPos, { align: 'right' });
+        doc.text(`₹${formatIndianCurrency(igstAmount)}`, 200 - margin, yPos, {
+          align: "right",
+        });
         yPos += 5;
-      } else if (invoice.gstType === 'intrastate') {
+      } else if (invoice.gstType === "intrastate") {
         const gstHalf = (invoice.gstPercentage || 0) / 2;
         doc.text(`CGST (${gstHalf}%):`, 140, yPos);
-        doc.text(`₹${formatIndianCurrency(cgstAmount)}`, 200 - margin, yPos, { align: 'right' });
+        doc.text(`₹${formatIndianCurrency(cgstAmount)}`, 200 - margin, yPos, {
+          align: "right",
+        });
         yPos += 5;
         doc.text(`SGST (${gstHalf}%):`, 140, yPos);
-        doc.text(`₹${formatIndianCurrency(sgstAmount)}`, 200 - margin, yPos, { align: 'right' });
+        doc.text(`₹${formatIndianCurrency(sgstAmount)}`, 200 - margin, yPos, {
+          align: "right",
+        });
         yPos += 5;
       }
 
       doc.text(`Grand Total:`, 140, yPos);
-      doc.text(`₹${formatIndianCurrency(grandTotal)}`, 200 - margin, yPos, { align: 'right' });
+      doc.text(`₹${formatIndianCurrency(grandTotal)}`, 200 - margin, yPos, {
+        align: "right",
+      });
       yPos += 10;
 
       // Amount in words section
-      doc.setFont('helvetica', 'bold');
-      doc.text('Amount in Words:', margin, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${numberToWords(Math.floor(grandTotal))} Rupees Only`, margin + 30, yPos);
+      doc.setFont("helvetica", "bold");
+      doc.text("Amount in Words:", margin, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `${numberToWords(Math.floor(grandTotal))} Rupees Only`,
+        margin + 30,
+        yPos
+      );
       yPos += 15;
 
       // Payment terms section
       doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Payment Terms:', margin, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(invoice.paymentTerms || 'Payment due within 15 days of invoice date', margin + 25, yPos);
+      doc.setFont("helvetica", "bold");
+      doc.text("Payment Terms:", margin, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        invoice.paymentTerms || "Payment due within 15 days of invoice date",
+        margin + 25,
+        yPos
+      );
       yPos += 10;
 
       // Notes section
       doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Notes:', margin, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(invoice.notes || 'Thank you for your business!', margin + 15, yPos, { maxWidth: 180 });
+      doc.setFont("helvetica", "bold");
+      doc.text("Notes:", margin, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        invoice.notes || "Thank you for your business!",
+        margin + 15,
+        yPos,
+        { maxWidth: 180 }
+      );
       yPos += 15;
 
       // Bank details section
       doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Bank Details:', margin, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Bank Name: Your Bank Name', margin, yPos + 5);
-      doc.text('Account Number: XXXXXXXXXXXX', margin, yPos + 10);
-      doc.text('IFSC Code: XXXXXXXXXX', margin, yPos + 15);
-      doc.text('Branch: Your Branch Name', margin, yPos + 20);
+      doc.setFont("helvetica", "bold");
+      doc.text("Bank Details:", margin, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text("Bank Name: Your Bank Name", margin, yPos + 5);
+      doc.text("Account Number: XXXXXXXXXXXX", margin, yPos + 10);
+      doc.text("IFSC Code: XXXXXXXXXX", margin, yPos + 15);
+      doc.text("Branch: Your Branch Name", margin, yPos + 20);
       yPos += 30;
 
       // Footer
       doc.setFontSize(10);
-      doc.text('This is Computer Generated Invoice & requires no Signature', 105, yPos, { align: 'center' });
+      doc.text(
+        "This is Computer Generated Invoice & requires no Signature",
+        105,
+        yPos,
+        { align: "center" }
+      );
 
       // Save the PDF with appropriate filename
-      const pdfBlob = doc.output('blob');
-      saveAs(pdfBlob, `${invoice.invoiceType.toLowerCase()}-${invoice.invoiceType === 'Proforma' ? invoice.proformaNumber : invoice.invoiceNumber || 'draft'}.pdf`);
+      const pdfBlob = doc.output("blob");
+      saveAs(
+        pdfBlob,
+        `${invoice.invoiceType.toLowerCase()}-${
+          invoice.invoiceType === "Proforma"
+            ? invoice.proformaNumber
+            : invoice.invoiceNumber || "draft"
+        }.pdf`
+      );
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('Failed to generate PDF');
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
     }
   };
 
@@ -295,46 +453,35 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
     setItemViewModalVisible(true);
   };
 
+  // New handler for showing follow-up drawer
+  const handleShowFollowUpDrawer = (invoice) => {
+    setSelectedInvoice(invoice);
+    setFollowUpDrawerVisible(true);
+  };
+
   // Close invoice handler
   const handleCloseInvoice = async (id) => {
-    const toastId = toast.loading('Closing invoice...');
+    const toastId = toast.loading("Closing invoice...");
     try {
       await axios.patch(`/api/invoices/${id}/close`);
-      toast.success('Invoice closed successfully', { id: toastId });
+      toast.success("Invoice closed successfully", { id: toastId });
       refreshInvoices?.();
     } catch (error) {
       console.error("Error closing invoice:", error);
-      toast.error('Failed to close invoice', { id: toastId });
+      toast.error("Failed to close invoice", { id: toastId });
     }
   };
 
   // Unlock invoice handler
   const handleUnlockInvoice = async (id) => {
-    const toastId = toast.loading('Unlocking invoice...');
+    const toastId = toast.loading("Unlocking invoice...");
     try {
       await axios.patch(`/api/invoices/${id}/unlock`);
-      toast.success('Invoice unlocked successfully', { id: toastId });
+      toast.success("Invoice unlocked successfully", { id: toastId });
       refreshInvoices?.();
     } catch (error) {
       console.error("Error unlocking invoice:", error);
-      toast.error('Failed to unlock invoice', { id: toastId });
-    }
-  };
-
-  // NEW FUNCTION: handleConvertProformaToInvoice
-  const handleConvertProformaToInvoice = async (id) => {
-    const toastId = toast.loading('Converting Proforma to Invoice...');
-    try {
-      // This API endpoint will trigger the backend conversion logic
-      // You need to ensure your backend has an endpoint like this
-      // that handles the conversion logic (e.g., assigning a new invoice number,
-      // changing invoiceType to 'Invoice', updating conversionStatus).
-      await axios.patch(`/api/invoices/${id}/convert-to-invoice`);
-      toast.success('Proforma converted to Invoice successfully', { id: toastId });
-      refreshInvoices?.(); // Refresh the list to show the updated invoice
-    } catch (error) {
-      console.error("Error converting Proforma to Invoice:", error);
-      toast.error('Failed to convert Proforma to Invoice', { id: toastId });
+      toast.error("Failed to unlock invoice", { id: toastId });
     }
   };
 
@@ -342,80 +489,103 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   const exportToExcel = () => {
     const data = filteredInvoices.map((inv, index) => ({
       SNo: index + 1,
-      InvoiceNumber: inv.invoiceType === 'Proforma' ? inv.proformaNumber : inv.invoiceNumber, // Conditional export for Excel
+      InvoiceNumber:
+        inv.invoiceType === "Proforma" ? inv.proformaNumber : inv.invoiceNumber, // Conditional export for Excel
       Type: inv.invoiceType,
       Business: inv.businessName,
       Customer: inv.customerName,
       TotalAmount: inv.totalAmount || 0,
       Date: inv.date,
-      DueDate: inv.dueDate || '',
+      DueDate: inv.dueDate || "",
       Status: inv.paymentStatus,
-      Closed: inv.isClosed ? 'Yes' : 'No',
-      ConversionStatus: inv.invoiceType === 'Proforma' ? inv.conversionStatus || 'N/A' : 'N/A', // NEW: Export conversion status
+      Closed: inv.isClosed ? "Yes" : "No",
+      ConversionStatus:
+        inv.invoiceType === "Proforma" ? inv.conversionStatus || "N/A" : "N/A", // NEW: Export conversion status
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Invoices');
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoices");
 
     // Correct MIME type for Excel files
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const fileData = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const fileData = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
 
-    saveAs(fileData, `Invoices-${new Date().toISOString().split('T')[0]}.xlsx`);
+    saveAs(fileData, `Invoices-${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
   // Filter invoices based on various criteria
-  const filteredInvoices = invoices.filter(inv => {
+  const filteredInvoices = invoices.filter((inv) => {
     const matchesType = inv.invoiceType === invoiceTypeFilter;
-    const matchesSearch = !searchTerm ||
-      (inv.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || inv.proformaNumber?.toLowerCase().includes(searchTerm.toLowerCase())) || // Search by proformaNumber as well
+    const matchesSearch =
+      !searchTerm ||
+      inv.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inv.proformaNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || // Search by proformaNumber as well
       inv.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDate = !dateRange || (
-      new Date(inv.date) >= dateRange[0].toDate() &&
-      new Date(inv.date) <= dateRange[1].toDate()
-    );
-    const matchesStatus = statusFilter === 'all' ? true :
-      statusFilter === 'overdue'
-        ? inv.paymentStatus !== 'paid' && new Date(inv.dueDate) < new Date()
+    const matchesDate =
+      !dateRange ||
+      (new Date(inv.date) >= dateRange[0].toDate() &&
+        new Date(inv.date) <= dateRange[1].toDate());
+    const matchesStatus =
+      statusFilter === "all"
+        ? true
+        : statusFilter === "overdue"
+        ? inv.paymentStatus !== "paid" && new Date(inv.dueDate) < new Date()
         : inv.paymentStatus === statusFilter;
-    const matchesBusiness = businessFilter === 'all' ? true : inv.businessName === businessFilter;
+    const matchesBusiness =
+      businessFilter === "all" ? true : inv.businessName === businessFilter;
 
     // NEW: Filter by conversion status (only applies to Proforma invoices)
-    const matchesConversionStatus = conversionStatusFilter === 'all' ? true :
-        (inv.invoiceType === 'Proforma' && inv.conversionStatus === conversionStatusFilter);
+    const matchesConversionStatus =
+      conversionStatusFilter === "all"
+        ? true
+        : inv.invoiceType === "Proforma" &&
+          inv.conversionStatus === conversionStatusFilter;
 
-    return matchesType && matchesSearch && matchesDate && matchesStatus && matchesBusiness && matchesConversionStatus;
+    return (
+      matchesType &&
+      matchesSearch &&
+      matchesDate &&
+      matchesStatus &&
+      matchesBusiness &&
+      matchesConversionStatus
+    );
   });
 
   // Get status tag component
   const getStatusTag = (status) => {
-    const config = {
-      paid: { color: 'green', text: 'Paid' },
-      partial: { color: 'orange', text: 'Partial' },
-      pending: { color: 'red', text: 'Pending' }
-    }[status] || {};
+    const config =
+      {
+        paid: { color: "green", text: "Paid" },
+        partial: { color: "orange", text: "Partial" },
+        pending: { color: "red", text: "Pending" },
+      }[status] || {};
     return <Tag color={config.color}>{config.text}</Tag>;
   };
 
   // Invoice type tabs component
   const invoiceTypeTabs = (
     <Space style={{ marginBottom: 16 }}>
-      {['Invoice', 'Proforma'].map(type => {
-        const count = invoices.filter(inv => inv.invoiceType === type).length;
+      {["Invoice", "Proforma"].map((type) => {
+        const count = invoices.filter((inv) => inv.invoiceType === type).length;
         const isActive = invoiceTypeFilter === type;
         return (
           <span
             key={type}
             onClick={() => setInvoiceTypeFilter(type)}
             style={{
-              cursor: 'pointer',
-              borderBottom: isActive ? '2px solid #1890ff' : 'none',
-              color: isActive ? '#1890ff' : '#000',
-              fontWeight: isActive ? '600' : 'normal',
+              cursor: "pointer",
+              borderBottom: isActive ? "2px solid #1890ff" : "none",
+              color: isActive ? "#1890ff" : "#000",
+              fontWeight: isActive ? "600" : "normal",
               paddingBottom: 4,
-              marginRight: 20
+              marginRight: 20,
             }}
           >
             {type} ({count})
@@ -442,7 +612,9 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
         // it tries to use a 'SPECIFICATION' from the specifications array.
         // Otherwise, it defaults to 'N/A'.
         if (!text && record.specifications?.length > 0) {
-          const mainSpec = record.specifications.find(s => s.name === "SPECIFICATION");
+          const mainSpec = record.specifications.find(
+            (s) => s.name === "SPECIFICATION"
+          );
           return mainSpec ? mainSpec.value : "N/A";
         }
         return text || "N/A";
@@ -483,84 +655,163 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   // Table columns configuration for the main InvoiceList
   const columns = [
     {
-      title: 'S.No',
+      title: "S.No",
       render: (_, __, index) => <Text strong>{index + 1}</Text>,
-      width: 60
+      width: 60,
     },
     {
-      title: 'Number', // Changed to 'Number' to be generic
+      title: "Number", // Changed to 'Number' to be generic
       render: (_, record) => (
         <Tag icon={<FileTextOutlined />} color="blue">
-          {record.invoiceType === 'Proforma' ? record.proformaNumber : record.invoiceNumber}
+          {record.invoiceType === "Proforma"
+            ? record.proformaNumber
+            : record.invoiceNumber}
         </Tag>
-      )
+      ),
     },
     {
-      title: 'Type',
-      dataIndex: 'invoiceType',
-      render: (type) => <Tag color={type === 'Proforma' ? 'purple' : 'cyan'}>{type}</Tag>
+      title: "Type",
+      dataIndex: "invoiceType",
+      render: (type) => (
+        <Tag color={type === "Proforma" ? "purple" : "cyan"}>{type}</Tag>
+      ),
     },
     {
-      title: 'Business',
+      title: "Business",
       render: (_, record) => {
         const name = record.businessId?.businessName || record.businessName;
-        return <Tooltip title={name}><Text strong>{name}</Text></Tooltip>;
-      }
+        return (
+          <Tooltip title={name}>
+            <Text strong>{name}</Text>
+          </Tooltip>
+        );
+      },
     },
     {
-      title: 'Customer',
+      title: "Customer",
       render: (_, record) => {
         const customer = record.businessId || {};
-        const name = customer.businessName || record.customerName || 'N/A';
-        return <Tooltip title={name}><Text>{name}</Text></Tooltip>;
-      }
+        const name = customer.businessName || record.customerName || "N/A";
+        return (
+          <Tooltip title={name}>
+            <Text>{name}</Text>
+          </Tooltip>
+        );
+      },
     },
     {
-      title: 'Amount',
-      dataIndex: 'totalAmount',
-      align: 'right',
-      render: (amt) => <Text style={{ color: '#52c41a' }}>₹{(amt || 0).toFixed(2)}</Text>
+      title: "Amount",
+      dataIndex: "totalAmount",
+      align: "right",
+      render: (amt) => (
+        <Text style={{ color: "#52c41a" }}>₹{(amt || 0).toFixed(2)}</Text>
+      ),
     },
     {
-      title: 'Date',
-      dataIndex: 'date',
-      align: 'center',
-      render: (date) => <Text>{date || 'N/A'}</Text>
+      title: "Date",
+      dataIndex: "date",
+      align: "center",
+      render: (date) => <Text>{date || "N/A"}</Text>,
     },
     {
-      title: 'Due Date',
-      dataIndex: 'dueDate',
-      align: 'center',
-      render: (date) => <Text>{date || 'N/A'}</Text>
+      title: "Due Date",
+      dataIndex: "dueDate",
+      align: "center",
+      render: (date) => <Text>{date || "N/A"}</Text>,
     },
- 
-    {
-      title: 'Actions',
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="View Invoice Details"><Button icon={<EyeOutlined />} onClick={() => handleView(record)} /></Tooltip>
-          <Tooltip title="View Item Specifications"><Button icon={<FileTextOutlined />} onClick={() => handleViewItemSpecs(record)} /></Tooltip>
-          <Tooltip title="Generate PDF"><Button icon={<PrinterOutlined />} onClick={() => generatePDF(record)} /></Tooltip>
-          <Tooltip title="View Notes"><Button icon={<MessageOutlined />} onClick={() => handleViewNotes(record)} /></Tooltip>
-          <Tooltip title="View Payments"><Button icon={<DollarOutlined />} onClick={() => handleViewPayments(record)} /></Tooltip>
-          {!record.isClosed && <Tooltip title="Edit Invoice"><Button icon={<EditOutlined />} onClick={() => onEdit(record)} /></Tooltip>}
-          {!record.isClosed ? (
-            <Popconfirm title="Close this invoice?" onConfirm={() => handleCloseInvoice(record._id)}>
-              <Tooltip title="Lock Invoice"><Button icon={<LockOutlined />} /></Tooltip>
-            </Popconfirm>
-          ) : (
-            <Popconfirm title="Unlock this invoice?" onConfirm={() => handleUnlockInvoice(record._id)}>
-              <Tooltip title="Unlock Invoice"><Button icon={<UnlockOutlined />} /></Tooltip>
-            </Popconfirm>
-          )}
-          <Popconfirm title="Delete invoice?" onConfirm={() => onDelete(record._id)}>
-            <Tooltip title="Delete Invoice"><Button icon={<DeleteOutlined />} danger /></Tooltip>
-          </Popconfirm>
 
-        
-        </Space>
-      )
-    }
+    {
+      title: "Actions",
+      width: 80, // Adjusted width for dropdown
+      render: (_, record) => (
+        <Dropdown
+          overlay={
+            <Menu>
+              <Menu.Item key="view" icon={<EyeOutlined />} onClick={() => handleView(record)}>
+                View Invoice Details
+              </Menu.Item>
+              <Menu.Item key="view-specs" icon={<FileTextOutlined />} onClick={() => handleViewItemSpecs(record)}>
+                View Item Specifications
+              </Menu.Item>
+              <Menu.Item key="generate-pdf" icon={<PrinterOutlined />} onClick={() => generatePDF(record)}>
+                Generate PDF
+              </Menu.Item>
+              <Menu.Item key="view-notes" icon={<MessageOutlined />} onClick={() => handleViewNotes(record)}>
+                View Notes
+              </Menu.Item>
+              <Menu.Item key="add-followup" icon={<ScheduleOutlined />} onClick={() => handleShowFollowUpDrawer(record)}>
+                Add/View Follow-ups
+              </Menu.Item>
+              <Menu.Item key="view-payments" icon={<DollarOutlined />} onClick={() => handleViewPayments(record)}>
+                View Payments
+              </Menu.Item>
+              {/* Edit Invoice */}
+              {!record.isClosed && (
+                <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => onEdit(record)}>
+                  Edit Invoice
+                </Menu.Item>
+              )}
+              {/* Lock/Unlock Invoice */}
+              {!record.isClosed ? (
+                <Menu.Item
+                  key="lock"
+                  icon={<LockOutlined />}
+                  onClick={() => {
+                    Modal.confirm({
+                      title: 'Close Invoice',
+                      content: 'Are you sure you want to close this invoice? It will become uneditable.',
+                      okText: 'Yes, Close',
+                      cancelText: 'No',
+                      okButtonProps: { danger: true },
+                      onOk: () => handleCloseInvoice(record._id)
+                    });
+                  }}
+                >
+                  Lock Invoice
+                </Menu.Item>
+              ) : (
+                <Menu.Item
+                  key="unlock"
+                  icon={<UnlockOutlined />}
+                  onClick={() => {
+                    Modal.confirm({
+                      title: 'Unlock Invoice',
+                      content: 'Are you sure you want to unlock this invoice? It will become editable again.',
+                      okText: 'Yes, Unlock',
+                      cancelText: 'No',
+                      onOk: () => handleUnlockInvoice(record._id)
+                    });
+                  }}
+                >
+                  Unlock Invoice
+                </Menu.Item>
+              )}
+              {/* Delete Invoice */}
+              <Menu.Item
+                key="delete"
+                icon={<DeleteOutlined />}
+                danger
+                onClick={() => {
+                  Modal.confirm({
+                    title: 'Delete Invoice',
+                    content: 'Are you sure you want to delete this invoice? This action cannot be undone.',
+                    okText: 'Yes, Delete',
+                    cancelText: 'No',
+                    okButtonProps: { danger: true },
+                    onOk: () => onDelete(record._id)
+                  });
+                }}
+              >
+                Delete Invoice
+              </Menu.Item>
+            </Menu>
+          }
+          trigger={['click']}
+        >
+          <Button icon={<MoreOutlined />} />
+        </Dropdown>
+      ),
+    },
   ];
 
   // Main component render
@@ -571,7 +822,11 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
         extra={
           <Space wrap>
             <RangePicker onChange={setDateRange} format="YYYY-MM-DD" />
-            <Select value={statusFilter} onChange={setStatusFilter} style={{ width: 140 }}>
+            <Select
+              value={statusFilter}
+              onChange={setStatusFilter}
+              style={{ width: 140 }}
+            >
               <Select.Option value="all">All Status</Select.Option>
               <Select.Option value="paid">Paid</Select.Option>
               <Select.Option value="pending">Pending</Select.Option>
@@ -579,7 +834,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
               <Select.Option value="overdue">Overdue</Select.Option>
             </Select>
             {/* NEW: Filter for Conversion Status */}
-          
+
             <Select
               value={businessFilter}
               onChange={setBusinessFilter}
@@ -588,8 +843,10 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
               allowClear
             >
               <Select.Option value="all">All Businesses</Select.Option>
-              {uniqueBusinessNames.map(name => (
-                <Select.Option key={name} value={name}>{name}</Select.Option>
+              {uniqueBusinessNames.map((name) => (
+                <Select.Option key={name} value={name}>
+                  {name}
+                </Select.Option>
               ))}
             </Select>
             <Input.Search
@@ -601,7 +858,9 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
               prefix={<SearchOutlined />}
             />
             <Button onClick={exportToExcel}>Export Excel</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={onAddNew}>New Invoice</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={onAddNew}>
+              New Invoice
+            </Button>
           </Space>
         }
       >
@@ -621,27 +880,49 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
         title="Invoice Details"
         open={viewModalVisible}
         onCancel={() => setViewModalVisible(false)}
-        footer={<Button onClick={() => setViewModalVisible(false)}>Close</Button>}
+        footer={
+          <Button onClick={() => setViewModalVisible(false)}>Close</Button>
+        }
         width={1000} // Increased width to accommodate items table
       >
         {selectedInvoice && (
           <div>
             <Descriptions bordered column={2} size="small">
               {/* Conditionally render Invoice No or Proforma No */}
-              <Descriptions.Item label={selectedInvoice.invoiceType === 'Proforma' ? 'Proforma No' : 'Invoice No'}>
-                {selectedInvoice.invoiceType === 'Proforma' ? selectedInvoice.proformaNumber : selectedInvoice.invoiceNumber}
+              <Descriptions.Item
+                label={
+                  selectedInvoice.invoiceType === "Proforma"
+                    ? "Proforma No"
+                    : "Invoice No"
+                }
+              >
+                {selectedInvoice.invoiceType === "Proforma"
+                  ? selectedInvoice.proformaNumber
+                  : selectedInvoice.invoiceNumber}
               </Descriptions.Item>
-              <Descriptions.Item label="Type">{selectedInvoice.invoiceType}</Descriptions.Item>
+              <Descriptions.Item label="Type">
+                {selectedInvoice.invoiceType}
+              </Descriptions.Item>
               <Descriptions.Item label="Date">
-                {selectedInvoice.date ? new Date(selectedInvoice.date).toLocaleDateString('en-IN') : 'N/A'}
+                {selectedInvoice.date
+                  ? new Date(selectedInvoice.date).toLocaleDateString("en-IN")
+                  : "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Due Date">
-                {selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString('en-IN') : 'N/A'}
+                {selectedInvoice.dueDate
+                  ? new Date(selectedInvoice.dueDate).toLocaleDateString(
+                      "en-IN"
+                    )
+                  : "N/A"}
               </Descriptions.Item>
-              <Descriptions.Item label="Business">{selectedInvoice.businessName}</Descriptions.Item>
-              <Descriptions.Item label="Customer">{selectedInvoice.customerName}</Descriptions.Item>
+              <Descriptions.Item label="Business">
+                {selectedInvoice.businessName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Customer">
+                {selectedInvoice.customerName}
+              </Descriptions.Item>
               <Descriptions.Item label="GSTIN" span={2}>
-                <Text code>{selectedInvoice.gstin || 'N/A'}</Text>
+                <Text code>{selectedInvoice.gstin || "N/A"}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Business Info" span={2}>
                 <Text style={{ whiteSpace: "pre-wrap" }}>
@@ -669,7 +950,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
                         {item.specifications?.length > 0 && (
                           <Descriptions column={1} size="small">
                             {item.specifications
-                              .filter(spec => spec.name !== "SPECIFICATION") // Exclude main SPECIFICATION if used for description
+                              .filter((spec) => spec.name !== "SPECIFICATION") // Exclude main SPECIFICATION if used for description
                               .map((spec, i) => (
                                 <Descriptions.Item key={i} label={spec.name}>
                                   {spec.value}
@@ -683,17 +964,18 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
                   }}
                   summary={(pageData) => {
                     const subTotal = pageData.reduce(
-                      (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),
+                      (sum, item) =>
+                        sum + (item.quantity || 0) * (item.rate || 0),
                       0
                     );
                     const gstPercentage = selectedInvoice.gstPercentage || 0;
-                    const gstType = selectedInvoice.gstType || 'intrastate';
+                    const gstType = selectedInvoice.gstType || "intrastate";
                     let totalGSTAmount = 0;
                     let cgstAmount = 0;
                     let sgstAmount = 0;
                     let igstAmount = 0;
 
-                    if (gstType === 'interstate') {
+                    if (gstType === "interstate") {
                       igstAmount = subTotal * (gstPercentage / 100);
                       totalGSTAmount = igstAmount;
                     } else {
@@ -707,44 +989,70 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
                     return (
                       <Table.Summary fixed>
                         <Table.Summary.Row>
-                          <Table.Summary.Cell index={0} colSpan={5} align="right">
+                          <Table.Summary.Cell
+                            index={0}
+                            colSpan={5}
+                            align="right"
+                          >
                             <Text strong>Sub Total:</Text>
                           </Table.Summary.Cell>
                           <Table.Summary.Cell index={5}>
                             <Text strong>{formatIndianCurrency(subTotal)}</Text>
                           </Table.Summary.Cell>
                         </Table.Summary.Row>
-                        {gstType === 'interstate' ? (
+                        {gstType === "interstate" ? (
                           <Table.Summary.Row>
-                            <Table.Summary.Cell index={0} colSpan={5} align="right">
+                            <Table.Summary.Cell
+                              index={0}
+                              colSpan={5}
+                              align="right"
+                            >
                               <Text strong>IGST ({gstPercentage}%):</Text>
                             </Table.Summary.Cell>
                             <Table.Summary.Cell index={5}>
-                              <Text strong>{formatIndianCurrency(igstAmount)}</Text>
+                              <Text strong>
+                                {formatIndianCurrency(igstAmount)}
+                              </Text>
                             </Table.Summary.Cell>
                           </Table.Summary.Row>
                         ) : (
                           <>
                             <Table.Summary.Row>
-                              <Table.Summary.Cell index={0} colSpan={5} align="right">
+                              <Table.Summary.Cell
+                                index={0}
+                                colSpan={5}
+                                align="right"
+                              >
                                 <Text strong>CGST ({gstPercentage / 2}%):</Text>
                               </Table.Summary.Cell>
                               <Table.Summary.Cell index={5}>
-                                <Text strong>{formatIndianCurrency(cgstAmount)}</Text>
+                                <Text strong>
+                                  {formatIndianCurrency(cgstAmount)}
+                                </Text>
                               </Table.Summary.Cell>
                             </Table.Summary.Row>
                             <Table.Summary.Row>
-                              <Table.Summary.Cell index={0} colSpan={5} align="right">
+                              <Table.Summary.Cell
+                                index={0}
+                                colSpan={5}
+                                align="right"
+                              >
                                 <Text strong>SGST ({gstPercentage / 2}%):</Text>
                               </Table.Summary.Cell>
                               <Table.Summary.Cell index={5}>
-                                <Text strong>{formatIndianCurrency(sgstAmount)}</Text>
+                                <Text strong>
+                                  {formatIndianCurrency(sgstAmount)}
+                                </Text>
                               </Table.Summary.Cell>
                             </Table.Summary.Row>
                           </>
                         )}
                         <Table.Summary.Row>
-                          <Table.Summary.Cell index={0} colSpan={5} align="right">
+                          <Table.Summary.Cell
+                            index={0}
+                            colSpan={5}
+                            align="right"
+                          >
                             <Text strong>Grand Total:</Text>
                           </Table.Summary.Cell>
                           <Table.Summary.Cell index={5}>
@@ -755,7 +1063,11 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
                         </Table.Summary.Row>
                         <Table.Summary.Row>
                           <Table.Summary.Cell index={0} colSpan={6}>
-                            <Text italic>Amount in words: {numberToWords(Math.floor(grandTotal))} Rupees Only</Text>
+                            <Text italic>
+                              Amount in words:{" "}
+                              {numberToWords(Math.floor(grandTotal))} Rupees
+                              Only
+                            </Text>
                           </Table.Summary.Cell>
                         </Table.Summary.Row>
                       </Table.Summary>
@@ -766,59 +1078,81 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
             )}
 
             {/* Amount Summary outside items table for overall total (keeping it here for consistency with original) */}
-            <Descriptions column={2} bordered size="small" style={{ marginTop: '20px' }}>
+            <Descriptions
+              column={2}
+              bordered
+              size="small"
+              style={{ marginTop: "20px" }}
+            >
               <Descriptions.Item label="Sub Total" span={2}>
-                ₹{selectedInvoice.subTotal?.toFixed(2) || '0.00'}
+                ₹{selectedInvoice.subTotal?.toFixed(2) || "0.00"}
               </Descriptions.Item>
-              {selectedInvoice.gstType === 'interstate' ? (
+              {selectedInvoice.gstType === "interstate" ? (
                 <Descriptions.Item label="IGST Amount" span={2}>
-                  ₹{selectedInvoice.igstAmount?.toFixed(2) || '0.00'}
+                  ₹{selectedInvoice.igstAmount?.toFixed(2) || "0.00"}
                 </Descriptions.Item>
               ) : (
                 <>
                   <Descriptions.Item label="CGST Amount" span={1}>
-                    ₹{selectedInvoice.cgstAmount?.toFixed(2) || '0.00'}
+                    ₹{selectedInvoice.cgstAmount?.toFixed(2) || "0.00"}
                   </Descriptions.Item>
                   <Descriptions.Item label="SGST Amount" span={1}>
-                    ₹{selectedInvoice.sgstAmount?.toFixed(2) || '0.00'}
+                    ₹{selectedInvoice.sgstAmount?.toFixed(2) || "0.00"}
                   </Descriptions.Item>
                 </>
               )}
               <Descriptions.Item label="Grand Total" span={2}>
                 <Text strong style={{ fontSize: "18px", color: "#52c41a" }}>
-                  ₹{selectedInvoice.totalAmount?.toFixed(2) || '0.00'}
+                  ₹{selectedInvoice.totalAmount?.toFixed(2) || "0.00"}
                 </Text>
               </Descriptions.Item>
               <Descriptions.Item label="Amount in Words" span={2}>
-                <Text italic>{numberToWords(Math.floor(selectedInvoice.totalAmount || 0))} Rupees Only</Text>
+                <Text italic>
+                  {numberToWords(Math.floor(selectedInvoice.totalAmount || 0))}{" "}
+                  Rupees Only
+                </Text>
               </Descriptions.Item>
-              <Descriptions.Item label="Status" span={2}>{getStatusTag(selectedInvoice.paymentStatus)}</Descriptions.Item>
+              <Descriptions.Item label="Status" span={2}>
+                {getStatusTag(selectedInvoice.paymentStatus)}
+              </Descriptions.Item>
               <Descriptions.Item label="Closed" span={2}>
-                {selectedInvoice.isClosed ? <Tag color="red">Yes</Tag> : <Tag color="green">No</Tag>}
+                {selectedInvoice.isClosed ? (
+                  <Tag color="red">Yes</Tag>
+                ) : (
+                  <Tag color="green">No</Tag>
+                )}
               </Descriptions.Item>
               {/* NEW: Display conversion status in modal */}
-              {selectedInvoice.invoiceType === 'Proforma' && (
-                  <Descriptions.Item label="Conversion Status" span={2}>
-                      <Tag color={
-                          selectedInvoice.conversionStatus === 'converted' ? 'green' :
-                          selectedInvoice.conversionStatus === 'rejected' ? 'red' :
-                          'blue'
-                      }>
-                          {selectedInvoice.conversionStatus === 'converted' ? 'Converted' :
-                           selectedInvoice.conversionStatus === 'rejected' ? 'Rejected' :
-                           'Pending Conversion'}
-                      </Tag>
-                  </Descriptions.Item>
+              {selectedInvoice.invoiceType === "Proforma" && (
+                <Descriptions.Item label="Conversion Status" span={2}>
+                  <Tag
+                    color={
+                      selectedInvoice.conversionStatus === "converted"
+                        ? "green"
+                        : selectedInvoice.conversionStatus === "rejected"
+                        ? "red"
+                        : "blue"
+                    }
+                  >
+                    {selectedInvoice.conversionStatus === "converted"
+                      ? "Converted"
+                      : selectedInvoice.conversionStatus === "rejected"
+                      ? "Rejected"
+                      : "Pending Conversion"}
+                  </Tag>
+                </Descriptions.Item>
               )}
             </Descriptions>
 
-
             {selectedInvoice.notes?.length > 0 && (
               <>
-                <Divider orientation="left">Notes ({selectedInvoice.notes.length})</Divider>
+                <Divider orientation="left">
+                  Notes ({selectedInvoice.notes.length})
+                </Divider>
                 {selectedInvoice.notes.map((note, index) => (
                   <div key={index} style={{ marginBottom: 8 }}>
-                    <Text strong>{note.author}</Text> on <Text type="secondary">{note.timestamp}</Text>
+                    <Text strong>{note.author}</Text> on{" "}
+                    <Text type="secondary">{note.timestamp}</Text>
                     <p>{note.text}</p>
                   </div>
                 ))}
@@ -833,7 +1167,9 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
         title="Item Specifications"
         open={itemViewModalVisible}
         onCancel={() => setItemViewModalVisible(false)}
-        footer={<Button onClick={() => setItemViewModalVisible(false)}>Close</Button>}
+        footer={
+          <Button onClick={() => setItemViewModalVisible(false)}>Close</Button>
+        }
         width={800}
       >
         {selectedInvoice && selectedInvoice.items && (
@@ -843,7 +1179,9 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
             renderItem={(item, index) => (
               <List.Item key={index}>
                 <List.Item.Meta
-                  title={<Text strong>{item.description || 'No Description'}</Text>}
+                  title={
+                    <Text strong>{item.description || "No Description"}</Text>
+                  }
                   description={
                     <>
                       <Text>Quantity: {item.quantity}</Text>
@@ -851,19 +1189,20 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
                       <Text>Rate: ₹{formatIndianCurrency(item.rate)}</Text>
                       <br />
                       {item.hsnSac && <Text>HSN/SAC: {item.hsnSac}</Text>}
-                      {item.specifications && item.specifications.length > 0 && (
-                        <>
-                          <br />
-                          <Text strong>Specifications:</Text>
-                          <ul>
-                            {item.specifications.map((spec, specIndex) => (
-                              <li key={specIndex}>
-                                {spec.name}: {spec.value}
-                              </li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
+                      {item.specifications &&
+                        item.specifications.length > 0 && (
+                          <>
+                            <br />
+                            <Text strong>Specifications:</Text>
+                            <ul>
+                              {item.specifications.map((spec, specIndex) => (
+                                <li key={specIndex}>
+                                  {spec.name}: {spec.value}
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
                     </>
                   }
                 />
@@ -874,12 +1213,24 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       </Modal>
 
       {/* Notes Drawer */}
-      <NotesDrawer
-        visible={notesDrawerVisible}
-        onClose={() => setNotesDrawerVisible(false)}
-        invoice={selectedInvoice}
-        refreshInvoices={refreshInvoices}
-      />
+      {selectedInvoice && (
+        <NotesDrawer
+          visible={notesDrawerVisible}
+          onClose={() => setNotesDrawerVisible(false)}
+          invoice={selectedInvoice}
+          refreshInvoices={refreshInvoices}
+        />
+      )}
+
+      {/* Follow-up Drawer */}
+      {selectedInvoice && (
+        <FollowUpDrawer
+          visible={followUpDrawerVisible}
+          onClose={() => setFollowUpDrawerVisible(false)}
+          invoice={selectedInvoice}
+          refreshInvoices={refreshInvoices}
+        />
+      )}
 
       {/* Payment History Drawer */}
       <PaymentHistoryDrawer

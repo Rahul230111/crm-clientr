@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import {
   Card, Input, Button, Table, Tabs, Switch, Typography,
-  Empty, Modal, Tag, Popconfirm, Space
+  Empty, Modal, Tag, Popconfirm, Space,
+  Dropdown,
+  Menu,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, SearchOutlined,
-  MessageOutlined, PrinterOutlined, CustomerServiceOutlined, DeleteOutlined
+  MessageOutlined, PrinterOutlined, CustomerServiceOutlined, DeleteOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { toast } from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -31,21 +34,18 @@ const Leads = () => {
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
   const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  // NEW STATE: For storing counts for tabs
   const [activeLeadsCount, setActiveLeadsCount] = useState(0);
   const [customersCount, setCustomersCount] = useState(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchAccounts();
-  }, [activeTab]); // Refetch when tab changes
+  }, [activeTab]);
 
   const fetchAccounts = async () => {
     try {
       let activeLeadsEndpoint = `${API_URL}/leads/active`;
       let customersEndpoint = `${API_URL}/customers`;
 
-      // Fetch both active leads and customers regardless of the active tab
-      // This ensures we always have accurate counts for both tabs
       const [leadsResponse, customersResponse] = await Promise.all([
         axios.get(activeLeadsEndpoint),
         axios.get(customersEndpoint)
@@ -54,17 +54,14 @@ const Leads = () => {
       const leadsData = leadsResponse.data;
       const customersData = customersResponse.data;
 
-      // Update counts
       setActiveLeadsCount(leadsData.length);
       setCustomersCount(customersData.length);
 
-      // Set accounts based on active tab
       if (activeTab === 'active') {
         setAccounts(leadsData);
       } else if (activeTab === 'customers') {
         setAccounts(customersData);
       } else {
-        // Fallback for an 'All' tab, though not explicitly defined in current tabs
         setAccounts([...leadsData, ...customersData]);
       }
 
@@ -77,16 +74,14 @@ const Leads = () => {
   const handleSaveAccount = async (values) => {
     try {
       if (currentAccount) {
-        // Update existing account
         await axios.put(`${API_URL}/${currentAccount._id}`, values);
         toast.success('Account updated successfully!');
       } else {
-        // Create new account
         await axios.post(API_URL, values);
         toast.success('Account created successfully!');
       }
       setFormVisible(false);
-      fetchAccounts(); // Refresh the list
+      fetchAccounts();
     } catch (error) {
       toast.error('Failed to save account.');
       console.error('Save account error:', error.response?.data || error.message);
@@ -131,7 +126,7 @@ const Leads = () => {
       const updatedAccount = { ...accountToUpdate, isCustomer: newStatus };
       await axios.put(`${API_URL}/${accountToUpdate._id}`, updatedAccount);
       toast.success(`Account status changed to ${newStatus ? 'Customer' : 'Lead'}!`);
-      fetchAccounts(); // Refresh list to reflect changes
+      fetchAccounts();
     } catch (error) {
       toast.error('Failed to update account status.');
       console.error('Status update error:', error.response?.data || error.message);
@@ -161,8 +156,8 @@ const Leads = () => {
       const canvas = await html2canvas(input, { scale: 2 });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
+      const imgWidth = 210;
+      const pageHeight = 297;
       const imgHeight = canvas.height * imgWidth / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
@@ -190,6 +185,7 @@ const Leads = () => {
       title: 'S.No',
       key: 'sno',
       render: (text, record, index) => index + 1,
+      width: 60, // Fixed width for S.No
     },
     {
       title: 'Business Name',
@@ -220,21 +216,25 @@ const Leads = () => {
       ),
       onFilter: (value, record) =>
         record.businessName.toLowerCase().includes(value.toLowerCase()),
+      responsive: ['xs', 'sm', 'md', 'lg'], // Visible on all screen sizes
     },
     {
       title: 'Contact Name',
       dataIndex: 'contactName',
       key: 'contactName',
+      responsive: ['md', 'lg'], // Hide on extra small and small screens
     },
     {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
+      responsive: ['lg'], // Only visible on large screens
     },
     {
       title: 'Mobile Number',
       dataIndex: 'mobileNumber',
       key: 'mobileNumber',
+      responsive: ['md', 'lg'], // Hide on extra small and small screens
     },
     {
       title: 'Lead Type',
@@ -246,6 +246,7 @@ const Leads = () => {
         { text: 'Cold', value: 'Cold' },
       ],
       onFilter: (value, record) => record.type.indexOf(value) === 0,
+      responsive: ['md', 'lg'], // Hide on extra small and small screens
     },
     {
       title: 'Status',
@@ -261,6 +262,7 @@ const Leads = () => {
         { text: 'Inactive', value: 'Inactive' },
       ],
       onFilter: (value, record) => record.status.indexOf(value) === 0,
+      responsive: ['sm', 'md', 'lg'], // Hide on extra small screens
     },
     {
       title: 'Source Type',
@@ -268,43 +270,76 @@ const Leads = () => {
       key: 'sourceType',
       filters: [
         { text: 'Direct', value: 'Direct' },
-        { text: 'Facebook Referral', value: 'Facebook Referral' },
+        { text: 'Facebook Referral', value: 'Facebook Referral ' },
         { text: 'Google Ads', value: 'Google Ads' },
         { text: 'Website', value: 'Website' },
         { text: 'Cold Call', value: 'Cold Call' },
         { text: 'Other', value: 'Other' },
       ],
       onFilter: (value, record) => record.sourceType?.indexOf(value) === 0,
+      responsive: ['lg'], // Only visible on large screens
     },
-    {
-      title: 'Referral Person',
-      dataIndex: 'referralPersonName',
-      key: 'referralPersonName',
-      render: (text) => text || 'N/A',
-    },
+ 
     {
       title: 'Action',
       key: 'action',
+      width: 80,
       render: (text, record) => (
-        <Space size="middle">
-          <Button icon={<EditOutlined />} onClick={() => showEditForm(record)} />
-          <Button icon={<MessageOutlined />} onClick={() => showNotesDrawer(record)} />
-          <Button icon={<CustomerServiceOutlined />} onClick={() => showFollowUpDrawer(record)} />
-          <Switch
-            checkedChildren="Customer"
-            unCheckedChildren="Lead"
-            checked={record.isCustomer}
-            onChange={(checked) => handleStatusChange(checked, record)}
-          />
-          <Popconfirm
-            title="Are you sure you want to delete this account?"
-            onConfirm={() => handleDeleteAccount(record._id)}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Button icon={<DeleteOutlined />} danger />
-          </Popconfirm>
-        </Space>
+        <Dropdown
+          overlay={
+            <Menu>
+              <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => showEditForm(record)}>
+                Edit Account
+              </Menu.Item>
+              <Menu.Item key="notes" icon={<MessageOutlined />} onClick={() => showNotesDrawer(record)}>
+                View/Add Notes
+              </Menu.Item>
+              <Menu.Item key="followup" icon={<CustomerServiceOutlined />} onClick={() => showFollowUpDrawer(record)}>
+                View/Add Follow-ups
+              </Menu.Item>
+              <Menu.Item key="generate-pdf" icon={<PrinterOutlined />} onClick={() => generatePdf(record)}>
+                Generate PDF
+              </Menu.Item>
+              {/* Conditional menu item for changing status */}
+              {record.isCustomer ? (
+                <Menu.Item
+                  key="change-to-lead"
+                  onClick={() => handleStatusChange(false, record)}
+                >
+                  Change to Lead
+                </Menu.Item>
+              ) : (
+                <Menu.Item
+                  key="change-to-customer"
+                  onClick={() => handleStatusChange(true, record)}
+                >
+                  Change to Customer
+                </Menu.Item>
+              )}
+              {/* Delete action using Modal.confirm for consistency */}
+              <Menu.Item
+                key="delete"
+                icon={<DeleteOutlined />}
+                danger
+                onClick={() => {
+                  Modal.confirm({
+                    title: 'Delete Account',
+                    content: 'Are you sure you want to delete this account? This action cannot be undone (soft delete).',
+                    okText: 'Yes, Delete',
+                    cancelText: 'No',
+                    okButtonProps: { danger: true },
+                    onOk: () => handleDeleteAccount(record._id)
+                  });
+                }}
+              >
+                Delete Account
+              </Menu.Item>
+            </Menu>
+          }
+          trigger={['click']}
+        >
+          <Button icon={<MoreOutlined />} />
+        </Dropdown>
       ),
     },
   ];
@@ -317,11 +352,11 @@ const Leads = () => {
 
   return (
     <Card title={<Title level={2}>Manage Leads & Customers</Title>}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <Input
           placeholder="Search by business or contact name"
           prefix={<SearchOutlined />}
-          style={{ width: 300 }}
+          style={{ width: '100%', maxWidth: 300 }} // Make search input responsive
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
@@ -334,7 +369,6 @@ const Leads = () => {
       </div>
 
       <Tabs defaultActiveKey="active" onChange={setActiveTab}>
-        {/* UPDATED: Added counts to tab titles */}
         <TabPane tab={`Active Leads (${activeLeadsCount})`} key="active" />
         <TabPane tab={`Customers (${customersCount})`} key="customers" />
       </Tabs>
@@ -371,7 +405,7 @@ const Leads = () => {
 
       <Modal
         title="Change Account Status"
-        visible={isModalVisible}
+        open={isModalVisible}
         onOk={handleConfirmStatusChange}
         onCancel={handleCancelStatusChange}
         okText="Yes"
@@ -379,8 +413,6 @@ const Leads = () => {
       >
         <p>Are you sure you want to change this account's status to {newStatus ? 'Customer' : 'Lead'}?</p>
       </Modal>
-
-
     </Card>
   );
 };

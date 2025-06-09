@@ -7,11 +7,13 @@ import {
   Tag,
   Input,
   Space,
-  Popconfirm,
+  Popconfirm, // Popconfirm is still imported but not used for the dropdown delete
   Typography,
-  Modal,
+  Modal,      // Modal is now explicitly used for confirmation
   Descriptions,
   Divider,
+  Dropdown,
+  Menu,
 } from "antd";
 import {
   EditOutlined,
@@ -20,10 +22,13 @@ import {
   PrinterOutlined,
   SearchOutlined,
   MessageOutlined,
+  ScheduleOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import toast from "react-hot-toast";
+import QuotationFollowUpDrawer from "./QuotationFollowUpDrawer";
 
 const { Text } = Typography;
 
@@ -35,9 +40,11 @@ const QuotationList = ({
   onSearch,
   onViewNotes,
   loading,
+  refreshQuotations,
 }) => {
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState(null);
+  const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
 
   const openViewModal = (record) => {
     setSelectedQuotation(record);
@@ -46,6 +53,11 @@ const QuotationList = ({
       duration: 1500,
       position: "top-right",
     });
+  };
+
+  const handleShowFollowUpDrawer = (record) => {
+    setSelectedQuotation(record);
+    setFollowUpDrawerVisible(true);
   };
 
   const generateAndDownloadPDF = async (record) => {
@@ -235,7 +247,7 @@ const QuotationList = ({
       title: "Total (₹)",
       dataIndex: "total",
       render: (amt, record) => {
-        const totalAmount = parseFloat(amt) || 
+        const totalAmount = parseFloat(amt) ||
           (record.items?.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0) || 0);
         return (
           <Text strong style={{ color: "#52c41a" }}>
@@ -268,55 +280,59 @@ const QuotationList = ({
     },
     {
       title: "Actions",
-      width: 200,
+      width: 80,
       render: (_, record) => (
-        <Space>
-          <Tooltip title="View Details">
-            <Button
-              icon={<EyeOutlined />}
-              onClick={() => openViewModal(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Download PDF">
-            <Button
-              icon={<PrinterOutlined />}
-              onClick={() => generateAndDownloadPDF(record)}
-            />
-          </Tooltip>
-          <Tooltip title="View/Add Notes">
-            <Button
-              icon={<MessageOutlined />}
-              onClick={() => {
+        <Dropdown
+          overlay={
+            <Menu>
+              <Menu.Item key="view" icon={<EyeOutlined />} onClick={() => openViewModal(record)}>
+                View Details
+              </Menu.Item>
+              <Menu.Item key="download" icon={<PrinterOutlined />} onClick={() => generateAndDownloadPDF(record)}>
+                Download PDF
+              </Menu.Item>
+              <Menu.Item key="notes" icon={<MessageOutlined />} onClick={() => {
                 onViewNotes(record);
                 toast.success("Opening notes dialog...", { duration: 1500 });
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="Edit Quotation">
-            <Button
-              icon={<EditOutlined />}
-              onClick={() => {
+              }}>
+                View/Add Notes
+              </Menu.Item>
+              <Menu.Item key="followups" icon={<ScheduleOutlined />} onClick={() => handleShowFollowUpDrawer(record)}>
+                Add/View Follow-ups
+              </Menu.Item>
+              <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => {
                 onEdit(record);
-                toast.success("Initiating quotation edit...", {
-                  duration: 1500,
-                });
-              }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Are you sure you want to delete this quotation?"
-            onConfirm={() => {
-              onDelete(record._id);
-              toast.success("Deleting quotation...", { duration: 1500 });
-            }}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Tooltip title="Delete Quotation">
-              <Button icon={<DeleteOutlined />} danger />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+                toast.success("Initiating quotation edit...", { duration: 1500 });
+              }}>
+                Edit Quotation
+              </Menu.Item>
+              {/* Corrected Delete Action using Modal.confirm */}
+              <Menu.Item
+                key="delete"
+                icon={<DeleteOutlined />}
+                danger
+                onClick={() => {
+                  Modal.confirm({
+                    title: 'Delete Quotation',
+                    content: 'Are you sure you want to delete this quotation? This action cannot be undone.',
+                    okText: 'Yes, Delete',
+                    cancelText: 'No',
+                    okButtonProps: { danger: true },
+                    onOk: () => {
+                      onDelete(record._id);
+                      toast.success("Deleting quotation...", { duration: 1500 });
+                    }
+                  });
+                }}
+              >
+                Delete Quotation
+              </Menu.Item>
+            </Menu>
+          }
+          trigger={['click']}
+        >
+          <Button icon={<MoreOutlined />} />
+        </Dropdown>
       ),
     },
   ];
@@ -357,11 +373,11 @@ const QuotationList = ({
         dataSource={quotations}
         rowKey="_id"
         loading={loading}
-        pagination={{ 
+        pagination={{
           pageSize: 10,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => 
+          showTotal: (total, range) =>
             `${range[0]}-${range[1]} of ${total} quotations`
         }}
         scroll={{ x: 1200 }}
@@ -401,8 +417,8 @@ const QuotationList = ({
                 <Tag color="blue">{selectedQuotation.quotationNumber || "N/A"}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Date">
-                {selectedQuotation.date ? 
-                  new Date(selectedQuotation.date).toLocaleDateString('en-IN') : 
+                {selectedQuotation.date ?
+                  new Date(selectedQuotation.date).toLocaleDateString('en-IN') :
                   "N/A"
                 }
               </Descriptions.Item>
@@ -432,7 +448,7 @@ const QuotationList = ({
                   }}
                 >
                   {formatCurrency(
-                    selectedQuotation.total || 
+                    selectedQuotation.total ||
                     (selectedQuotation.items?.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0) || 0)
                   )}
                 </Text>
@@ -526,14 +542,14 @@ const QuotationList = ({
             <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
               QUOTATION
             </h2>
-            
+
             <Descriptions column={2} bordered size="small">
               <Descriptions.Item label="Quotation Number">
                 {quotation.quotationNumber || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Date">
-                {quotation.date ? 
-                  new Date(quotation.date).toLocaleDateString('en-IN') : 
+                {quotation.date ?
+                  new Date(quotation.date).toLocaleDateString('en-IN') :
                   "N/A"
                 }
               </Descriptions.Item>
@@ -550,7 +566,9 @@ const QuotationList = ({
                 {quotation.gstin || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Business Info" span={2}>
-                {quotation.businessInfo || "N/A"}
+                <Text style={{ whiteSpace: "pre-wrap" }}>
+                  {quotation.businessInfo || "N/A"}
+                </Text>
               </Descriptions.Item>
             </Descriptions>
 
@@ -625,6 +643,15 @@ const QuotationList = ({
           </div>
         </div>
       ))}
+
+      {selectedQuotation && (
+        <QuotationFollowUpDrawer
+          visible={followUpDrawerVisible}
+          onClose={() => setFollowUpDrawerVisible(false)}
+          quotation={selectedQuotation}
+          refreshQuotations={refreshQuotations}
+        />
+      )}
     </>
   );
 };

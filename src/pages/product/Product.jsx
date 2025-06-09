@@ -34,6 +34,7 @@ const Product = () => {
   const [viewingProduct, setViewingProduct] = useState(null);
   const [notesVisible, setNotesVisible] = useState(false);
 
+  // ✅ Fetch all products
   const fetchProducts = async () => {
     try {
       const { data } = await axios.get("/api/product");
@@ -61,9 +62,10 @@ const Product = () => {
     }
   };
 
+  // ✅ Fix incorrect API URL here
   const fetchProductDetails = async (id) => {
     try {
-      const { data } = await axios.get(`/api//${id}`);
+      const { data } = await axios.get(`/api/product/${id}`);
       setViewingProduct(data);
     } catch (error) {
       toast.error("Failed to fetch product details");
@@ -200,7 +202,7 @@ const Product = () => {
           </TabPane>
         </Tabs>
 
-        {/* Product Drawer Form */}
+        {/* Product Form Drawer */}
         <ProductForm
           visible={drawerVisible}
           onClose={() => {
@@ -211,7 +213,7 @@ const Product = () => {
           initialValues={editingProduct}
         />
 
-        {/* View Product Drawer */}
+        {/* Product Details Drawer */}
         <Drawer
           open={!!viewingProduct}
           title="Product Details"
@@ -227,9 +229,9 @@ const Product = () => {
                 <Descriptions.Item label="Name">
                   {viewingProduct.productName}
                 </Descriptions.Item>
-                <Descriptions.Item label="Price">{`₹${viewingProduct.price?.toFixed(
-                  2
-                )}`}</Descriptions.Item>
+                <Descriptions.Item label="Price">
+                  ₹{viewingProduct.price?.toFixed(2)}
+                </Descriptions.Item>
                 <Descriptions.Item label="Qty">
                   {viewingProduct.quantity}
                 </Descriptions.Item>
