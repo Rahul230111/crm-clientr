@@ -27,6 +27,10 @@ const InvoicePage = () => {
 
   const handleSave = async (invoiceData) => {
     try {
+      // --- IMPORTANT DEBUGGING STEP ---
+      console.log("Invoice data being sent:", invoiceData); // Check this in your browser's console!
+      // --- END DEBUGGING STEP ---
+
       if (currentInvoice && currentInvoice._id) {
         await axios.put(`/api/invoices/${currentInvoice._id}`, invoiceData);
         message.success('Invoice updated successfully');
@@ -39,6 +43,8 @@ const InvoicePage = () => {
       setCurrentInvoice(null);
     } catch (err) {
       console.error(err);
+      // Log the full response data for more specific error messages from the backend
+      console.error("Server error response:", err?.response?.data);
       message.error(err?.response?.data?.message || 'Failed to save invoice');
     }
   };
@@ -78,7 +84,7 @@ const InvoicePage = () => {
       <InvoiceList
         invoices={filteredInvoices.length > 0 ? filteredInvoices : invoices}
         onAddNew={() => {
-          setCurrentInvoice(null);
+          setCurrentInvoice(null); // Ensure currentInvoice is null for new invoice
           setShowForm(true);
         }}
         onEdit={handleEdit}
@@ -101,7 +107,24 @@ const InvoicePage = () => {
         <InvoiceForm
           onCancel={handleClose}
           onSave={handleSave}
-          initialValues={currentInvoice}
+          // Ensure initialValues provides all necessary fields, even if null/undefined for new invoices
+          initialValues={currentInvoice || {
+            invoiceType: 'Invoice', // Provide a default if starting fresh
+            items: [], // Crucial: ensure items array is always present
+            taxRate: 18,
+            discountAmount: 0,
+            // Add other default empty strings or values for denormalized fields
+            businessName: '',
+            customerName: '',
+            customerAddress: '',
+            customerGSTIN: '',
+            companyGSTIN: '',
+            companyName: '',
+            companyAddress: '',
+            contactPerson: '',
+            contactNumber: '',
+            paymentTerms: '',
+          }}
         />
       </Drawer>
 
