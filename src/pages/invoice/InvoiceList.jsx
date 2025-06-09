@@ -40,7 +40,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
     const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
     const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', 'Ten', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    
+
     if (num === 0) return 'Zero';
     if (num < 10) return units[num];
     if (num < 20) return teens[num - 10];
@@ -71,7 +71,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
 
       // Set document properties
       doc.setProperties({
-        title: `${invoice.invoiceType} - ${invoice.invoiceNumber}`,
+        title: `${invoice.invoiceType} - ${invoice.invoiceNumber || invoice.proformaNumber}`, // Use appropriate number
         subject: 'Invoice',
         author: 'Your Company Name',
         keywords: 'invoice, billing',
@@ -87,8 +87,8 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
       doc.text(
-        invoice.invoiceType === 'Proforma' ? 'PROFORMA INVOICE' : 'TAX INVOICE', 
-        105, 
+        invoice.invoiceType === 'Proforma' ? 'PROFORMA INVOICE' : 'TAX INVOICE',
+        105,
         yPos,
         { align: 'center' }
       );
@@ -110,7 +110,8 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text(`Bill To: ${invoice.customerName || 'N/A'}`, margin, yPos);
-      doc.text(`Invoice No: ${invoice.invoiceNumber || 'N/A'}`, 140, yPos);
+      // Conditionally display Invoice No or Proforma No
+      doc.text(`${invoice.invoiceType === 'Proforma' ? 'Proforma No' : 'Invoice No'}: ${invoice.invoiceType === 'Proforma' ? invoice.proformaNumber : invoice.invoiceNumber || 'N/A'}`, 140, yPos);
       yPos += 5;
 
       doc.text(`Contact: ${invoice.contactPerson || 'N/A'}`, margin, yPos);
@@ -252,7 +253,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
 
       // Save the PDF with appropriate filename
       const pdfBlob = doc.output('blob');
-      saveAs(pdfBlob, `${invoice.invoiceType.toLowerCase()}-${invoice.invoiceNumber || 'draft'}.pdf`);
+      saveAs(pdfBlob, `${invoice.invoiceType.toLowerCase()}-${invoice.invoiceType === 'Proforma' ? invoice.proformaNumber : invoice.invoiceNumber || 'draft'}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('Failed to generate PDF');
@@ -294,7 +295,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
     const toastId = toast.loading('Closing invoice...');
     try {
       // Assuming axios is imported elsewhere or provided
-      await axios.patch(`/api/invoices/${id}/close`); 
+      await axios.patch(`/api/invoices/${id}/close`);
       toast.success('Invoice closed successfully', { id: toastId });
       refreshInvoices?.();
     } catch (error) { // Catch the error to provide better feedback
@@ -321,7 +322,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   const exportToExcel = () => {
     const data = filteredInvoices.map((inv, index) => ({
       SNo: index + 1,
-      InvoiceNumber: inv.invoiceNumber,
+      InvoiceNumber: inv.invoiceType === 'Proforma' ? inv.proformaNumber : inv.invoiceNumber, // Conditional export for Excel
       Type: inv.invoiceType,
       Business: inv.businessName,
       Customer: inv.customerName,
@@ -347,7 +348,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   const filteredInvoices = invoices.filter(inv => {
     const matchesType = inv.invoiceType === invoiceTypeFilter;
     const matchesSearch = !searchTerm ||
-      inv.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (inv.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || inv.proformaNumber?.toLowerCase().includes(searchTerm.toLowerCase())) || // Search by proformaNumber as well
       inv.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDate = !dateRange || (
@@ -461,8 +462,12 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       width: 60
     },
     {
-      title: 'Invoice #',
-      render: (_, record) => <Tag icon={<FileTextOutlined />} color="blue">{record.invoiceNumber}</Tag>
+      title: 'Number', // Changed to 'Number' to be generic
+      render: (_, record) => (
+        <Tag icon={<FileTextOutlined />} color="blue">
+          {record.invoiceType === 'Proforma' ? record.proformaNumber : record.invoiceNumber}
+        </Tag>
+      )
     },
     {
       title: 'Type',
@@ -596,7 +601,10 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
         {selectedInvoice && (
           <div>
             <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label="Invoice No">{selectedInvoice.invoiceNumber}</Descriptions.Item>
+              {/* Conditionally render Invoice No or Proforma No */}
+              <Descriptions.Item label={selectedInvoice.invoiceType === 'Proforma' ? 'Proforma No' : 'Invoice No'}>
+                {selectedInvoice.invoiceType === 'Proforma' ? selectedInvoice.proformaNumber : selectedInvoice.invoiceNumber}
+              </Descriptions.Item>
               <Descriptions.Item label="Type">{selectedInvoice.invoiceType}</Descriptions.Item>
               <Descriptions.Item label="Date">
                 {selectedInvoice.date ? new Date(selectedInvoice.date).toLocaleDateString('en-IN') : 'N/A'}
@@ -660,14 +668,14 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
                     let igstAmount = 0;
 
                     if (gstType === 'interstate') {
-                        igstAmount = subTotal * (gstPercentage / 100);
-                        totalGSTAmount = igstAmount;
+                      igstAmount = subTotal * (gstPercentage / 100);
+                      totalGSTAmount = igstAmount;
                     } else {
-                        cgstAmount = subTotal * (gstPercentage / 200);
-                        sgstAmount = subTotal * (gstPercentage / 200);
-                        totalGSTAmount = cgstAmount + sgstAmount;
+                      cgstAmount = subTotal * (gstPercentage / 200);
+                      sgstAmount = subTotal * (gstPercentage / 200);
+                      totalGSTAmount = cgstAmount + sgstAmount;
                     }
-                    
+
                     const grandTotal = subTotal + totalGSTAmount;
 
                     return (
@@ -681,33 +689,33 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
                           </Table.Summary.Cell>
                         </Table.Summary.Row>
                         {gstType === 'interstate' ? (
-                            <Table.Summary.Row>
-                                <Table.Summary.Cell index={0} colSpan={5} align="right">
-                                    <Text strong>IGST ({gstPercentage}%):</Text>
-                                </Table.Summary.Cell>
-                                <Table.Summary.Cell index={5}>
-                                    <Text strong>{formatIndianCurrency(igstAmount)}</Text>
-                                </Table.Summary.Cell>
-                            </Table.Summary.Row>
+                          <Table.Summary.Row>
+                            <Table.Summary.Cell index={0} colSpan={5} align="right">
+                              <Text strong>IGST ({gstPercentage}%):</Text>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={5}>
+                              <Text strong>{formatIndianCurrency(igstAmount)}</Text>
+                            </Table.Summary.Cell>
+                          </Table.Summary.Row>
                         ) : (
-                            <>
-                                <Table.Summary.Row>
-                                    <Table.Summary.Cell index={0} colSpan={5} align="right">
-                                        <Text strong>CGST ({gstPercentage / 2}%):</Text>
-                                    </Table.Summary.Cell>
-                                    <Table.Summary.Cell index={5}>
-                                        <Text strong>{formatIndianCurrency(cgstAmount)}</Text>
-                                    </Table.Summary.Cell>
-                                </Table.Summary.Row>
-                                <Table.Summary.Row>
-                                    <Table.Summary.Cell index={0} colSpan={5} align="right">
-                                        <Text strong>SGST ({gstPercentage / 2}%):</Text>
-                                    </Table.Summary.Cell>
-                                    <Table.Summary.Cell index={5}>
-                                        <Text strong>{formatIndianCurrency(sgstAmount)}</Text>
-                                    </Table.Summary.Cell>
-                                </Table.Summary.Row>
-                            </>
+                          <>
+                            <Table.Summary.Row>
+                              <Table.Summary.Cell index={0} colSpan={5} align="right">
+                                <Text strong>CGST ({gstPercentage / 2}%):</Text>
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={5}>
+                                <Text strong>{formatIndianCurrency(cgstAmount)}</Text>
+                              </Table.Summary.Cell>
+                            </Table.Summary.Row>
+                            <Table.Summary.Row>
+                              <Table.Summary.Cell index={0} colSpan={5} align="right">
+                                <Text strong>SGST ({gstPercentage / 2}%):</Text>
+                              </Table.Summary.Cell>
+                              <Table.Summary.Cell index={5}>
+                                <Text strong>{formatIndianCurrency(sgstAmount)}</Text>
+                              </Table.Summary.Cell>
+                            </Table.Summary.Row>
+                          </>
                         )}
                         <Table.Summary.Row>
                           <Table.Summary.Cell index={0} colSpan={5} align="right">
@@ -720,9 +728,9 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
                           </Table.Summary.Cell>
                         </Table.Summary.Row>
                         <Table.Summary.Row>
-                            <Table.Summary.Cell index={0} colSpan={6}>
-                                <Text italic>Amount in words: {numberToWords(Math.floor(grandTotal))} Rupees Only</Text>
-                            </Table.Summary.Cell>
+                          <Table.Summary.Cell index={0} colSpan={6}>
+                            <Text italic>Amount in words: {numberToWords(Math.floor(grandTotal))} Rupees Only</Text>
+                          </Table.Summary.Cell>
                         </Table.Summary.Row>
                       </Table.Summary>
                     );
@@ -733,35 +741,35 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
 
             {/* Amount Summary outside items table for overall total (keeping it here for consistency with original) */}
             <Descriptions column={2} bordered size="small" style={{ marginTop: '20px' }}>
-                <Descriptions.Item label="Sub Total" span={2}>
-                    ₹{selectedInvoice.subTotal?.toFixed(2) || '0.00'}
+              <Descriptions.Item label="Sub Total" span={2}>
+                ₹{selectedInvoice.subTotal?.toFixed(2) || '0.00'}
+              </Descriptions.Item>
+              {selectedInvoice.gstType === 'interstate' ? (
+                <Descriptions.Item label="IGST Amount" span={2}>
+                  ₹{selectedInvoice.igstAmount?.toFixed(2) || '0.00'}
                 </Descriptions.Item>
-                {selectedInvoice.gstType === 'interstate' ? (
-                    <Descriptions.Item label="IGST Amount" span={2}>
-                        ₹{selectedInvoice.igstAmount?.toFixed(2) || '0.00'}
-                    </Descriptions.Item>
-                ) : (
-                    <>
-                        <Descriptions.Item label="CGST Amount" span={1}>
-                            ₹{selectedInvoice.cgstAmount?.toFixed(2) || '0.00'}
-                        </Descriptions.Item>
-                        <Descriptions.Item label="SGST Amount" span={1}>
-                            ₹{selectedInvoice.sgstAmount?.toFixed(2) || '0.00'}
-                        </Descriptions.Item>
-                    </>
-                )}
-                <Descriptions.Item label="Grand Total" span={2}>
-                    <Text strong style={{ fontSize: "18px", color: "#52c41a" }}>
-                        ₹{selectedInvoice.totalAmount?.toFixed(2) || '0.00'}
-                    </Text>
-                </Descriptions.Item>
-                 <Descriptions.Item label="Amount in Words" span={2}>
-                    <Text italic>{numberToWords(Math.floor(selectedInvoice.totalAmount || 0))} Rupees Only</Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Status" span={2}>{getStatusTag(selectedInvoice.paymentStatus)}</Descriptions.Item>
-                <Descriptions.Item label="Closed" span={2}>
-                    {selectedInvoice.isClosed ? <Tag color="red">Yes</Tag> : <Tag color="green">No</Tag>}
-                </Descriptions.Item>
+              ) : (
+                <>
+                  <Descriptions.Item label="CGST Amount" span={1}>
+                    ₹{selectedInvoice.cgstAmount?.toFixed(2) || '0.00'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="SGST Amount" span={1}>
+                    ₹{selectedInvoice.sgstAmount?.toFixed(2) || '0.00'}
+                  </Descriptions.Item>
+                </>
+              )}
+              <Descriptions.Item label="Grand Total" span={2}>
+                <Text strong style={{ fontSize: "18px", color: "#52c41a" }}>
+                  ₹{selectedInvoice.totalAmount?.toFixed(2) || '0.00'}
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Amount in Words" span={2}>
+                <Text italic>{numberToWords(Math.floor(selectedInvoice.totalAmount || 0))} Rupees Only</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Status" span={2}>{getStatusTag(selectedInvoice.paymentStatus)}</Descriptions.Item>
+              <Descriptions.Item label="Closed" span={2}>
+                {selectedInvoice.isClosed ? <Tag color="red">Yes</Tag> : <Tag color="green">No</Tag>}
+              </Descriptions.Item>
             </Descriptions>
 
 
@@ -769,16 +777,9 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
               <>
                 <Divider orientation="left">Notes ({selectedInvoice.notes.length})</Divider>
                 {selectedInvoice.notes.map((note, index) => (
-                  <div key={index} style={{ marginBottom: 12, padding: 8, background: "#f5f5f5", borderRadius: 4 }}>
-                    <Text italic>"{note.text}"</Text>
-                    <br />
-                    <Text type="secondary" style={{ fontSize: "0.8em" }}>
-                      — {note.author} on{" "}
-                      {note.timestamp ||
-                        new Date(
-                          selectedInvoice.createdAt
-                        ).toLocaleDateString('en-IN')}
-                    </Text>
+                  <div key={index} style={{ marginBottom: 8 }}>
+                    <Text strong>{note.author}</Text> on <Text type="secondary">{note.timestamp}</Text>
+                    <p>{note.text}</p>
                   </div>
                 ))}
               </>
@@ -787,31 +788,25 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
         )}
       </Modal>
 
-      {/* Item Specifications Modal */}
+      {/* Item View Modal */}
       <Modal
         title="Item Specifications"
         open={itemViewModalVisible}
         onCancel={() => setItemViewModalVisible(false)}
         footer={<Button onClick={() => setItemViewModalVisible(false)}>Close</Button>}
-        width={700}
+        width={800}
       >
-        {selectedInvoice && (
+        {selectedInvoice && selectedInvoice.items && (
           <List
-            itemLayout="vertical" // Changed to vertical for better multi-line spec display
+            itemLayout="vertical"
             dataSource={selectedInvoice.items}
             renderItem={(item, index) => (
-              <List.Item>
+              <List.Item key={index}>
                 <List.Item.Meta
-                  title={
-                    <Text strong>
-                      {index + 1}. {item.description}
-                    </Text>
-                  }
+                  title={<Text strong>{item.description || 'No Description'}</Text>}
                   description={
                     <>
-                      <Text>
-                        Qty: {item.quantity} {item.quantityType}
-                      </Text>
+                      <Text>Quantity: {item.quantity}</Text>
                       <br />
                       <Text>Rate: ₹{formatIndianCurrency(item.rate)}</Text>
                       <br />

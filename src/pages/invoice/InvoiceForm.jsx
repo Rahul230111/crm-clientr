@@ -497,7 +497,7 @@ ${business.gstNumber || ""}
               <Select
                 placeholder="Select GST calculation type"
                 onChange={(value) => setGstType(value)}
-                value={gstType} // <--- Add this line to control the Select value
+                value={gstType}
                 style={styles.formField}
               >
                 <Option value="interstate">
