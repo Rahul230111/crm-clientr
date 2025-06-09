@@ -6,7 +6,8 @@ import {
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined,
   FileTextOutlined, PrinterOutlined, SearchOutlined,
-  MessageOutlined, LockOutlined, UnlockOutlined, DollarOutlined
+  MessageOutlined, LockOutlined, UnlockOutlined, DollarOutlined,
+  SwapOutlined // NEW IMPORT: SwapOutlined for the convert button
 } from '@ant-design/icons';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -15,6 +16,7 @@ import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import NotesDrawer from './NotesDrawer';
 import PaymentHistoryDrawer from './PaymentHistoryDrawer';
+import axios from '../../api/axios'; // Make sure this import path is correct for your project
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -31,6 +33,9 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   const [businessFilter, setBusinessFilter] = useState('all');
   const [invoiceTypeFilter, setInvoiceTypeFilter] = useState('Invoice');
   const [itemViewModalVisible, setItemViewModalVisible] = useState(false); // New state for item spec view
+
+  // NEW STATE: For filtering Proforma conversion status
+  const [conversionStatusFilter, setConversionStatusFilter] = useState('all');
 
   // Get unique business names for filter dropdown
   const uniqueBusinessNames = [...new Set(invoices.map(inv => inv.businessName))];
@@ -294,12 +299,11 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   const handleCloseInvoice = async (id) => {
     const toastId = toast.loading('Closing invoice...');
     try {
-      // Assuming axios is imported elsewhere or provided
       await axios.patch(`/api/invoices/${id}/close`);
       toast.success('Invoice closed successfully', { id: toastId });
       refreshInvoices?.();
-    } catch (error) { // Catch the error to provide better feedback
-      console.error("Error closing invoice:", error); // Log the error for debugging
+    } catch (error) {
+      console.error("Error closing invoice:", error);
       toast.error('Failed to close invoice', { id: toastId });
     }
   };
@@ -308,13 +312,29 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
   const handleUnlockInvoice = async (id) => {
     const toastId = toast.loading('Unlocking invoice...');
     try {
-      // Assuming axios is imported elsewhere or provided
       await axios.patch(`/api/invoices/${id}/unlock`);
       toast.success('Invoice unlocked successfully', { id: toastId });
       refreshInvoices?.();
-    } catch (error) { // Catch the error to provide better feedback
-      console.error("Error unlocking invoice:", error); // Log the error for debugging
+    } catch (error) {
+      console.error("Error unlocking invoice:", error);
       toast.error('Failed to unlock invoice', { id: toastId });
+    }
+  };
+
+  // NEW FUNCTION: handleConvertProformaToInvoice
+  const handleConvertProformaToInvoice = async (id) => {
+    const toastId = toast.loading('Converting Proforma to Invoice...');
+    try {
+      // This API endpoint will trigger the backend conversion logic
+      // You need to ensure your backend has an endpoint like this
+      // that handles the conversion logic (e.g., assigning a new invoice number,
+      // changing invoiceType to 'Invoice', updating conversionStatus).
+      await axios.patch(`/api/invoices/${id}/convert-to-invoice`);
+      toast.success('Proforma converted to Invoice successfully', { id: toastId });
+      refreshInvoices?.(); // Refresh the list to show the updated invoice
+    } catch (error) {
+      console.error("Error converting Proforma to Invoice:", error);
+      toast.error('Failed to convert Proforma to Invoice', { id: toastId });
     }
   };
 
@@ -331,6 +351,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       DueDate: inv.dueDate || '',
       Status: inv.paymentStatus,
       Closed: inv.isClosed ? 'Yes' : 'No',
+      ConversionStatus: inv.invoiceType === 'Proforma' ? inv.conversionStatus || 'N/A' : 'N/A', // NEW: Export conversion status
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -360,7 +381,12 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
         ? inv.paymentStatus !== 'paid' && new Date(inv.dueDate) < new Date()
         : inv.paymentStatus === statusFilter;
     const matchesBusiness = businessFilter === 'all' ? true : inv.businessName === businessFilter;
-    return matchesType && matchesSearch && matchesDate && matchesStatus && matchesBusiness;
+
+    // NEW: Filter by conversion status (only applies to Proforma invoices)
+    const matchesConversionStatus = conversionStatusFilter === 'all' ? true :
+        (inv.invoiceType === 'Proforma' && inv.conversionStatus === conversionStatusFilter);
+
+    return matchesType && matchesSearch && matchesDate && matchesStatus && matchesBusiness && matchesConversionStatus;
   });
 
   // Get status tag component
@@ -507,11 +533,7 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
       align: 'center',
       render: (date) => <Text>{date || 'N/A'}</Text>
     },
-    {
-      title: 'Status',
-      dataIndex: 'paymentStatus',
-      render: getStatusTag
-    },
+ 
     {
       title: 'Actions',
       render: (_, record) => (
@@ -534,6 +556,8 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
           <Popconfirm title="Delete invoice?" onConfirm={() => onDelete(record._id)}>
             <Tooltip title="Delete Invoice"><Button icon={<DeleteOutlined />} danger /></Tooltip>
           </Popconfirm>
+
+        
         </Space>
       )
     }
@@ -554,6 +578,8 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
               <Select.Option value="partial">Partial</Select.Option>
               <Select.Option value="overdue">Overdue</Select.Option>
             </Select>
+            {/* NEW: Filter for Conversion Status */}
+          
             <Select
               value={businessFilter}
               onChange={setBusinessFilter}
@@ -770,6 +796,20 @@ const InvoiceList = ({ invoices, onAddNew, onEdit, onDelete, onSearch, refreshIn
               <Descriptions.Item label="Closed" span={2}>
                 {selectedInvoice.isClosed ? <Tag color="red">Yes</Tag> : <Tag color="green">No</Tag>}
               </Descriptions.Item>
+              {/* NEW: Display conversion status in modal */}
+              {selectedInvoice.invoiceType === 'Proforma' && (
+                  <Descriptions.Item label="Conversion Status" span={2}>
+                      <Tag color={
+                          selectedInvoice.conversionStatus === 'converted' ? 'green' :
+                          selectedInvoice.conversionStatus === 'rejected' ? 'red' :
+                          'blue'
+                      }>
+                          {selectedInvoice.conversionStatus === 'converted' ? 'Converted' :
+                           selectedInvoice.conversionStatus === 'rejected' ? 'Rejected' :
+                           'Pending Conversion'}
+                      </Tag>
+                  </Descriptions.Item>
+              )}
             </Descriptions>
 
 
