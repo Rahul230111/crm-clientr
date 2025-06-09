@@ -36,7 +36,7 @@ const Product = () => {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await axios.get("/api/products");
+      const { data } = await axios.get("/api/product");
       setProducts(data);
     } catch (err) {
       toast.error("Failed to load products");
@@ -53,7 +53,7 @@ const Product = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/products/${id}`);
+      await axios.delete(`/api/product/${id}`);
       toast.success("Product deleted");
       fetchProducts();
     } catch {
@@ -63,7 +63,7 @@ const Product = () => {
 
   const fetchProductDetails = async (id) => {
     try {
-      const { data } = await axios.get(`/api/products/${id}`);
+      const { data } = await axios.get(`/api//${id}`);
       setViewingProduct(data);
     } catch (error) {
       toast.error("Failed to fetch product details");

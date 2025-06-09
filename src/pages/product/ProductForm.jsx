@@ -39,10 +39,10 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
 
     try {
       if (initialValues?._id) {
-        await axios.put(`/api/products/${initialValues._id}`, payload);
+        await axios.put(`/api/product/${initialValues._id}`, payload);
         toast.success('Product updated');
       } else {
-        await axios.post('/api/products', payload);
+        await axios.post('/api/product', payload);
         toast.success('Product added');
       }
       onSave();

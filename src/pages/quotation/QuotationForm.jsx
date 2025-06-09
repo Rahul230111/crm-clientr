@@ -94,7 +94,7 @@ ${business.email || ""}
 
     const toastId = toast.loading("Loading product options...");
     try {
-      const res = await axios.get("/api/products");
+      const res = await axios.get("/api/product");
       setProductOptions(
         res.data.map((p) => ({
           ...p,

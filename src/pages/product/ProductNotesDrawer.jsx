@@ -38,7 +38,7 @@ const ProductNotesDrawer = ({ visible, onClose, product, refreshProducts }) => {
         author: getCurrentUser()
       };
       const updatedNotes = [...notes, newNote];
-      await axios.put(`/api/products/${product._id}/notes`, { notes: updatedNotes });
+      await axios.put(`/api/product/${product._id}/notes`, { notes: updatedNotes });
       setNotes(updatedNotes);
       toast.success('Note added', { id: toastId });
       form.resetFields();
