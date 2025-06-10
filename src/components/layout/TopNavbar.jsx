@@ -51,7 +51,6 @@ const TopNavbar = ({ collapsed, setCollapsed }) => {
       height: 64,
       padding: '0 16px',
       background: '#fff',
-      boxShadow: '0 1px 4px rgba(0,21,41,.08)',
       position: 'sticky',
       top: 0,
       zIndex: 100

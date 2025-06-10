@@ -2,7 +2,8 @@ import React from 'react';
 import RoleGuard from '../components/auth/RoleGuard';
 
 // Lazy-loaded pages
-const Dashboard = React.lazy(() => import('../pages/Dashboard'));
+const Dashboard = React.lazy(() => import('../pages/dashboard/Dashboard'));
+// Removed: const Dashboard = React.lazy(() => import('../pages/dashboard/DashboardMetricCard')); // This line was problematic
 const Login = React.lazy(() => import('../pages/Login'));
 const Profile = React.lazy(() => import('../pages/Profile'));
 const Settings = React.lazy(() => import('../pages/Settings'));
@@ -82,22 +83,13 @@ export const appRoutes = [
     ),
   },
   {
-    path: '/products',  // Use plural route here for product list
+    path: '/products',  // Use plural route here for product list
     element: (
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <Product />
       </RoleGuard>
     ),
   },
-  // You can remove or keep this alias if you want:
-  // {
-  //   path: '/product',
-  //   element: (
-  //     <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
-  //       <Product />
-  //     </RoleGuard>
-  //   ),
-  // },
   {
     path: '/invoice/form',
     element: (

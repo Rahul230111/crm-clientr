@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Added useRef
 import axios from '../../api/axios';
 import {
   Card, Input, Button, Table, Tabs, Switch, Typography,
@@ -10,10 +10,13 @@ import {
   PlusOutlined, EditOutlined, SearchOutlined,
   MessageOutlined, PrinterOutlined, CustomerServiceOutlined, DeleteOutlined,
   MoreOutlined,
+  FilePdfOutlined, // Added for PDF export icon
+  FileExcelOutlined, // Added for Excel export icon
 } from '@ant-design/icons';
 import { toast } from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx'; // Added for Excel export
 import BusinessAccountForm from './BusinessAccountForm';
 import NotesDrawer from './NotesDrawer';
 import FollowUpDrawer from './FollowUpDrawer';
@@ -34,8 +37,15 @@ const Leads = () => {
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
   const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
+
+  // State variables for counts
   const [activeLeadsCount, setActiveLeadsCount] = useState(0);
   const [customersCount, setCustomersCount] = useState(0);
+  const [waitingLeadsCount, setWaitingLeadsCount] = useState(0);
+  const [closedAccountsCount, setClosedAccountsCount] = useState(0);
+
+  // Ref for the table element to capture for PDF/Excel export
+  const tableRef = useRef(null);
 
   useEffect(() => {
     fetchAccounts();
@@ -43,26 +53,29 @@ const Leads = () => {
 
   const fetchAccounts = async () => {
     try {
-      let activeLeadsEndpoint = `${API_URL}/leads/active`;
-      let customersEndpoint = `${API_URL}/customers`;
+      const response = await axios.get(`${API_URL}`);
+      const allAccounts = response.data;
 
-      const [leadsResponse, customersResponse] = await Promise.all([
-        axios.get(activeLeadsEndpoint),
-        axios.get(customersEndpoint)
-      ]);
+      const activeLeadsData = allAccounts.filter(account => account.status === 'Active' && !account.isCustomer);
+      const customersData = allAccounts.filter(account => account.isCustomer);
+      const waitingLeadsData = allAccounts.filter(account => account.status === 'Waiting' && !account.isCustomer);
+      const closedAccountsData = allAccounts.filter(account => account.status === 'Closed');
 
-      const leadsData = leadsResponse.data;
-      const customersData = customersResponse.data;
-
-      setActiveLeadsCount(leadsData.length);
+      setActiveLeadsCount(activeLeadsData.length);
       setCustomersCount(customersData.length);
+      setWaitingLeadsCount(waitingLeadsData.length);
+      setClosedAccountsCount(closedAccountsData.length);
 
       if (activeTab === 'active') {
-        setAccounts(leadsData);
+        setAccounts(activeLeadsData);
       } else if (activeTab === 'customers') {
         setAccounts(customersData);
+      } else if (activeTab === 'waiting') {
+        setAccounts(waitingLeadsData);
+      } else if (activeTab === 'closed') {
+        setAccounts(closedAccountsData);
       } else {
-        setAccounts([...leadsData, ...customersData]);
+        setAccounts(allAccounts);
       }
 
     } catch (error) {
@@ -104,7 +117,6 @@ const Leads = () => {
     }
   };
 
-
   const showNotesDrawer = (account) => {
     setSelectedAccount(account);
     setNotesDrawerVisible(true);
@@ -143,10 +155,11 @@ const Leads = () => {
     setNewStatus(null);
   };
 
-  const generatePdf = async (account) => {
-    const input = document.getElementById(`lead-${account._id}`);
+  // Function to export the entire table to PDF
+  const exportTableToPdf = async () => {
+    const input = tableRef.current; // Use the ref for the table
     if (!input) {
-      toast.error('PDF content not found.');
+      toast.error('Table content not found for PDF export.');
       return;
     }
 
@@ -171,12 +184,58 @@ const Leads = () => {
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      pdf.save(`${account.businessName}-details.pdf`);
+      pdf.save(`Leads_Customers_Data.pdf`); // Changed filename
       toast.success('PDF generated!', { id: 'pdf-toast' });
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error('Failed to generate PDF.', { id: 'pdf-toast' });
     }
+  };
+
+  // Function to export the entire table data to Excel
+  const exportTableToExcel = () => {
+    if (filteredAccounts.length === 0) {
+      toast.error('No data to export to Excel.');
+      return;
+    }
+
+    // Prepare data for Excel: exclude `key` and `action` column, add S.No
+    const dataForExcel = filteredAccounts.map((account, index) => {
+      const row = {
+        'S.No': index + 1,
+        'Business Name': account.businessName,
+        'Contact Name': account.contactName,
+        'Email': account.email,
+        'Mobile Number': account.mobileNumber,
+        'Lead Type': account.type,
+        'Status': account.status,
+        'Source Type': account.sourceType,
+        // Add any other fields you want to export
+        'GST Number': account.gstNumber,
+        'Phone Number': account.phoneNumber,
+        'Address Line 1': account.addressLine1,
+        'Address Line 2': account.addressLine2,
+        'Address Line 3': account.addressLine3,
+        'Landmark': account.landmark,
+        'City': account.city,
+        'Pincode': account.pincode,
+        'State': account.state,
+        'Country': account.country,
+        'Website': account.website,
+        'Is Customer': account.isCustomer ? 'Yes' : 'No',
+        'Created At': new Date(account.createdAt).toLocaleString(),
+        // Notes and Follow-ups might need special handling if included,
+        // as they are nested arrays. For simplicity, we'll exclude them here
+        // or join them into a string if absolutely necessary.
+      };
+      return row;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Leads & Customers');
+    XLSX.writeFile(workbook, 'Leads_Customers_Data.xlsx');
+    toast.success('Data exported to Excel!');
   };
 
 
@@ -252,14 +311,31 @@ const Leads = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag color={status === 'Active' ? 'green' : 'red'}>
-          {status}
-        </Tag>
-      ),
+      render: (status) => {
+        let color;
+        switch (status) {
+          case 'Active':
+            color = 'green';
+            break;
+          case 'Inactive':
+            color = 'red';
+            break;
+          case 'Waiting':
+            color = 'orange';
+            break;
+          case 'Closed':
+            color = 'purple';
+            break;
+          default:
+            color = 'blue';
+        }
+        return <Tag color={color}>{status}</Tag>;
+      },
       filters: [
         { text: 'Active', value: 'Active' },
         { text: 'Inactive', value: 'Inactive' },
+        { text: 'Waiting', value: 'Waiting' },
+        { text: 'Closed', value: 'Closed' },
       ],
       onFilter: (value, record) => record.status.indexOf(value) === 0,
       responsive: ['sm', 'md', 'lg'], // Hide on extra small screens
@@ -297,8 +373,8 @@ const Leads = () => {
               <Menu.Item key="followup" icon={<CustomerServiceOutlined />} onClick={() => showFollowUpDrawer(record)}>
                 View/Add Follow-ups
               </Menu.Item>
-              <Menu.Item key="generate-pdf" icon={<PrinterOutlined />} onClick={() => generatePdf(record)}>
-                Generate PDF
+              <Menu.Item key="generate-pdf-single" icon={<PrinterOutlined />} onClick={() => generatePdfSingleAccount(record)}>
+                Generate PDF (Single)
               </Menu.Item>
               {/* Conditional menu item for changing status */}
               {record.isCustomer ? (
@@ -344,6 +420,43 @@ const Leads = () => {
     },
   ];
 
+  // Original generatePdf function renamed to generatePdfSingleAccount
+  const generatePdfSingleAccount = async (account) => {
+    const input = document.getElementById(`lead-${account._id}`);
+    if (!input) {
+      toast.error('PDF content not found for this account.');
+      return;
+    }
+
+    toast.loading('Generating PDF...', { id: 'pdf-toast' });
+
+    try {
+      const canvas = await html2canvas(input, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      pdf.save(`${account.businessName}-details.pdf`);
+      toast.success('PDF generated!', { id: 'pdf-toast' });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error('Failed to generate PDF.', { id: 'pdf-toast' });
+    }
+  };
+
   const filteredAccounts = accounts.filter(account =>
     account.businessName.toLowerCase().includes(searchText.toLowerCase()) ||
     account.contactName.toLowerCase().includes(searchText.toLowerCase())
@@ -356,28 +469,42 @@ const Leads = () => {
         <Input
           placeholder="Search by business or contact name"
           prefix={<SearchOutlined />}
-          style={{ width: '100%', maxWidth: 300 }} // Make search input responsive
+          style={{ width: '100%', maxWidth: 300 }}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-          setCurrentAccount(null);
-          setFormVisible(true);
-        }}>
-          Add New Account
-        </Button>
+        <Space> {/* Use Space for better button alignment */}
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            setCurrentAccount(null);
+            setFormVisible(true);
+          }}>
+            Add New Account
+          </Button>
+          {/* New buttons for exporting table data */}
+          <Button icon={<FilePdfOutlined />} onClick={exportTableToPdf}>
+            Export to PDF
+          </Button>
+          <Button icon={<FileExcelOutlined />} onClick={exportTableToExcel}>
+            Export to Excel
+          </Button>
+        </Space>
       </div>
 
       <Tabs defaultActiveKey="active" onChange={setActiveTab}>
         <TabPane tab={`Active Leads (${activeLeadsCount})`} key="active" />
         <TabPane tab={`Customers (${customersCount})`} key="customers" />
+        <TabPane tab={`Waiting Leads (${waitingLeadsCount})`} key="waiting" />
+        <TabPane tab={`Closed Accounts (${closedAccountsCount})`} key="closed" />
       </Tabs>
 
-      {filteredAccounts.length > 0 ? (
-        <Table columns={columns} dataSource={filteredAccounts} rowKey="_id" scroll={{ x: 'max-content' }} />
-      ) : (
-        <Empty description="No accounts found." />
-      )}
+      {/* Attach ref to the Table component for PDF/Excel export */}
+      <div ref={tableRef}>
+        {filteredAccounts.length > 0 ? (
+          <Table columns={columns} dataSource={filteredAccounts} rowKey="_id" scroll={{ x: 'max-content' }} />
+        ) : (
+          <Empty description="No accounts found." />
+        )}
+      </div>
 
       <BusinessAccountForm
         visible={formVisible}

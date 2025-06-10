@@ -16,8 +16,8 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
     if (initialValues) {
       form.setFieldsValue(initialValues);
     } else {
-      // Set default value for sourceType when adding a new account
-      form.setFieldsValue({ sourceType: 'Direct' });
+      // Set default value for sourceType and status when adding a new account
+      form.setFieldsValue({ sourceType: 'Direct', status: 'Active' }); // Added default status
     }
   }, [initialValues, form]);
 
@@ -161,6 +161,20 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
             <Option value="Hot">Hot</Option>
             <Option value="Warm">Warm</Option>
             <Option value="Cold">Cold</Option>
+          </Select>
+        </Form.Item>
+
+        {/* Status Field: Added to allow setting/editing account status */}
+        <Form.Item
+          name="status"
+          label="Account Status"
+          rules={[{ required: true, message: 'Please select an account status' }]}
+        >
+          <Select placeholder="Select Status">
+            <Option value="Active">Active</Option>
+            <Option value="Inactive">Inactive</Option>
+            <Option value="Waiting">Waiting</Option>
+            <Option value="Closed">Closed</Option>
           </Select>
         </Form.Item>
 

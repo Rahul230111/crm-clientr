@@ -1,16 +1,32 @@
 import {
-  Form, Input, DatePicker, Select, InputNumber, Button, Card, Row, Col,
-  Divider, Space, Radio, theme, Tooltip
-} from 'antd';
+  Form,
+  Input,
+  DatePicker,
+  Select,
+  InputNumber,
+  Button,
+  Card,
+  Row,
+  Col,
+  Divider,
+  Space,
+  Radio,
+  theme,
+  Tooltip,
+} from "antd";
 import {
-  SaveOutlined, PrinterOutlined, DeleteOutlined, PlusOutlined, MinusCircleOutlined
-} from '@ant-design/icons';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import dayjs from 'dayjs';
-import axios from '../../api/axios';
-import { toast } from 'react-hot-toast';
+  SaveOutlined,
+  PrinterOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  MinusCircleOutlined,
+} from "@ant-design/icons";
+import { useState, useEffect, useCallback, useRef } from "react";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import dayjs from "dayjs";
+import axios from "../../api/axios";
+import { toast } from "react-hot-toast";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -18,12 +34,23 @@ const { useToken } = theme;
 
 const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
   const [form] = Form.useForm();
-  const [items, setItems] = useState([{ id: 1, productId: null, description: '', hsnSac: '', quantity: 1, quantityType: '', rate: 0, specifications: [{ key: Date.now(), name: '', value: '' }] }]);
-  const [paymentStatus, setPaymentStatus] = useState('pending');
+  const [items, setItems] = useState([
+    {
+      id: 1,
+      productId: null,
+      description: "",
+      hsnSac: "",
+      quantity: 1,
+      quantityType: "",
+      rate: 0,
+      specifications: [{ key: Date.now(), name: "", value: "" }],
+    },
+  ]);
+  const [paymentStatus, setPaymentStatus] = useState("pending");
   const [invoiceTypes, setInvoiceTypes] = useState([]);
   const [dueDate, setDueDate] = useState(null);
   const [businessOptions, setBusinessOptions] = useState([]);
-  const [taxRate, setTaxRate] = useState(18); // Default GST rate to 18% for manual entry
+  const [taxRate, setTaxRate] = useState(); // Default GST rate to 18% for manual entry
   const [productOptions, setProductOptions] = useState([]);
   const [selectedBusinessDetails, setSelectedBusinessDetails] = useState(null);
   const [gstType, setGstType] = useState(null); // Added GST Type for Invoice
@@ -33,8 +60,8 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
   // Styles derived from QuotationFormStyles for consistency
   const styles = {
     mainCardTitle: {
-      fontSize: '20px',
-      fontWeight: 'bold',
+      fontSize: "20px",
+      fontWeight: "bold",
       color: token.colorPrimary,
     },
     quotationCard: {
@@ -42,24 +69,24 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
       boxShadow: token.boxShadowSecondary,
     },
     formField: {
-      width: '100%',
+      width: "100%",
     },
     readOnlyFormField: {
-      width: '100%',
+      width: "100%",
       backgroundColor: token.colorFillAlter,
       color: token.colorTextDisabled,
-      cursor: 'not-allowed',
+      cursor: "not-allowed",
     },
     textAreaField: {
-      width: '100%',
-      resize: 'vertical'
+      width: "100%",
+      resize: "vertical",
     },
     readOnlyTextArea: {
-      width: '100%',
+      width: "100%",
       backgroundColor: token.colorFillAlter,
       color: token.colorTextDisabled,
-      cursor: 'not-allowed',
-      resize: 'vertical'
+      cursor: "not-allowed",
+      resize: "vertical",
     },
     businessInfoCard: {
       backgroundColor: token.colorFillAlter,
@@ -67,16 +94,16 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
       borderRadius: token.borderRadiusSM,
     },
     businessInfoPre: {
-      whiteSpace: 'pre-wrap',
-      fontFamily: 'Roboto, sans-serif',
+      whiteSpace: "pre-wrap",
+      fontFamily: "Roboto, sans-serif",
       fontSize: token.fontSizeSM,
       color: token.colorTextSecondary,
       margin: 0,
     },
     divider: {
-      margin: '24px 0',
+      margin: "24px 0",
       borderColor: token.colorBorderSecondary,
-      borderStyle: 'dashed',
+      borderStyle: "dashed",
     },
     itemCard: {
       marginBottom: token.margin,
@@ -87,7 +114,7 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
       color: token.colorError,
     },
     specificationDivider: {
-      margin: '16px 0 8px 0',
+      margin: "16px 0 8px 0",
       fontSize: token.fontSizeSM,
       color: token.colorTextSecondary,
     },
@@ -95,7 +122,7 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
       marginBottom: token.marginXS,
     },
     addButton: {
-      width: '100%',
+      width: "100%",
       borderColor: token.colorPrimaryBorder,
       color: token.colorPrimary,
     },
@@ -115,13 +142,13 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
     totalField: {
       backgroundColor: token.colorFillAlter,
       color: token.colorText,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       fontSize: token.fontSizeLG,
     },
     grandTotalField: {
       backgroundColor: token.colorSuccessBg,
       color: token.colorSuccessText,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       fontSize: token.fontSizeXL,
     },
     notesCard: {
@@ -135,7 +162,7 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
     },
     buttonGroup: {
       marginTop: token.marginXL,
-      textAlign: 'right',
+      textAlign: "right",
     },
   };
 
@@ -144,10 +171,10 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
 
   const getCurrentUser = () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
-      return user?.email || 'Unknown';
+      const user = JSON.parse(localStorage.getItem("user"));
+      return user?.email || "Unknown";
     } catch {
-      return 'Unknown';
+      return "Unknown";
     }
   };
 
@@ -171,11 +198,11 @@ ${business.gstNumber || ""}
 
     const toastId = toast.loading("Loading business options...");
     try {
-      const res = await axios.get('/api/invoices/leads/active');
+      const res = await axios.get("/api/invoices/leads/active");
       setBusinessOptions(res.data);
       toast.success("Business options loaded", { id: toastId });
     } catch (error) {
-      toast.error('Failed to load businesses', { id: toastId });
+      toast.error("Failed to load businesses", { id: toastId });
       console.error("Error fetching business options:", error);
       hasFetchedBusinessOptions.current = false;
     }
@@ -184,11 +211,11 @@ ${business.gstNumber || ""}
   const fetchInvoiceTypes = useCallback(async () => {
     const toastId = toast.loading("Loading invoice types...");
     try {
-      const res = await axios.get('/api/invoices/types');
+      const res = await axios.get("/api/invoices/types");
       setInvoiceTypes(res.data);
       toast.success("Invoice types loaded", { id: toastId });
     } catch (error) {
-      toast.error('Failed to load invoice types', { id: toastId });
+      toast.error("Failed to load invoice types", { id: toastId });
       console.error("Error fetching invoice types:", error);
     }
   }, []);
@@ -222,77 +249,104 @@ ${business.gstNumber || ""}
     fetchInvoiceTypes();
 
     if (initialValues) {
-      const selectedBusinessId = initialValues.businessId?._id || initialValues.businessId;
-      const selectedBusiness = businessOptions.find(b => b._id === selectedBusinessId);
+      const selectedBusinessId =
+        initialValues.businessId?._id || initialValues.businessId;
+      const selectedBusiness = businessOptions.find(
+        (b) => b._id === selectedBusinessId
+      );
 
       form.setFieldsValue({
         ...initialValues,
         date: initialValues.date ? dayjs(initialValues.date) : null,
         dueDate: initialValues.dueDate ? dayjs(initialValues.dueDate) : null,
-        paymentStatus: initialValues.paymentStatus || 'pending',
-        invoiceType: initialValues.invoiceType || 'Invoice',
+        paymentStatus: initialValues.paymentStatus || "pending",
+        invoiceType: initialValues.invoiceType || "Invoice",
         gstType: initialValues.gstType || null, // Set GST Type
         businessName: selectedBusiness?.businessName,
         businessType: selectedBusiness?.type,
-        businessInfo: selectedBusiness ? formatBusinessInfo(selectedBusiness) : '', // Use formatBusinessInfo
-        gstin: selectedBusiness?.gstNumber || '',
+        businessInfo: selectedBusiness
+          ? formatBusinessInfo(selectedBusiness)
+          : "", // Use formatBusinessInfo
+        gstin: selectedBusiness?.gstNumber || "",
         businessId: selectedBusiness?._id,
       });
 
       setItems(initialValues.items || []);
-      setPaymentStatus(initialValues.paymentStatus || 'pending');
+      setPaymentStatus(initialValues.paymentStatus || "pending");
       setDueDate(initialValues.dueDate ? dayjs(initialValues.dueDate) : null);
       setGstType(initialValues.gstType || null); // Set GST Type state
-      setTaxRate(initialValues.gstPercentage || 18);
+      setTaxRate(initialValues.gstPercentage || 0);
       if (selectedBusiness) {
         setSelectedBusinessDetails(selectedBusiness);
       }
     }
-  }, [initialValues, businessOptions, fetchBusinessOptions, fetchProductOptions, form, formatBusinessInfo, fetchInvoiceTypes]);
+  }, [
+    initialValues,
+    businessOptions,
+    fetchBusinessOptions,
+    fetchProductOptions,
+    form,
+    formatBusinessInfo,
+    fetchInvoiceTypes,
+  ]);
 
   const addItem = () => {
-    const nextId = Math.max(0, ...items.map(i => i.id)) + 1;
-    setItems([...items, { id: nextId, productId: null, description: '', hsnSac: '', quantity: 1, quantityType: '', rate: 0, specifications: [{ key: Date.now(), name: '', value: '' }] }]);
+    const nextId = Math.max(0, ...items.map((i) => i.id)) + 1;
+    setItems([
+      ...items,
+      {
+        id: nextId,
+        productId: null,
+        description: "",
+        hsnSac: "",
+        quantity: 1,
+        quantityType: "",
+        rate: 0,
+        specifications: [{ key: Date.now(), name: "", value: "" }],
+      },
+    ]);
   };
 
   const updateItem = (id, key, value) => {
-    setItems(items.map(item => {
-      if (item.id === id) {
-        if (key === "productId") {
-          const selectedProduct = productOptions.find((p) => p._id === value);
-          if (selectedProduct) {
-            return {
-              ...item,
-              productId: value,
-              description: selectedProduct.description || "",
-              hsnSac: selectedProduct.hsnSac || "",
-              rate: selectedProduct.price || 0,
-              quantityType: selectedProduct.quantityType || "",
-              specifications:
-                selectedProduct.options && selectedProduct.options.length > 0
-                  ? selectedProduct.options.map((opt) => ({
-                      key: Date.now() + Math.random(),
-                      name: opt.type || "",
-                      value: opt.description || "",
-                    }))
-                  : [
-                      {
+    setItems(
+      items.map((item) => {
+        if (item.id === id) {
+          if (key === "productId") {
+            const selectedProduct = productOptions.find((p) => p._id === value);
+            if (selectedProduct) {
+              return {
+                ...item,
+                productId: value,
+                description: selectedProduct.description || "",
+                hsnSac: selectedProduct.hsnSac || "",
+                rate: selectedProduct.price || 0,
+                quantityType: selectedProduct.quantityType || "",
+                specifications:
+                  selectedProduct.options && selectedProduct.options.length > 0
+                    ? selectedProduct.options.map((opt) => ({
                         key: Date.now() + Math.random(),
-                        name: "",
-                        value: "",
-                      },
-                    ],
-            };
+                        name: opt.type || "",
+                        value: opt.description || "",
+                      }))
+                    : [
+                        {
+                          key: Date.now() + Math.random(),
+                          name: "",
+                          value: "",
+                        },
+                      ],
+              };
+            }
           }
+          return { ...item, [key]: value };
         }
-        return { ...item, [key]: value };
-      }
-      return item;
-    }));
+        return item;
+      })
+    );
   };
 
   const removeItem = (id) => {
-    setItems(items.filter(item => item.id !== id));
+    setItems(items.filter((item) => item.id !== id));
   };
 
   const addSpecification = (itemId) => {
@@ -341,22 +395,27 @@ ${business.gstNumber || ""}
     );
   };
 
-  const calculateSubTotal = () => items.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0);
+  const calculateSubTotal = () =>
+    items.reduce(
+      (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),
+      0
+    );
   const calculateTotalGSTAmount = () => calculateSubTotal() * (taxRate / 100);
 
   const calculateIGST = () => {
-    return gstType === 'interstate' ? calculateTotalGSTAmount() : 0;
+    return gstType === "interstate" ? calculateTotalGSTAmount() : 0;
   };
 
   const calculateCGST = () => {
-    return gstType === 'intrastate' ? calculateTotalGSTAmount() / 2 : 0;
+    return gstType === "intrastate" ? calculateTotalGSTAmount() / 2 : 0;
   };
 
   const calculateSGST = () => {
-    return gstType === 'intrastate' ? calculateTotalGSTAmount() / 2 : 0;
+    return gstType === "intrastate" ? calculateTotalGSTAmount() / 2 : 0;
   };
 
-  const calculateGrandTotal = () => calculateSubTotal() + calculateTotalGSTAmount();
+  const calculateGrandTotal = () =>
+    calculateSubTotal() + calculateTotalGSTAmount();
 
   const handleBusinessSelect = (id) => {
     const selected = businessOptions.find((b) => b._id === id);
@@ -400,14 +459,14 @@ ${business.gstNumber || ""}
       amount: values.newPaymentAmount,
       method: values.newPaymentMethod,
       reference: values.newPaymentReference,
-      date: values.newPaymentDate?.format('YYYY-MM-DD'),
-      addedBy: getCurrentUser()
+      date: values.newPaymentDate?.format("YYYY-MM-DD"),
+      addedBy: getCurrentUser(),
     };
 
     const invoiceData = {
       ...values,
-      date: values.date?.format('YYYY-MM-DD'),
-      dueDate: dueDate?.format('YYYY-MM-DD'),
+      date: values.date?.format("YYYY-MM-DD"),
+      dueDate: dueDate?.format("YYYY-MM-DD"),
       paymentStatus,
       items,
       subTotal,
@@ -428,7 +487,7 @@ ${business.gstNumber || ""}
     if (newPayment.amount && newPayment.method) {
       invoiceData.paymentHistory = [
         ...(initialValues?.paymentHistory || []),
-        newPayment
+        newPayment,
       ];
     }
 
@@ -444,7 +503,7 @@ ${business.gstNumber || ""}
     <Card
       title={
         <span style={styles.mainCardTitle}>
-          {initialValues ? 'Edit Invoice' : 'Create New Invoice'}
+          {initialValues ? "Edit Invoice" : "Create New Invoice"}
         </span>
       }
       loading={isSaving}
@@ -478,7 +537,9 @@ ${business.gstNumber || ""}
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item name="businessName" hidden><Input /></Form.Item>
+            <Form.Item name="businessName" hidden>
+              <Input />
+            </Form.Item>
           </Col>
           <Col xs={24} md={12}>
             <Form.Item name="businessType" label="Type">
@@ -487,56 +548,54 @@ ${business.gstNumber || ""}
           </Col>
         </Row>
 
-        <Row gutter={[16]}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              name="gstType"
-              label="GST Type"
-              rules={[{ required: true, message: "Please select a GST type!" }]}
-            >
-              <Select
-                placeholder="Select GST calculation type"
-                onChange={(value) => setGstType(value)}
-                value={gstType}
-                style={styles.formField}
-              >
-                <Option value="interstate">
-                  Interstate - IGST (Integrated GST)
-                </Option>
-                <Option value="intrastate">
-                  Intrastate - SGST/CGST (State/Central GST)
-                </Option>
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item label="Business Info">
-              <Card bordered style={styles.businessInfoCard}>
-                <pre style={styles.businessInfoPre}>
-                  {form.getFieldValue("businessInfo") ||
-                    "Select a business to view details..."}
-                </pre>
-              </Card>
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item label="Invoice Type" name="invoiceType" rules={[{ required: true }]}>
-          <Select placeholder="Select invoice type" style={styles.formField}>
-            {invoiceTypes.map(type => (
-              <Option key={type} value={type}>{type}</Option>
-            ))}
-          </Select>
-        </Form.Item>
-
+  <Row gutter={[24]}>
+  <Col xs={24} md={12}>
+    <Form.Item label="Business Info">
+      <Card bordered style={styles.businessInfoCard}>
+        <pre style={styles.businessInfoPre}>
+          {form.getFieldValue("businessInfo") ||
+            "Select a business to view details..."}
+        </pre>
+      </Card>
+    </Form.Item>
+  </Col>
+  
+  <Col xs={24} md={12}>
+    <Form.Item
+      label="Invoice Type"
+      name="invoiceType"
+      rules={[{ required: true, message: 'Please select an invoice type' }]}
+    >
+      <Select
+        placeholder="Select invoice type"
+        style={styles.formField}
+        allowClear
+      >
+        {invoiceTypes.map((type) => (
+          <Option key={type} value={type}>
+            {type}
+          </Option>
+        ))}
+      </Select>
+    </Form.Item>
+  </Col>
+</Row>
         <Row gutter={16}>
           {initialValues?.invoiceNumber && (
             <Col span={12}>
-              <Form.Item label="Invoice Number"><Input value={initialValues.invoiceNumber} readOnly style={styles.readOnlyFormField} /></Form.Item>
+              <Form.Item label="Invoice Number">
+                <Input
+                  value={initialValues.invoiceNumber}
+                  readOnly
+                  style={styles.readOnlyFormField}
+                />
+              </Form.Item>
             </Col>
           )}
           <Col span={12}>
-            <Form.Item label="GSTIN" name="gstin"><Input readOnly style={styles.readOnlyFormField} /></Form.Item>
+            <Form.Item label="GSTIN" name="gstin">
+              <Input readOnly style={styles.readOnlyFormField} />
+            </Form.Item>
           </Col>
         </Row>
 
@@ -548,18 +607,36 @@ ${business.gstNumber || ""}
           </Col>
           <Col span={12}>
             <Form.Item label="Due Date" name="dueDate">
-              <DatePicker style={styles.formField} format="DD/MM/YYYY" value={dueDate} onChange={setDueDate} />
+              <DatePicker
+                style={styles.formField}
+                format="DD/MM/YYYY"
+                value={dueDate}
+                onChange={setDueDate}
+              />
             </Form.Item>
           </Col>
         </Row>
 
-        <Form.Item label="Customer Name" name="customerName" rules={[{ required: true }]}><Input style={styles.formField} /></Form.Item>
-        <Form.Item label="Customer Address" name="customerAddress" rules={[{ required: true }]}>
+        <Form.Item
+          label="Customer Name"
+          name="customerName"
+          rules={[{ required: true }]}
+        >
+          <Input style={styles.formField} />
+        </Form.Item>
+        <Form.Item
+          label="Customer Address"
+          name="customerAddress"
+          rules={[{ required: true }]}
+        >
           <TextArea rows={2} style={styles.textAreaField} />
         </Form.Item>
 
         <Form.Item label="Payment Status" name="paymentStatus">
-          <Radio.Group value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
+          <Radio.Group
+            value={paymentStatus}
+            onChange={(e) => setPaymentStatus(e.target.value)}
+          >
             <Radio.Button value="pending">Pending</Radio.Button>
             <Radio.Button value="partial">Partial</Radio.Button>
             <Radio.Button value="paid">Paid</Radio.Button>
@@ -621,7 +698,6 @@ ${business.gstNumber || ""}
                           ? styles.readOnlyFormField
                           : styles.formField
                       }
-                     
                     />
                   </Form.Item>
                 </Col>
@@ -690,7 +766,6 @@ ${business.gstNumber || ""}
                           ? styles.readOnlyFormField
                           : styles.formField
                       }
-                     
                     />
                   </Form.Item>
                 </Col>
@@ -800,9 +875,37 @@ ${business.gstNumber || ""}
             </Card>
           );
         })}
-        <Button onClick={addItem} block type="dashed" style={styles.addItemButton}>+ Add Another Item</Button>
+        <Button
+          onClick={addItem}
+          block
+          type="dashed"
+          style={styles.addItemButton}
+        >
+          + Add Another Item
+        </Button>
 
         <Divider style={styles.divider}>Summary</Divider>
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="gstType"
+            label="GST Type"
+            rules={[{ required: true, message: "Please select a GST type!" }]}
+          >
+            <Select
+              placeholder="Select GST calculation type"
+              onChange={(value) => setGstType(value)}
+              value={gstType}
+              style={styles.formField}
+            >
+              <Option value="interstate">
+                Interstate - IGST (Integrated GST)
+              </Option>
+              <Option value="intrastate">
+                Intrastate - SGST/CGST (State/Central GST)
+              </Option>
+            </Select>
+          </Form.Item>
+        </Col>
         <Row gutter={[16, 16]} style={styles.summaryRow}>
           <Col xs={24} sm={8}>
             <Form.Item label="Sub Total">
@@ -825,7 +928,7 @@ ${business.gstNumber || ""}
               />
             </Form.Item>
           </Col>
-          {gstType === 'interstate' && (
+          {gstType === "interstate" && (
             <Col xs={24} sm={8}>
               <Form.Item label="IGST Amount">
                 <Input
@@ -836,7 +939,7 @@ ${business.gstNumber || ""}
               </Form.Item>
             </Col>
           )}
-          {gstType === 'intrastate' && (
+          {gstType === "intrastate" && (
             <>
               <Col xs={24} sm={8}>
                 <Form.Item label="CGST Amount">
@@ -874,11 +977,21 @@ ${business.gstNumber || ""}
           <div style={{ marginBottom: 16 }}>
             {initialValues.paymentHistory.map((p, i) => (
               <Card key={i} size="small" style={{ marginBottom: 8 }}>
-                <p><strong>Amount:</strong> ₹{p.amount}</p>
-                <p><strong>Method:</strong> {p.method}</p>
-                <p><strong>Date:</strong> {p.date}</p>
-                <p><strong>Reference:</strong> {p.reference}</p>
-                <p><strong>Added By:</strong> {p.addedBy}</p>
+                <p>
+                  <strong>Amount:</strong> ₹{p.amount}
+                </p>
+                <p>
+                  <strong>Method:</strong> {p.method}
+                </p>
+                <p>
+                  <strong>Date:</strong> {p.date}
+                </p>
+                <p>
+                  <strong>Reference:</strong> {p.reference}
+                </p>
+                <p>
+                  <strong>Added By:</strong> {p.addedBy}
+                </p>
               </Card>
             ))}
           </div>
@@ -886,26 +999,54 @@ ${business.gstNumber || ""}
 
         <Divider>Add Payment Entry</Divider>
         <Row gutter={16}>
-          <Col span={6}><Form.Item label="Amount" name="newPaymentAmount"><InputNumber min={0} style={styles.formField} /></Form.Item></Col>
-          <Col span={6}><Form.Item label="Method" name="newPaymentMethod">
-            <Select placeholder="Select method" style={styles.formField}>
-              <Option value="Cash">Cash</Option>
-              <Option value="Bank">Bank</Option>
-              <Option value="UPI">UPI</Option>
-              <Option value="Cheque">Cheque</Option>
-            </Select>
-          </Form.Item></Col>
-          <Col span={6}><Form.Item label="Reference" name="newPaymentReference"><Input style={styles.formField} /></Form.Item></Col>
-          <Col span={6}><Form.Item label="Date" name="newPaymentDate"><DatePicker style={styles.formField} format="DD/MM/YYYY" /></Form.Item></Col>
+          <Col span={6}>
+            <Form.Item label="Amount" name="newPaymentAmount">
+              <InputNumber min={0} style={styles.formField} />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item label="Method" name="newPaymentMethod">
+              <Select placeholder="Select method" style={styles.formField}>
+                <Option value="Cash">Cash</Option>
+                <Option value="Bank">Bank</Option>
+                <Option value="UPI">UPI</Option>
+                <Option value="Cheque">Cheque</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item label="Reference" name="newPaymentReference">
+              <Input style={styles.formField} />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item label="Date" name="newPaymentDate">
+              <DatePicker style={styles.formField} format="DD/MM/YYYY" />
+            </Form.Item>
+          </Col>
         </Row>
 
         <Form.Item style={styles.buttonGroup}>
           <Space size="middle">
-            <Button onClick={onCancel} size="large" disabled={isSaving}>Cancel</Button>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} size="large" loading={isSaving}>
-              {initialValues ? 'Update Invoice' : 'Save Invoice'}
+            <Button onClick={onCancel} size="large" disabled={isSaving}>
+              Cancel
             </Button>
-            <Button icon={<PrinterOutlined />} size="large" onClick={() => window.print()}>Print</Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              size="large"
+              loading={isSaving}
+            >
+              {initialValues ? "Update Invoice" : "Save Invoice"}
+            </Button>
+            <Button
+              icon={<PrinterOutlined />}
+              size="large"
+              onClick={() => window.print()}
+            >
+              Print
+            </Button>
           </Space>
         </Form.Item>
       </Form>
