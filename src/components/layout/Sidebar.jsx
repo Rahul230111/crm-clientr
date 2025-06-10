@@ -90,15 +90,14 @@ const Sidebar = ({ collapsed }) => {
   return (
     <div
       style={{
-        // These styles make the sidebar sticky
         position: 'sticky',
         top: 0,
         height: '100vh', // Occupy full viewport height
-        overflowY: 'auto', // Enable scrolling if menu content exceeds viewport height
-        background: '#fafafa', // Ensures background color for the sticky element
-        // You might want to define a width here, or rely on a parent layout component (e.g., Ant Design's Sider)
-        // width: collapsed ? 80 : 200, // Example: adjust width based on collapsed state if not using AntD Sider directly
-      }}
+        overflowY: 'hidden', // Enable scrolling if menu content exceeds viewport height
+        background: '#ffffff', // Ensures background color for the sticky element
+                  // You might want to define a width here, or rely on a parent layout component (e.g., Ant Design's Sider)
+                width: collapsed ? 80 : 200, // Example: adjust width based on collapsed state if not using AntD Sider directly
+        }}
     >
       <div
         style={{

@@ -1,35 +1,50 @@
-import React, { useState, useEffect, useRef } from 'react'; // Added useRef
-import axios from '../../api/axios';
+import React, { useState, useEffect, useRef } from "react"; // Added useRef
+import axios from "../../api/axios";
 import {
-  Card, Input, Button, Table, Tabs, Switch, Typography,
-  Empty, Modal, Tag, Popconfirm, Space,
+  Card,
+  Input,
+  Button,
+  Table,
+  Tabs,
+  Switch,
+  Typography,
+  Empty,
+  Modal,
+  Tag,
+  Popconfirm,
+  Space,
   Dropdown,
   Menu,
-} from 'antd';
+} from "antd";
 import {
-  PlusOutlined, EditOutlined, SearchOutlined,
-  MessageOutlined, PrinterOutlined, CustomerServiceOutlined, DeleteOutlined,
+  PlusOutlined,
+  EditOutlined,
+  SearchOutlined,
+  MessageOutlined,
+  PrinterOutlined,
+  CustomerServiceOutlined,
+  DeleteOutlined,
   MoreOutlined,
   FilePdfOutlined, // Added for PDF export icon
   FileExcelOutlined, // Added for Excel export icon
-} from '@ant-design/icons';
-import { toast } from 'react-hot-toast';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import * as XLSX from 'xlsx'; // Added for Excel export
-import BusinessAccountForm from './BusinessAccountForm';
-import NotesDrawer from './NotesDrawer';
-import FollowUpDrawer from './FollowUpDrawer';
+} from "@ant-design/icons";
+import { toast } from "react-hot-toast";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import * as XLSX from "xlsx"; // Added for Excel export
+import BusinessAccountForm from "./BusinessAccountForm";
+import NotesDrawer from "./NotesDrawer";
+import FollowUpDrawer from "./FollowUpDrawer";
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
-const API_URL = '/api/accounts';
+const API_URL = "/api/accounts";
 
 const Leads = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [currentAccount, setCurrentAccount] = useState(null);
-  const [searchText, setSearchText] = useState('');
-  const [activeTab, setActiveTab] = useState('active');
+  const [searchText, setSearchText] = useState("");
+  const [activeTab, setActiveTab] = useState("active");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [accountToUpdate, setAccountToUpdate] = useState(null);
   const [newStatus, setNewStatus] = useState(null);
@@ -56,31 +71,36 @@ const Leads = () => {
       const response = await axios.get(`${API_URL}`);
       const allAccounts = response.data;
 
-      const activeLeadsData = allAccounts.filter(account => account.status === 'Active' && !account.isCustomer);
-      const customersData = allAccounts.filter(account => account.isCustomer);
-      const waitingLeadsData = allAccounts.filter(account => account.status === 'Waiting' && !account.isCustomer);
-      const closedAccountsData = allAccounts.filter(account => account.status === 'Closed');
+      const activeLeadsData = allAccounts.filter(
+        (account) => account.status === "Active" && !account.isCustomer
+      );
+      const customersData = allAccounts.filter((account) => account.isCustomer);
+      const waitingLeadsData = allAccounts.filter(
+        (account) => account.status === "Waiting" && !account.isCustomer
+      );
+      const closedAccountsData = allAccounts.filter(
+        (account) => account.status === "Closed"
+      );
 
       setActiveLeadsCount(activeLeadsData.length);
       setCustomersCount(customersData.length);
       setWaitingLeadsCount(waitingLeadsData.length);
       setClosedAccountsCount(closedAccountsData.length);
 
-      if (activeTab === 'active') {
+      if (activeTab === "active") {
         setAccounts(activeLeadsData);
-      } else if (activeTab === 'customers') {
+      } else if (activeTab === "customers") {
         setAccounts(customersData);
-      } else if (activeTab === 'waiting') {
+      } else if (activeTab === "waiting") {
         setAccounts(waitingLeadsData);
-      } else if (activeTab === 'closed') {
+      } else if (activeTab === "closed") {
         setAccounts(closedAccountsData);
       } else {
         setAccounts(allAccounts);
       }
-
     } catch (error) {
-      toast.error('Failed to fetch accounts.');
-      console.error('Fetch accounts error:', error);
+      toast.error("Failed to fetch accounts.");
+      console.error("Fetch accounts error:", error);
     }
   };
 
@@ -88,16 +108,19 @@ const Leads = () => {
     try {
       if (currentAccount) {
         await axios.put(`${API_URL}/${currentAccount._id}`, values);
-        toast.success('Account updated successfully!');
+        toast.success("Account updated successfully!");
       } else {
         await axios.post(API_URL, values);
-        toast.success('Account created successfully!');
+        toast.success("Account created successfully!");
       }
       setFormVisible(false);
       fetchAccounts();
     } catch (error) {
-      toast.error('Failed to save account.');
-      console.error('Save account error:', error.response?.data || error.message);
+      toast.error("Failed to save account.");
+      console.error(
+        "Save account error:",
+        error.response?.data || error.message
+      );
     }
   };
 
@@ -109,13 +132,28 @@ const Leads = () => {
   const handleDeleteAccount = async (id) => {
     try {
       await axios.delete(`${API_URL}/${id}`);
-      toast.success('Account deleted successfully (soft delete)!');
+      toast.success("Account deleted successfully (soft delete)!");
       fetchAccounts();
     } catch (error) {
-      toast.error('Failed to delete account.');
-      console.error('Delete account error:', error.response?.data || error.message);
+      toast.error("Failed to delete account.");
+      console.error(
+        "Delete account error:",
+        error.response?.data || error.message
+      );
     }
   };
+  // const handleDeleteAccount = async (id) => {
+  //   try {
+  //     // Assuming a soft delete mechanism where you update a 'deleted' flag or similar
+  //     // If it's a hard delete, the backend should remove the record completely.
+  //     await axios.delete(`${API_URL}/${id}`);
+  //     toast.success('Account deleted successfully (soft delete)!');
+  //     fetchAccounts(); // Re-fetch accounts to update the table
+  //   } catch (error) {
+  //     toast.error('Failed to delete account.');
+  //     console.error('Delete account error:', error.response?.data || error.message);
+  //   }
+  // };
 
   const showNotesDrawer = (account) => {
     setSelectedAccount(account);
@@ -137,11 +175,16 @@ const Leads = () => {
     try {
       const updatedAccount = { ...accountToUpdate, isCustomer: newStatus };
       await axios.put(`${API_URL}/${accountToUpdate._id}`, updatedAccount);
-      toast.success(`Account status changed to ${newStatus ? 'Customer' : 'Lead'}!`);
+      toast.success(
+        `Account status changed to ${newStatus ? "Customer" : "Lead"}!`
+      );
       fetchAccounts();
     } catch (error) {
-      toast.error('Failed to update account status.');
-      console.error('Status update error:', error.response?.data || error.message);
+      toast.error("Failed to update account status.");
+      console.error(
+        "Status update error:",
+        error.response?.data || error.message
+      );
     } finally {
       setIsModalVisible(false);
       setAccountToUpdate(null);
@@ -159,71 +202,71 @@ const Leads = () => {
   const exportTableToPdf = async () => {
     const input = tableRef.current; // Use the ref for the table
     if (!input) {
-      toast.error('Table content not found for PDF export.');
+      toast.error("Table content not found for PDF export.");
       return;
     }
 
-    toast.loading('Generating PDF...', { id: 'pdf-toast' });
+    toast.loading("Generating PDF...", { id: "pdf-toast" });
 
     try {
       const canvas = await html2canvas(input, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
       const imgWidth = 210;
       const pageHeight = 297;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
       pdf.save(`Leads_Customers_Data.pdf`); // Changed filename
-      toast.success('PDF generated!', { id: 'pdf-toast' });
+      toast.success("PDF generated!", { id: "pdf-toast" });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.error('Failed to generate PDF.', { id: 'pdf-toast' });
+      toast.error("Failed to generate PDF.", { id: "pdf-toast" });
     }
   };
 
   // Function to export the entire table data to Excel
   const exportTableToExcel = () => {
     if (filteredAccounts.length === 0) {
-      toast.error('No data to export to Excel.');
+      toast.error("No data to export to Excel.");
       return;
     }
 
     // Prepare data for Excel: exclude `key` and `action` column, add S.No
     const dataForExcel = filteredAccounts.map((account, index) => {
       const row = {
-        'S.No': index + 1,
-        'Business Name': account.businessName,
-        'Contact Name': account.contactName,
-        'Email': account.email,
-        'Mobile Number': account.mobileNumber,
-        'Lead Type': account.type,
-        'Status': account.status,
-        'Source Type': account.sourceType,
+        "S.No": index + 1,
+        "Business Name": account.businessName,
+        "Contact Name": account.contactName,
+        Email: account.email,
+        "Mobile Number": account.mobileNumber,
+        "Lead Type": account.type,
+        Status: account.status,
+        "Source Type": account.sourceType,
         // Add any other fields you want to export
-        'GST Number': account.gstNumber,
-        'Phone Number': account.phoneNumber,
-        'Address Line 1': account.addressLine1,
-        'Address Line 2': account.addressLine2,
-        'Address Line 3': account.addressLine3,
-        'Landmark': account.landmark,
-        'City': account.city,
-        'Pincode': account.pincode,
-        'State': account.state,
-        'Country': account.country,
-        'Website': account.website,
-        'Is Customer': account.isCustomer ? 'Yes' : 'No',
-        'Created At': new Date(account.createdAt).toLocaleString(),
+        "GST Number": account.gstNumber,
+        "Phone Number": account.phoneNumber,
+        "Address Line 1": account.addressLine1,
+        "Address Line 2": account.addressLine2,
+        "Address Line 3": account.addressLine3,
+        Landmark: account.landmark,
+        City: account.city,
+        Pincode: account.pincode,
+        State: account.state,
+        Country: account.country,
+        Website: account.website,
+        "Is Customer": account.isCustomer ? "Yes" : "No",
+        "Created At": new Date(account.createdAt).toLocaleString(),
         // Notes and Follow-ups might need special handling if included,
         // as they are nested arrays. For simplicity, we'll exclude them here
         // or join them into a string if absolutely necessary.
@@ -233,31 +276,37 @@ const Leads = () => {
 
     const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Leads & Customers');
-    XLSX.writeFile(workbook, 'Leads_Customers_Data.xlsx');
-    toast.success('Data exported to Excel!');
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Leads & Customers");
+    XLSX.writeFile(workbook, "Leads_Customers_Data.xlsx");
+    toast.success("Data exported to Excel!");
   };
-
 
   const columns = [
     {
-      title: 'S.No',
-      key: 'sno',
+      title: "S.No",
+      key: "sno",
       render: (text, record, index) => index + 1,
       width: 60, // Fixed width for S.No
     },
     {
-      title: 'Business Name',
-      dataIndex: 'businessName',
-      key: 'businessName',
-      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+      title: "Business Name",
+      dataIndex: "businessName",
+      key: "businessName",
+      filterDropdown: ({
+        setSelectedKeys,
+        selectedKeys,
+        confirm,
+        clearFilters,
+      }) => (
         <div style={{ padding: 8 }}>
           <Input
             placeholder="Search Business Name"
             value={selectedKeys[0]}
-            onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onChange={(e) =>
+              setSelectedKeys(e.target.value ? [e.target.value] : [])
+            }
             onPressEnter={() => confirm()}
-            style={{ marginBottom: 8, display: 'block' }}
+            style={{ marginBottom: 8, display: "block" }}
           />
           <Button
             type="primary"
@@ -268,112 +317,132 @@ const Leads = () => {
           >
             Search
           </Button>
-          <Button onClick={() => clearFilters()} size="small" style={{ width: 90 }}>
+          <Button
+            onClick={() => clearFilters()}
+            size="small"
+            style={{ width: 90 }}
+          >
             Reset
           </Button>
         </div>
       ),
       onFilter: (value, record) =>
         record.businessName.toLowerCase().includes(value.toLowerCase()),
-      responsive: ['xs', 'sm', 'md', 'lg'], // Visible on all screen sizes
+      responsive: ["xs", "sm", "md", "lg"], // Visible on all screen sizes
     },
     {
-      title: 'Contact Name',
-      dataIndex: 'contactName',
-      key: 'contactName',
-      responsive: ['md', 'lg'], // Hide on extra small and small screens
+      title: "Contact Name",
+      dataIndex: "contactName",
+      key: "contactName",
+      responsive: ["md", "lg"], // Hide on extra small and small screens
     },
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-      responsive: ['lg'], // Only visible on large screens
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      responsive: ["lg"], // Only visible on large screens
     },
     {
-      title: 'Mobile Number',
-      dataIndex: 'mobileNumber',
-      key: 'mobileNumber',
-      responsive: ['md', 'lg'], // Hide on extra small and small screens
+      title: "Mobile Number",
+      dataIndex: "mobileNumber",
+      key: "mobileNumber",
+      responsive: ["md", "lg"], // Hide on extra small and small screens
     },
     {
-      title: 'Lead Type',
-      dataIndex: 'type',
-      key: 'type',
+      title: "Lead Type",
+      dataIndex: "type",
+      key: "type",
       filters: [
-        { text: 'Hot', value: 'Hot' },
-        { text: 'Warm', value: 'Warm' },
-        { text: 'Cold', value: 'Cold' },
+        { text: "Hot", value: "Hot" },
+        { text: "Warm", value: "Warm" },
+        { text: "Cold", value: "Cold" },
       ],
       onFilter: (value, record) => record.type.indexOf(value) === 0,
-      responsive: ['md', 'lg'], // Hide on extra small and small screens
+      responsive: ["md", "lg"], // Hide on extra small and small screens
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
       render: (status) => {
         let color;
         switch (status) {
-          case 'Active':
-            color = 'green';
+          case "Active":
+            color = "green";
             break;
-          case 'Inactive':
-            color = 'red';
+          case "Inactive":
+            color = "red";
             break;
-          case 'Waiting':
-            color = 'orange';
+          case "Waiting":
+            color = "orange";
             break;
-          case 'Closed':
-            color = 'purple';
+          case "Closed":
+            color = "purple";
             break;
           default:
-            color = 'blue';
+            color = "blue";
         }
         return <Tag color={color}>{status}</Tag>;
       },
       filters: [
-        { text: 'Active', value: 'Active' },
-        { text: 'Inactive', value: 'Inactive' },
-        { text: 'Waiting', value: 'Waiting' },
-        { text: 'Closed', value: 'Closed' },
+        { text: "Active", value: "Active" },
+        { text: "Inactive", value: "Inactive" },
+        { text: "Waiting", value: "Waiting" },
+        { text: "Closed", value: "Closed" },
       ],
       onFilter: (value, record) => record.status.indexOf(value) === 0,
-      responsive: ['sm', 'md', 'lg'], // Hide on extra small screens
+      responsive: ["sm", "md", "lg"], // Hide on extra small screens
     },
     {
-      title: 'Source Type',
-      dataIndex: 'sourceType',
-      key: 'sourceType',
+      title: "Source Type",
+      dataIndex: "sourceType",
+      key: "sourceType",
       filters: [
-        { text: 'Direct', value: 'Direct' },
-        { text: 'Facebook Referral', value: 'Facebook Referral ' },
-        { text: 'Google Ads', value: 'Google Ads' },
-        { text: 'Website', value: 'Website' },
-        { text: 'Cold Call', value: 'Cold Call' },
-        { text: 'Other', value: 'Other' },
+        { text: "Direct", value: "Direct" },
+        { text: "Facebook Referral", value: "Facebook Referral " },
+        { text: "Google Ads", value: "Google Ads" },
+        { text: "Website", value: "Website" },
+        { text: "Cold Call", value: "Cold Call" },
+        { text: "Other", value: "Other" },
       ],
       onFilter: (value, record) => record.sourceType?.indexOf(value) === 0,
-      responsive: ['lg'], // Only visible on large screens
+      responsive: ["lg"], // Only visible on large screens
     },
- 
+
     {
-      title: 'Action',
-      key: 'action',
+      title: "Action",
+      key: "action",
       width: 80,
       render: (text, record) => (
         <Dropdown
           overlay={
             <Menu>
-              <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => showEditForm(record)}>
+              <Menu.Item
+                key="edit"
+                icon={<EditOutlined />}
+                onClick={() => showEditForm(record)}
+              >
                 Edit Account
               </Menu.Item>
-              <Menu.Item key="notes" icon={<MessageOutlined />} onClick={() => showNotesDrawer(record)}>
+              <Menu.Item
+                key="notes"
+                icon={<MessageOutlined />}
+                onClick={() => showNotesDrawer(record)}
+              >
                 View/Add Notes
               </Menu.Item>
-              <Menu.Item key="followup" icon={<CustomerServiceOutlined />} onClick={() => showFollowUpDrawer(record)}>
+              <Menu.Item
+                key="followup"
+                icon={<CustomerServiceOutlined />}
+                onClick={() => showFollowUpDrawer(record)}
+              >
                 View/Add Follow-ups
               </Menu.Item>
-              <Menu.Item key="generate-pdf-single" icon={<PrinterOutlined />} onClick={() => generatePdfSingleAccount(record)}>
+              <Menu.Item
+                key="generate-pdf-single"
+                icon={<PrinterOutlined />}
+                onClick={() => generatePdfSingleAccount(record)}
+              >
                 Generate PDF (Single)
               </Menu.Item>
               {/* Conditional menu item for changing status */}
@@ -393,26 +462,20 @@ const Leads = () => {
                 </Menu.Item>
               )}
               {/* Delete action using Modal.confirm for consistency */}
-              <Menu.Item
-                key="delete"
-                icon={<DeleteOutlined />}
-                danger
-                onClick={() => {
-                  Modal.confirm({
-                    title: 'Delete Account',
-                    content: 'Are you sure you want to delete this account? This action cannot be undone (soft delete).',
-                    okText: 'Yes, Delete',
-                    cancelText: 'No',
-                    okButtonProps: { danger: true },
-                    onOk: () => handleDeleteAccount(record._id)
-                  });
-                }}
-              >
-                Delete Account
+              <Menu.Item>
+                <Popconfirm
+                  title="Are you sure you want to delete this account?"
+                  onConfirm={() => handleDeleteAccount(record._id)}
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  <DeleteOutlined /> 
+                  Delete Account
+                </Popconfirm>
               </Menu.Item>
             </Menu>
           }
-          trigger={['click']}
+          trigger={["click"]}
         >
           <Button icon={<MoreOutlined />} />
         </Dropdown>
@@ -424,60 +487,75 @@ const Leads = () => {
   const generatePdfSingleAccount = async (account) => {
     const input = document.getElementById(`lead-${account._id}`);
     if (!input) {
-      toast.error('PDF content not found for this account.');
+      toast.error("PDF content not found for this account.");
       return;
     }
 
-    toast.loading('Generating PDF...', { id: 'pdf-toast' });
+    toast.loading("Generating PDF...", { id: "pdf-toast" });
 
     try {
       const canvas = await html2canvas(input, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
       const imgWidth = 210;
       const pageHeight = 297;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
       pdf.save(`${account.businessName}-details.pdf`);
-      toast.success('PDF generated!', { id: 'pdf-toast' });
+      toast.success("PDF generated!", { id: "pdf-toast" });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.error('Failed to generate PDF.', { id: 'pdf-toast' });
+      toast.error("Failed to generate PDF.", { id: "pdf-toast" });
     }
   };
 
-  const filteredAccounts = accounts.filter(account =>
-    account.businessName.toLowerCase().includes(searchText.toLowerCase()) ||
-    account.contactName.toLowerCase().includes(searchText.toLowerCase())
+  const filteredAccounts = accounts.filter(
+    (account) =>
+      account.businessName.toLowerCase().includes(searchText.toLowerCase()) ||
+      account.contactName.toLowerCase().includes(searchText.toLowerCase())
   );
-
 
   return (
     <Card title={<Title level={2}>Manage Leads & Customers</Title>}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "10px",
+        }}
+      >
         <Input
           placeholder="Search by business or contact name"
           prefix={<SearchOutlined />}
-          style={{ width: '100%', maxWidth: 300 }}
+          style={{ width: "100%", maxWidth: 300 }}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
-        <Space> {/* Use Space for better button alignment */}
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-            setCurrentAccount(null);
-            setFormVisible(true);
-          }}>
+        <Space>
+          {" "}
+          {/* Use Space for better button alignment */}
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setCurrentAccount(null);
+              setFormVisible(true);
+            }}
+          >
             Add New Account
           </Button>
           {/* New buttons for exporting table data */}
@@ -494,13 +572,21 @@ const Leads = () => {
         <TabPane tab={`Active Leads (${activeLeadsCount})`} key="active" />
         <TabPane tab={`Customers (${customersCount})`} key="customers" />
         <TabPane tab={`Waiting Leads (${waitingLeadsCount})`} key="waiting" />
-        <TabPane tab={`Closed Accounts (${closedAccountsCount})`} key="closed" />
+        <TabPane
+          tab={`Closed Accounts (${closedAccountsCount})`}
+          key="closed"
+        />
       </Tabs>
 
       {/* Attach ref to the Table component for PDF/Excel export */}
       <div ref={tableRef}>
         {filteredAccounts.length > 0 ? (
-          <Table columns={columns} dataSource={filteredAccounts} rowKey="_id" scroll={{ x: 'max-content' }} />
+          <Table
+            columns={columns}
+            dataSource={filteredAccounts}
+            rowKey="_id"
+            scroll={{ x: "max-content" }}
+          />
         ) : (
           <Empty description="No accounts found." />
         )}
@@ -538,7 +624,10 @@ const Leads = () => {
         okText="Yes"
         cancelText="No"
       >
-        <p>Are you sure you want to change this account's status to {newStatus ? 'Customer' : 'Lead'}?</p>
+        <p>
+          Are you sure you want to change this account's status to{" "}
+          {newStatus ? "Customer" : "Lead"}?
+        </p>
       </Modal>
     </Card>
   );
