@@ -12,7 +12,6 @@ import {
   ProjectOutlined,
   SettingOutlined,
   UserSwitchOutlined,
-  // LayoutOutlined, // These icons are imported but not used in the provided menuItems
   // MobileOutlined,
   // DesktopOutlined,
   // TabletOutlined,
@@ -43,9 +42,9 @@ const Sidebar = ({ collapsed }) => {
           icon: <DashboardOutlined />,
           label: collapsed ? null : 'Dashboard',
           children: [
-            { key: '/dashboard/deals', label: 'Deals Dashboard' },
-            { key: '/dashboard/leads', label: 'Leads Dashboard' },
-            { key: '/dashboard/project', label: 'Project Dashboard' }
+            { key: '/dashboard/deals', label: 'Leads Dashboard' },
+            { key: '/dashboard', label: 'Quotation Dashboard' },
+            { key: '/invoicedashboard', label: 'Invoice Dashboard' }
           ]
         },
         {
@@ -90,14 +89,15 @@ const Sidebar = ({ collapsed }) => {
   return (
     <div
       style={{
+        // These styles make the sidebar sticky
         position: 'sticky',
         top: 0,
         height: '100vh', // Occupy full viewport height
-        overflowY: 'hidden', // Enable scrolling if menu content exceeds viewport height
-        background: '#ffffff', // Ensures background color for the sticky element
-                  // You might want to define a width here, or rely on a parent layout component (e.g., Ant Design's Sider)
-                width: collapsed ? 80 : 200, // Example: adjust width based on collapsed state if not using AntD Sider directly
-        }}
+        overflowY: 'auto', // Enable scrolling if menu content exceeds viewport height
+        background: '#fafafa', // Ensures background color for the sticky element
+        // You might want to define a width here, or rely on a parent layout component (e.g., Ant Design's Sider)
+        // width: collapsed ? 80 : 200, // Example: adjust width based on collapsed state if not using AntD Sider directly
+      }}
     >
       <div
         style={{

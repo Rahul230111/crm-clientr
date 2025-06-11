@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Drawer, Table, Form, Input, Button,
-  DatePicker, Select, Space, Modal, Popconfirm, Typography, Descriptions // Added Typography and Descriptions for display
+  DatePicker, Select, Space, Modal, Popconfirm, Typography, Descriptions
 } from 'antd';
 import toast from 'react-hot-toast';
 import axios from '../../api/axios';
 import dayjs from 'dayjs';
 
-const { Text } = Typography; // Destructure Text from Typography
+const { Text } = Typography;
 
 const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) => {
   const [form] = Form.useForm();
@@ -20,16 +20,21 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
   // --- Start of new/modified code for calculations ---
   const [totalPaidAmount, setTotalPaidAmount] = useState(0);
   const [outstandingBalance, setOutstandingBalance] = useState(0);
+  const [isFullyPaid, setIsFullyPaid] = useState(false); // New state to track full payment
 
   // Function to calculate total paid and outstanding balance
   const calculateTotals = (currentInvoiceData) => {
     const paid = currentInvoiceData.paymentHistory.reduce((sum, payment) => sum + payment.amount, 0);
     setTotalPaidAmount(paid);
 
-    if (invoice?.totalAmount) { // Ensure invoice total amount is available
-      setOutstandingBalance(invoice.totalAmount - paid);
+    if (invoice?.totalAmount) {
+      const outstanding = invoice.totalAmount - paid;
+      setOutstandingBalance(outstanding);
+      // Determine if fully paid (allow for minor floating point discrepancies)
+      setIsFullyPaid(outstanding <= 0.01); // Consider fully paid if outstanding is very close to zero
     } else {
-      setOutstandingBalance(0); // Or handle appropriately if totalAmount is not available
+      setOutstandingBalance(0);
+      setIsFullyPaid(false); // If no total amount, not fully paid
     }
   };
   // --- End of new/modified code for calculations ---
@@ -54,12 +59,12 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
           : []
       };
       setInvoiceData(fetchedInvoiceData);
-      calculateTotals(fetchedInvoiceData); // Call calculation after fetching data
+      calculateTotals(fetchedInvoiceData); // Recalculate based on fetched data
     } catch (error) {
       toast.error('Failed to fetch invoice details.');
       console.error('Error fetching invoice:', error);
-      setInvoiceData({ paymentHistory: [] }); // Reset on error
-      calculateTotals({ paymentHistory: [] }); // Recalculate with empty history on error
+      setInvoiceData({ paymentHistory: [] });
+      calculateTotals({ paymentHistory: [] });
     }
   };
 
@@ -68,15 +73,29 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
     if (visible) {
       fetchInvoice();
     }
-  }, [visible, invoice?._id]); // Re-fetch when drawer becomes visible or invoice changes
+  }, [visible, invoice?._id]);
 
   useEffect(() => {
-    // Recalculate if invoice prop changes, in case totalAmount is updated externally
+    // Recalculate totals whenever invoiceData or invoice.totalAmount changes
     calculateTotals(invoiceData);
-  }, [invoice?.totalAmount, invoiceData.paymentHistory]); // Depend on invoice total and payment history
+  }, [invoice?.totalAmount, invoiceData.paymentHistory]);
   // --- End of Effects ---
 
   const handleAddPayment = async (values) => {
+    const newAmount = parseFloat(values.amount);
+    if (isNaN(newAmount) || newAmount <= 0) {
+      toast.error('Please enter a valid positive amount!');
+      return;
+    }
+
+    const currentTotalPaid = invoiceData.paymentHistory.reduce((sum, payment) => sum + payment.amount, 0);
+    const invoiceTotal = invoice?.totalAmount || 0;
+
+    if (currentTotalPaid + newAmount > invoiceTotal + 0.01) { // Allow for minor floating point error
+      toast.error(`Payment amount exceeds outstanding balance. Outstanding: ₹${(invoiceTotal - currentTotalPaid).toFixed(2)}`);
+      return;
+    }
+
     setLoading(true);
     try {
       const newPayment = {
@@ -87,8 +106,8 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
       await axios.post(`/api/invoices/${invoice._id}/payments`, newPayment);
       toast.success('Payment added successfully!');
       form.resetFields();
-      await fetchInvoice(); // Re-fetch to update history and totals
-      refreshInvoices(); // Notify parent component to refresh invoice list
+      await fetchInvoice(); // Re-fetch to get updated payment history and trigger status update
+      refreshInvoices(); // Notify parent to refresh invoice list
     } catch (error) {
       toast.error('Failed to add payment.');
       console.error('Error adding payment:', error);
@@ -99,10 +118,11 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
 
   const handleDeletePayment = async (paymentId) => {
     try {
+      // Corrected API endpoint to include both invoice ID and payment ID
       await axios.delete(`/api/invoices/${invoice._id}/payments/${paymentId}`);
       toast.success('Payment deleted successfully!');
-      await fetchInvoice(); // Re-fetch to update history and totals
-      refreshInvoices();
+      await fetchInvoice(); // Re-fetch to get updated payment history and trigger status update
+      refreshInvoices(); // Notify parent to refresh invoice list
     } catch (error) {
       toast.error('Failed to delete payment.');
       console.error('Error deleting payment:', error);
@@ -118,8 +138,8 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
       await axios.put(`/api/invoices/${invoice._id}/payments/${currentEditingPaymentId}`, updatedPayment);
       toast.success('Payment updated successfully!');
       setEditModalVisible(false);
-      await fetchInvoice(); // Re-fetch to update history and totals
-      refreshInvoices();
+      await fetchInvoice(); // Re-fetch to get updated payment history and trigger status update
+      refreshInvoices(); // Notify parent to refresh invoice list
     } catch (error) {
       toast.error('Failed to update payment.');
       console.error('Error updating payment:', error);
@@ -184,7 +204,7 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
 
   return (
     <Drawer
-      title={`Payment History for Invoice #${invoice?.invoiceNo || 'N/A'}`}
+      title={`Payment History for Invoice #${invoice?.invoiceNumber || invoice?.proformaNumber || 'N/A'}`}
       placement="right"
       onClose={onClose}
       open={visible}
@@ -203,29 +223,34 @@ const PaymentHistoryDrawer = ({ visible, onClose, invoice, refreshInvoices }) =>
         </Descriptions.Item>
       </Descriptions>
 
-      <h3>Add New Payment</h3>
-      <Form form={form} layout="vertical" onFinish={handleAddPayment} style={{ marginBottom: 20 }}>
-        <Space>
-          <Form.Item name="amount" label="Amount" rules={[{ required: true, message: 'Please input amount!' }]}>
-            <Input type="number" step="0.01" />
-          </Form.Item>
-          <Form.Item name="method" label="Method" rules={[{ required: true, message: 'Please select method!' }]}>
-            <Select style={{ width: 120 }}>
-              <Select.Option value="Cash">Cash</Select.Option>
-              <Select.Option value="UPI">UPI</Select.Option>
-              <Select.Option value="Bank Transfer">Bank Transfer</Select.Option>
-              <Select.Option value="Card">Card</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="reference" label="Reference">
-            <Input />
-          </Form.Item>
-          <Form.Item name="date" label="Date" rules={[{ required: true, message: 'Please select date!' }]}>
-            <DatePicker style={{ width: '100%' }} defaultValue={dayjs()} format="DD/MM/YYYY" />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading}>Add Payment</Button>
-        </Space>
-      </Form>
+      {/* Conditionally render Add New Payment section */}
+      {!isFullyPaid && (
+        <>
+          <h3>Add New Payment</h3>
+          <Form form={form} layout="vertical" onFinish={handleAddPayment} style={{ marginBottom: 20 }}>
+            <Space>
+              <Form.Item name="amount" label="Amount" rules={[{ required: true, message: 'Please input amount!' }]}>
+                <Input type="number" step="0.01" />
+              </Form.Item>
+              <Form.Item name="method" label="Method" rules={[{ required: true, message: 'Please select method!' }]}>
+                <Select style={{ width: 120 }}>
+                  <Select.Option value="Cash">Cash</Select.Option>
+                  <Select.Option value="UPI">UPI</Select.Option>
+                  <Select.Option value="Bank Transfer">Bank Transfer</Select.Option>
+                  <Select.Option value="Card">Card</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item name="reference" label="Reference">
+                <Input />
+              </Form.Item>
+              <Form.Item name="date" label="Date" rules={[{ required: true, message: 'Please select date!' }]}>
+                <DatePicker style={{ width: '100%' }} defaultValue={dayjs()} format="DD/MM/YYYY" />
+              </Form.Item>
+              <Button type="primary" htmlType="submit" loading={loading}>Add Payment</Button>
+            </Space>
+          </Form>
+        </>
+      )}
 
       <h3>Payment History</h3>
       <Table

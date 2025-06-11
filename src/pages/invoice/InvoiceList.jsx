@@ -1,22 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Space,
   Button,
   Card,
   Input,
-  Popconfirm, // Popconfirm is still imported but not used directly in dropdown for delete/lock/unlock
+  Popconfirm,
   Tag,
   Tooltip,
-  Modal,      // Modal is now explicitly used for confirmation
+  Modal,
   Descriptions,
   Select,
   Typography,
   DatePicker,
   List,
   Divider,
-  Dropdown, // NEW IMPORT: Dropdown for the 3-dot menu
-  Menu,     // NEW IMPORT: Menu for dropdown items
+  Dropdown,
+  Menu,
 } from "antd";
 import {
   PlusOutlined,
@@ -32,17 +32,17 @@ import {
   DollarOutlined,
   SwapOutlined,
   ScheduleOutlined,
-  MoreOutlined, // NEW IMPORT: for the 3-dot icon
+  MoreOutlined,
 } from "@ant-design/icons";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { saveAs } from "file-saver";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
-import NotesDrawer from "./NotesDrawer";
-import PaymentHistoryDrawer from "./PaymentHistoryDrawer";
-import FollowUpDrawer from "./FollowUpDrawer";
-import axios from "../../api/axios";
+import NotesDrawer from "./NotesDrawer.jsx";
+import PaymentHistoryDrawer from "././PaymentHistoryDrawer.jsx";
+import FollowUpDrawer from "././FollowUpDrawer.jsx";
+import axios from "../../api/axios.js";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -51,7 +51,7 @@ const InvoiceList = ({
   invoices,
   onAddNew,
   onEdit,
-  onDelete,
+  onDelete, // onDelete prop is available here
   onSearch,
   refreshInvoices,
 }) => {
@@ -67,6 +67,7 @@ const InvoiceList = ({
   const [businessFilter, setBusinessFilter] = useState("all");
   const [invoiceTypeFilter, setInvoiceTypeFilter] = useState("Invoice");
   const [itemViewModalVisible, setItemViewModalVisible] = useState(false);
+  const [invoiceStatusMap, setInvoiceStatusMap] = useState({}); // New state to hold calculated payment statuses
 
   // NEW STATE: For filtering Proforma conversion status
   const [conversionStatusFilter, setConversionStatusFilter] = useState("all");
@@ -75,6 +76,34 @@ const InvoiceList = ({
   const uniqueBusinessNames = [
     ...new Set(invoices.map((inv) => inv.businessName)),
   ];
+
+  // Function to calculate payment status based on total paid vs total amount
+  const calculatePaymentStatus = (invoice) => {
+    const totalAmount = parseFloat(invoice.totalAmount) || 0;
+    const totalPaid = invoice.paymentHistory?.reduce((sum, payment) => sum + parseFloat(payment.amount || 0), 0) || 0;
+
+    if (totalAmount <= 0) {
+      return "N/A"; // Or some other appropriate status for zero-amount invoices
+    }
+
+    // Allow for minor floating point discrepancies when checking for full payment
+    if (totalPaid >= totalAmount - 0.01) { 
+      return "paid";
+    } else if (totalPaid > 0 && totalPaid < totalAmount) {
+      return "partial";
+    } else {
+      return "pending";
+    }
+  };
+
+  // Effect to update invoiceStatusMap whenever invoices prop changes
+  useEffect(() => {
+    const newStatusMap = {};
+    invoices.forEach(invoice => {
+      newStatusMap[invoice._id] = calculatePaymentStatus(invoice);
+    });
+    setInvoiceStatusMap(newStatusMap);
+  }, [invoices]);
 
   // Convert number to words for amount in words section
   const numberToWords = (num) => {
@@ -316,7 +345,7 @@ const InvoiceList = ({
       const igstAmount = parseFloat(invoice.igstAmount) || 0;
       const cgstAmount = parseFloat(invoice.cgstAmount) || 0;
       const sgstAmount = parseFloat(invoice.sgstAmount) || 0;
-      const totalGSTAmount = igstAmount + cgstAmount + sgstAmount;
+      const totalGSTAmount = igstAmount + cgstAmount + sgstAmount; // This variable is not used in PDF output but is calculated.
       const grandTotal = parseFloat(invoice.totalAmount) || 0; // Grand total is already calculated in InvoiceForm
 
       doc.text(`Sub Total:`, 140, yPos);
@@ -426,7 +455,7 @@ const InvoiceList = ({
   // Search handler
   const handleSearch = (value) => {
     setSearchTerm(value);
-    onSearch(value);
+    onSearch(value); // This calls the onSearch prop from the parent
   };
 
   // View invoice details handler
@@ -459,26 +488,26 @@ const InvoiceList = ({
     setFollowUpDrawerVisible(true);
   };
 
-  // Close invoice handler
+  // Close invoice handler - marks an invoice as closed/locked
   const handleCloseInvoice = async (id) => {
     const toastId = toast.loading("Closing invoice...");
     try {
       await axios.patch(`/api/invoices/${id}/close`);
       toast.success("Invoice closed successfully", { id: toastId });
-      refreshInvoices?.();
+      refreshInvoices?.(); // Refresh the invoice list to reflect the change
     } catch (error) {
       console.error("Error closing invoice:", error);
       toast.error("Failed to close invoice", { id: toastId });
     }
   };
 
-  // Unlock invoice handler
+  // Unlock invoice handler - marks an invoice as unlocked/editable
   const handleUnlockInvoice = async (id) => {
     const toastId = toast.loading("Unlocking invoice...");
     try {
       await axios.patch(`/api/invoices/${id}/unlock`);
       toast.success("Invoice unlocked successfully", { id: toastId });
-      refreshInvoices?.();
+      refreshInvoices?.(); // Refresh the invoice list to reflect the change
     } catch (error) {
       console.error("Error unlocking invoice:", error);
       toast.error("Failed to unlock invoice", { id: toastId });
@@ -489,15 +518,15 @@ const InvoiceList = ({
   const exportToExcel = () => {
     const data = filteredInvoices.map((inv, index) => ({
       SNo: index + 1,
-      InvoiceNumber:
-        inv.invoiceType === "Proforma" ? inv.proformaNumber : inv.invoiceNumber, // Conditional export for Excel
+      // Conditional export for InvoiceNumber or ProformaNumber
+      Number: inv.invoiceType === "Proforma" ? inv.proformaNumber : inv.invoiceNumber, 
       Type: inv.invoiceType,
       Business: inv.businessName,
       Customer: inv.customerName,
       TotalAmount: inv.totalAmount || 0,
       Date: inv.date,
       DueDate: inv.dueDate || "",
-      Status: inv.paymentStatus,
+      Status: invoiceStatusMap[inv._id] || inv.paymentStatus, // Use calculated status for export
       Closed: inv.isClosed ? "Yes" : "No",
       ConversionStatus:
         inv.invoiceType === "Proforma" ? inv.conversionStatus || "N/A" : "N/A", // NEW: Export conversion status
@@ -532,12 +561,13 @@ const InvoiceList = ({
       !dateRange ||
       (new Date(inv.date) >= dateRange[0].toDate() &&
         new Date(inv.date) <= dateRange[1].toDate());
+    const calculatedStatus = invoiceStatusMap[inv._id]; // Get calculated status
     const matchesStatus =
       statusFilter === "all"
         ? true
         : statusFilter === "overdue"
-        ? inv.paymentStatus !== "paid" && new Date(inv.dueDate) < new Date()
-        : inv.paymentStatus === statusFilter;
+        ? calculatedStatus !== "paid" && new Date(inv.dueDate) < new Date()
+        : calculatedStatus === statusFilter; // Use calculated status for filtering
     const matchesBusiness =
       businessFilter === "all" ? true : inv.businessName === businessFilter;
 
@@ -558,21 +588,27 @@ const InvoiceList = ({
     );
   });
 
-  // Get status tag component
+  // Get status tag component for displaying payment status
   const getStatusTag = (status) => {
-    const config =
-      {
-        paid: { color: "green", text: "Paid" },
-        partial: { color: "orange", text: "Partial" },
-        pending: { color: "red", text: "Pending" },
-      }[status] || {};
-    return <Tag color={config.color}>{config.text}</Tag>;
+    let tagColor = "red";
+    let tagText = "Payment Pending";
+
+    if (status === "paid") {
+      tagColor = "green";
+      tagText = "Completed Payment";
+    } else if (status === "partial") {
+      tagColor = "orange";
+      tagText = "Partial Payment";
+    }
+
+    return <Tag color={tagColor}>{tagText}</Tag>;
   };
 
-  // Invoice type tabs component
+  // Invoice type tabs component for switching between Invoice and Proforma views
   const invoiceTypeTabs = (
     <Space style={{ marginBottom: 16 }}>
       {["Invoice", "Proforma"].map((type) => {
+        // Count invoices for each type to display in the tab
         const count = invoices.filter((inv) => inv.invoiceType === type).length;
         const isActive = invoiceTypeFilter === type;
         return (
@@ -660,7 +696,7 @@ const InvoiceList = ({
       width: 60,
     },
     {
-      title: "Number", // Changed to 'Number' to be generic
+      title: "Number", // Changed to 'Number' to be generic for Invoice/Proforma
       render: (_, record) => (
         <Tag icon={<FileTextOutlined />} color="blue">
           {record.invoiceType === "Proforma"
@@ -719,7 +755,16 @@ const InvoiceList = ({
       align: "center",
       render: (date) => <Text>{date || "N/A"}</Text>,
     },
-
+    // Updated Payment Status Column to be more precise
+    {
+      title: "Payment Status",
+      key: "paymentStatusLabel", // Unique key for the column
+      align: "center",
+      render: (_, record) => {
+        const calculatedStatus = invoiceStatusMap[record._id] || "pending"; // Get status from map
+        return getStatusTag(calculatedStatus);
+      },
+    },
     {
       title: "Actions",
       width: 80, // Adjusted width for dropdown
@@ -727,43 +772,73 @@ const InvoiceList = ({
         <Dropdown
           overlay={
             <Menu>
-              <Menu.Item key="view" icon={<EyeOutlined />} onClick={() => handleView(record)}>
+              <Menu.Item
+                key="view"
+                icon={<EyeOutlined />}
+                onClick={() => handleView(record)}
+              >
                 View Invoice Details
               </Menu.Item>
-              <Menu.Item key="view-specs" icon={<FileTextOutlined />} onClick={() => handleViewItemSpecs(record)}>
+              <Menu.Item
+                key="view-specs"
+                icon={<FileTextOutlined />}
+                onClick={() => handleViewItemSpecs(record)}
+              >
                 View Item Specifications
               </Menu.Item>
-              <Menu.Item key="generate-pdf" icon={<PrinterOutlined />} onClick={() => generatePDF(record)}>
+              <Menu.Item
+                key="generate-pdf"
+                icon={<PrinterOutlined />}
+                onClick={() => generatePDF(record)}
+              >
                 Generate PDF
               </Menu.Item>
-              <Menu.Item key="view-notes" icon={<MessageOutlined />} onClick={() => handleViewNotes(record)}>
+              <Menu.Item
+                key="view-notes"
+                icon={<MessageOutlined />}
+                onClick={() => handleViewNotes(record)}
+              >
                 View Notes
               </Menu.Item>
-              <Menu.Item key="add-followup" icon={<ScheduleOutlined />} onClick={() => handleShowFollowUpDrawer(record)}>
+              <Menu.Item
+                key="add-followup"
+                icon={<ScheduleOutlined />}
+                onClick={() => handleShowFollowUpDrawer(record)}
+              >
                 Add/View Follow-ups
               </Menu.Item>
-              <Menu.Item key="view-payments" icon={<DollarOutlined />} onClick={() => handleViewPayments(record)}>
+              <Menu.Item
+                key="view-payments"
+                icon={<DollarOutlined />}
+                onClick={() => handleViewPayments(record)}
+              >
                 View Payments
               </Menu.Item>
-              {/* Edit Invoice */}
+              {/* Edit Invoice - only if not closed */}
               {!record.isClosed && (
-                <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => onEdit(record)}>
+                <Menu.Item
+                  key="edit"
+                  icon={<EditOutlined />}
+                  onClick={() => onEdit(record)}
+                >
                   Edit Invoice
                 </Menu.Item>
               )}
-              {/* Lock/Unlock Invoice */}
+              {/* Lock/Unlock Invoice based on isClosed status */}
               {!record.isClosed ? (
                 <Menu.Item
                   key="lock"
                   icon={<LockOutlined />}
                   onClick={() => {
+                    // Custom confirmation modal (Ant Design Modal.confirm)
                     Modal.confirm({
-                      title: 'Close Invoice',
-                      content: 'Are you sure you want to close this invoice? It will become uneditable.',
-                      okText: 'Yes, Close',
-                      cancelText: 'No',
-                      okButtonProps: { danger: true },
-                      onOk: () => handleCloseInvoice(record._id)
+                      title: "Close Invoice",
+                      content:
+                        "Are you sure you want to close this invoice? It will become uneditable.",
+                      okText: "Yes, Close",
+                      cancelText: "No",
+                      okButtonProps: { danger: true }, // Style 'Yes' button as danger
+                      onOk: () => handleCloseInvoice(record._id), // Call close handler on confirmation
                     });
                   }}
                 >
@@ -774,39 +849,37 @@ const InvoiceList = ({
                   key="unlock"
                   icon={<UnlockOutlined />}
                   onClick={() => {
+                    // Custom confirmation modal for unlocking
                     Modal.confirm({
-                      title: 'Unlock Invoice',
-                      content: 'Are you sure you want to unlock this invoice? It will become editable again.',
-                      okText: 'Yes, Unlock',
-                      cancelText: 'No',
-                      onOk: () => handleUnlockInvoice(record._id)
+                      title: "Unlock Invoice",
+                      content:
+                        "Are you sure you want to unlock this invoice? It will become editable again.",
+                      okText: "Yes, Unlock",
+                      cancelText: "No",
+                      onOk: () => handleUnlockInvoice(record._id), // Call unlock handler on confirmation
                     });
                   }}
                 >
                   Unlock Invoice
                 </Menu.Item>
               )}
-              {/* Delete Invoice */}
+              {/* Delete Invoice: Corrected to use onDelete prop */}
               <Menu.Item
-                key="delete"
-                icon={<DeleteOutlined />}
-                danger
-                onClick={() => {
-                  Modal.confirm({
-                    title: 'Delete Invoice',
-                    content: 'Are you sure you want to delete this invoice? This action cannot be undone.',
-                    okText: 'Yes, Delete',
-                    cancelText: 'No',
-                    okButtonProps: { danger: true },
-                    onOk: () => onDelete(record._id)
-                  });
-                }}
+                key="delete" // Added a key for consistency
+                icon={<DeleteOutlined />} // Added icon
               >
-                Delete Invoice
+                <Popconfirm
+                  title="Are you sure you want to delete this invoice?" // Changed text for clarity
+                  onConfirm={() => onDelete(record._id)} // Corrected to use onDelete prop
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  Delete Invoice
+                </Popconfirm>
               </Menu.Item>
             </Menu>
           }
-          trigger={['click']}
+          trigger={["click"]} // Dropdown triggers on click
         >
           <Button icon={<MoreOutlined />} />
         </Dropdown>
@@ -821,7 +894,9 @@ const InvoiceList = ({
         title="Invoice Management"
         extra={
           <Space wrap>
+            {/* Date range picker for filtering invoices by date */}
             <RangePicker onChange={setDateRange} format="YYYY-MM-DD" />
+            {/* Select dropdown for filtering by payment status */}
             <Select
               value={statusFilter}
               onChange={setStatusFilter}
@@ -833,8 +908,7 @@ const InvoiceList = ({
               <Select.Option value="partial">Partial</Select.Option>
               <Select.Option value="overdue">Overdue</Select.Option>
             </Select>
-            {/* NEW: Filter for Conversion Status */}
-
+            {/* Select dropdown for filtering by business name */}
             <Select
               value={businessFilter}
               onChange={setBusinessFilter}
@@ -849,33 +923,38 @@ const InvoiceList = ({
                 </Select.Option>
               ))}
             </Select>
+            {/* Search input for filtering by invoice number, business name, or customer name */}
             <Input.Search
               placeholder="Search invoices"
               onSearch={handleSearch}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)} // Update search term on change
               style={{ width: 240 }}
               allowClear
               prefix={<SearchOutlined />}
             />
+            {/* Button to export filtered invoices to Excel */}
             <Button onClick={exportToExcel}>Export Excel</Button>
+            {/* Button to add a new invoice */}
             <Button type="primary" icon={<PlusOutlined />} onClick={onAddNew}>
               New Invoice
             </Button>
           </Space>
         }
       >
+        {/* Tabs for switching between Invoice and Proforma views */}
         {invoiceTypeTabs}
+        {/* Main table displaying filtered invoices */}
         <Table
           dataSource={filteredInvoices}
           columns={columns}
-          rowKey="_id"
-          pagination={{ pageSize: 10 }}
-          bordered
-          scroll={{ x: true }}
+          rowKey="_id" // Unique key for each row
+          pagination={{ pageSize: 10 }} // Pagination settings
+          bordered // Add borders to the table
+          scroll={{ x: true }} // Enable horizontal scrolling for smaller screens
         />
       </Card>
 
-      {/* Invoice Details Modal */}
+      {/* Invoice Details Modal - displays comprehensive details of a selected invoice */}
       <Modal
         title="Invoice Details"
         open={viewModalVisible}
@@ -887,8 +966,8 @@ const InvoiceList = ({
       >
         {selectedInvoice && (
           <div>
+            {/* General invoice details */}
             <Descriptions bordered column={2} size="small">
-              {/* Conditionally render Invoice No or Proforma No */}
               <Descriptions.Item
                 label={
                   selectedInvoice.invoiceType === "Proforma"
@@ -931,7 +1010,7 @@ const InvoiceList = ({
               </Descriptions.Item>
             </Descriptions>
 
-            {/* Items Details Table */}
+            {/* Items Details Table - displays a detailed list of items in the invoice */}
             {selectedInvoice.items?.length > 0 && (
               <>
                 <Divider orientation="left">
@@ -942,7 +1021,7 @@ const InvoiceList = ({
                   columns={getItemsTableColumns()} // Use the function to get columns
                   pagination={false}
                   size="small"
-                  rowKey={(item, idx) => `${selectedInvoice._id}-item-${idx}`}
+                  rowKey={(item, idx) => `${selectedInvoice._id}-item-${idx}`} // Unique key for each item
                   bordered
                   expandable={{
                     expandedRowRender: (item) => (
@@ -960,7 +1039,7 @@ const InvoiceList = ({
                         )}
                       </div>
                     ),
-                    rowExpandable: (item) => item.specifications?.length > 0,
+                    rowExpandable: (item) => item.specifications?.length > 0, // Enable expansion if specifications exist
                   }}
                   summary={(pageData) => {
                     const subTotal = pageData.reduce(
@@ -1113,7 +1192,7 @@ const InvoiceList = ({
                 </Text>
               </Descriptions.Item>
               <Descriptions.Item label="Status" span={2}>
-                {getStatusTag(selectedInvoice.paymentStatus)}
+                {getStatusTag(invoiceStatusMap[selectedInvoice._id])} {/* Use calculated status here */}
               </Descriptions.Item>
               <Descriptions.Item label="Closed" span={2}>
                 {selectedInvoice.isClosed ? (
@@ -1122,7 +1201,7 @@ const InvoiceList = ({
                   <Tag color="green">No</Tag>
                 )}
               </Descriptions.Item>
-              {/* NEW: Display conversion status in modal */}
+              {/* NEW: Display conversion status in modal for Proforma invoices */}
               {selectedInvoice.invoiceType === "Proforma" && (
                 <Descriptions.Item label="Conversion Status" span={2}>
                   <Tag
@@ -1144,6 +1223,7 @@ const InvoiceList = ({
               )}
             </Descriptions>
 
+            {/* Display notes associated with the invoice */}
             {selectedInvoice.notes?.length > 0 && (
               <>
                 <Divider orientation="left">
@@ -1162,7 +1242,7 @@ const InvoiceList = ({
         )}
       </Modal>
 
-      {/* Item View Modal */}
+      {/* Item View Modal - specifically for viewing item specifications */}
       <Modal
         title="Item Specifications"
         open={itemViewModalVisible}
@@ -1212,7 +1292,7 @@ const InvoiceList = ({
         )}
       </Modal>
 
-      {/* Notes Drawer */}
+      {/* Notes Drawer - for adding/viewing notes */}
       {selectedInvoice && (
         <NotesDrawer
           visible={notesDrawerVisible}
@@ -1222,7 +1302,7 @@ const InvoiceList = ({
         />
       )}
 
-      {/* Follow-up Drawer */}
+      {/* Follow-up Drawer - for managing follow-ups */}
       {selectedInvoice && (
         <FollowUpDrawer
           visible={followUpDrawerVisible}
@@ -1232,7 +1312,7 @@ const InvoiceList = ({
         />
       )}
 
-      {/* Payment History Drawer */}
+      {/* Payment History Drawer - for viewing/managing payment history */}
       <PaymentHistoryDrawer
         visible={paymentDrawerVisible}
         onClose={() => setPaymentDrawerVisible(false)}

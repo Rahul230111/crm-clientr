@@ -9,7 +9,7 @@ import {
   Space,
   Popconfirm, // Popconfirm is still imported but not used for the dropdown delete
   Typography,
-  Modal,      // Modal is now explicitly used for confirmation
+  Modal, // Modal is now explicitly used for confirmation
   Descriptions,
   Divider,
   Dropdown,
@@ -133,7 +133,10 @@ const QuotationList = ({
 
   const formatCurrency = (amount) => {
     const numAmount = parseFloat(amount) || 0;
-    return `₹${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `₹${numAmount.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const getItemsTableColumns = () => [
@@ -149,7 +152,9 @@ const QuotationList = ({
       ellipsis: true,
       render: (text, record) => {
         if (!text && record.specifications?.length > 0) {
-          const mainSpec = record.specifications.find(s => s.name === "SPECIFICATION");
+          const mainSpec = record.specifications.find(
+            (s) => s.name === "SPECIFICATION"
+          );
           return mainSpec ? mainSpec.value : "N/A";
         }
         return text || "N/A";
@@ -192,12 +197,14 @@ const QuotationList = ({
       title: "Quotation #",
       dataIndex: "quotationNumber",
       render: (text) => <Tag color="blue">{text || "N/A"}</Tag>,
-      sorter: (a, b) => (a.quotationNumber || "").localeCompare(b.quotationNumber || ""),
+      sorter: (a, b) =>
+        (a.quotationNumber || "").localeCompare(b.quotationNumber || ""),
     },
     {
       title: "Business",
       dataIndex: "businessName",
-      sorter: (a, b) => (a.businessName || "").localeCompare(b.businessName || ""),
+      sorter: (a, b) =>
+        (a.businessName || "").localeCompare(b.businessName || ""),
     },
     {
       title: "Customer",
@@ -206,17 +213,21 @@ const QuotationList = ({
         <div>
           <div>{text || "N/A"}</div>
           {record.customerEmail && (
-            <div style={{ fontSize: 12, color: "#666" }}>{record.customerEmail}</div>
+            <div style={{ fontSize: 12, color: "#666" }}>
+              {record.customerEmail}
+            </div>
           )}
         </div>
       ),
-      sorter: (a, b) => (a.customerName || "").localeCompare(b.customerName || ""),
+      sorter: (a, b) =>
+        (a.customerName || "").localeCompare(b.customerName || ""),
     },
     {
       title: "Items Count",
       render: (_, record) => (
         <Tag color="geekblue">
-          {record.items?.length || 0} item{(record.items?.length || 0) !== 1 ? 's' : ''}
+          {record.items?.length || 0} item
+          {(record.items?.length || 0) !== 1 ? "s" : ""}
         </Tag>
       ),
     },
@@ -247,8 +258,13 @@ const QuotationList = ({
       title: "Total (₹)",
       dataIndex: "total",
       render: (amt, record) => {
-        const totalAmount = parseFloat(amt) ||
-          (record.items?.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0) || 0);
+        const totalAmount =
+          parseFloat(amt) ||
+          record.items?.reduce(
+            (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),
+            0
+          ) ||
+          0;
         return (
           <Text strong style={{ color: "#52c41a" }}>
             {formatCurrency(totalAmount)}
@@ -267,7 +283,7 @@ const QuotationList = ({
       render: (date) => {
         if (!date) return "N/A";
         try {
-          return new Date(date).toLocaleDateString('en-IN');
+          return new Date(date).toLocaleDateString("en-IN");
         } catch {
           return date;
         }
@@ -285,51 +301,64 @@ const QuotationList = ({
         <Dropdown
           overlay={
             <Menu>
-              <Menu.Item key="view" icon={<EyeOutlined />} onClick={() => openViewModal(record)}>
+              <Menu.Item
+                key="view"
+                icon={<EyeOutlined />}
+                onClick={() => openViewModal(record)}
+              >
                 View Details
               </Menu.Item>
-              <Menu.Item key="download" icon={<PrinterOutlined />} onClick={() => generateAndDownloadPDF(record)}>
+              <Menu.Item
+                key="download"
+                icon={<PrinterOutlined />}
+                onClick={() => generateAndDownloadPDF(record)}
+              >
                 Download PDF
               </Menu.Item>
-              <Menu.Item key="notes" icon={<MessageOutlined />} onClick={() => {
-                onViewNotes(record);
-                toast.success("Opening notes dialog...", { duration: 1500 });
-              }}>
+              <Menu.Item
+                key="notes"
+                icon={<MessageOutlined />}
+                onClick={() => {
+                  onViewNotes(record);
+                  toast.success("Opening notes dialog...", { duration: 1500 });
+                }}
+              >
                 View/Add Notes
               </Menu.Item>
-              <Menu.Item key="followups" icon={<ScheduleOutlined />} onClick={() => handleShowFollowUpDrawer(record)}>
+              <Menu.Item
+                key="followups"
+                icon={<ScheduleOutlined />}
+                onClick={() => handleShowFollowUpDrawer(record)}
+              >
                 Add/View Follow-ups
               </Menu.Item>
-              <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => {
-                onEdit(record);
-                toast.success("Initiating quotation edit...", { duration: 1500 });
-              }}>
-                Edit Quotation
-              </Menu.Item>
-              {/* Corrected Delete Action using Modal.confirm */}
               <Menu.Item
-                key="delete"
-                icon={<DeleteOutlined />}
-                danger
+                key="edit"
+                icon={<EditOutlined />}
                 onClick={() => {
-                  Modal.confirm({
-                    title: 'Delete Quotation',
-                    content: 'Are you sure you want to delete this quotation? This action cannot be undone.',
-                    okText: 'Yes, Delete',
-                    cancelText: 'No',
-                    okButtonProps: { danger: true },
-                    onOk: () => {
-                      onDelete(record._id);
-                      toast.success("Deleting quotation...", { duration: 1500 });
-                    }
+                  onEdit(record);
+                  toast.success("Initiating quotation edit...", {
+                    duration: 1500,
                   });
                 }}
               >
-                Delete Quotation
+                Edit Quotation
+              </Menu.Item>
+              {/* Corrected Delete Action using Modal.confirm */}
+              <Menu.Item>
+                <Popconfirm
+                  title="Are you sure you want to delete this account?"
+                  onConfirm={() => handleDeleteAccount(record._id)}
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  <DeleteOutlined />
+                  Delete Account
+                </Popconfirm>
               </Menu.Item>
             </Menu>
           }
-          trigger={['click']}
+          trigger={["click"]}
         >
           <Button icon={<MoreOutlined />} />
         </Dropdown>
@@ -378,7 +407,7 @@ const QuotationList = ({
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) =>
-            `${range[0]}-${range[1]} of ${total} quotations`
+            `${range[0]}-${range[1]} of ${total} quotations`,
         }}
         scroll={{ x: 1200 }}
       />
@@ -414,13 +443,14 @@ const QuotationList = ({
           <div id={`quotation-modal-preview-${selectedQuotation._id}`}>
             <Descriptions column={2} bordered size="small">
               <Descriptions.Item label="Quotation Number">
-                <Tag color="blue">{selectedQuotation.quotationNumber || "N/A"}</Tag>
+                <Tag color="blue">
+                  {selectedQuotation.quotationNumber || "N/A"}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Date">
-                {selectedQuotation.date ?
-                  new Date(selectedQuotation.date).toLocaleDateString('en-IN') :
-                  "N/A"
-                }
+                {selectedQuotation.date
+                  ? new Date(selectedQuotation.date).toLocaleDateString("en-IN")
+                  : "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Business Name">
                 {selectedQuotation.businessName || "N/A"}
@@ -449,7 +479,12 @@ const QuotationList = ({
                 >
                   {formatCurrency(
                     selectedQuotation.total ||
-                    (selectedQuotation.items?.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0) || 0)
+                      selectedQuotation.items?.reduce(
+                        (sum, item) =>
+                          sum + (item.quantity || 0) * (item.rate || 0),
+                        0
+                      ) ||
+                      0
                   )}
                 </Text>
               </Descriptions.Item>
@@ -473,7 +508,7 @@ const QuotationList = ({
                         {item.specifications?.length > 0 && (
                           <Descriptions column={1} size="small">
                             {item.specifications
-                              .filter(spec => spec.name !== "SPECIFICATION")
+                              .filter((spec) => spec.name !== "SPECIFICATION")
                               .map((spec, i) => (
                                 <Descriptions.Item key={i} label={spec.name}>
                                   {spec.value}
@@ -487,7 +522,8 @@ const QuotationList = ({
                   }}
                   summary={(pageData) => {
                     const totalAmount = pageData.reduce(
-                      (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),
+                      (sum, item) =>
+                        sum + (item.quantity || 0) * (item.rate || 0),
                       0
                     );
                     return (
@@ -511,9 +547,19 @@ const QuotationList = ({
 
             {selectedQuotation.notes?.length > 0 && (
               <>
-                <Divider orientation="left">Notes ({selectedQuotation.notes.length})</Divider>
+                <Divider orientation="left">
+                  Notes ({selectedQuotation.notes.length})
+                </Divider>
                 {selectedQuotation.notes.map((note, index) => (
-                  <div key={index} style={{ marginBottom: 12, padding: 8, background: "#f5f5f5", borderRadius: 4 }}>
+                  <div
+                    key={index}
+                    style={{
+                      marginBottom: 12,
+                      padding: 8,
+                      background: "#f5f5f5",
+                      borderRadius: 4,
+                    }}
+                  >
                     <Text italic>"{note.text}"</Text>
                     <br />
                     <Text type="secondary" style={{ fontSize: "0.8em" }}>
@@ -521,7 +567,7 @@ const QuotationList = ({
                       {note.timestamp ||
                         new Date(
                           selectedQuotation.createdAt
-                        ).toLocaleDateString('en-IN')}
+                        ).toLocaleDateString("en-IN")}
                     </Text>
                   </div>
                 ))}
@@ -548,10 +594,9 @@ const QuotationList = ({
                 {quotation.quotationNumber || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Date">
-                {quotation.date ?
-                  new Date(quotation.date).toLocaleDateString('en-IN') :
-                  "N/A"
-                }
+                {quotation.date
+                  ? new Date(quotation.date).toLocaleDateString("en-IN")
+                  : "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Business Name">
                 {quotation.businessName || "N/A"}
@@ -574,7 +619,9 @@ const QuotationList = ({
 
             {quotation.items?.length > 0 && (
               <>
-                <h3 style={{ marginTop: "20px", marginBottom: "10px" }}>Items</h3>
+                <h3 style={{ marginTop: "20px", marginBottom: "10px" }}>
+                  Items
+                </h3>
                 <Table
                   dataSource={quotation.items}
                   columns={getItemsTableColumns()}
@@ -588,7 +635,7 @@ const QuotationList = ({
                         {item.specifications?.length > 0 && (
                           <Descriptions column={1} size="small">
                             {item.specifications
-                              .filter(spec => spec.name !== "SPECIFICATION")
+                              .filter((spec) => spec.name !== "SPECIFICATION")
                               .map((spec, i) => (
                                 <Descriptions.Item key={i} label={spec.name}>
                                   {spec.value}
@@ -602,7 +649,8 @@ const QuotationList = ({
                   }}
                   summary={(pageData) => {
                     const totalAmount = pageData.reduce(
-                      (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),
+                      (sum, item) =>
+                        sum + (item.quantity || 0) * (item.rate || 0),
                       0
                     );
                     return (
@@ -626,7 +674,9 @@ const QuotationList = ({
 
             {quotation.notes?.length > 0 && (
               <>
-                <h3 style={{ marginTop: "20px", marginBottom: "10px" }}>Notes</h3>
+                <h3 style={{ marginTop: "20px", marginBottom: "10px" }}>
+                  Notes
+                </h3>
                 {quotation.notes.map((note, index) => (
                   <div key={index} style={{ marginBottom: 8 }}>
                     <Text italic>"{note.text}"</Text>
@@ -634,7 +684,9 @@ const QuotationList = ({
                     <Text type="secondary" style={{ fontSize: "0.8em" }}>
                       — {note.author} on{" "}
                       {note.timestamp ||
-                        new Date(quotation.createdAt).toLocaleDateString('en-IN')}
+                        new Date(quotation.createdAt).toLocaleDateString(
+                          "en-IN"
+                        )}
                     </Text>
                   </div>
                 ))}

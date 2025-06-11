@@ -1,9 +1,10 @@
 import React from 'react';
 import RoleGuard from '../components/auth/RoleGuard';
+// import InvoiceDashboard from '../pages/invoice/invoicedashboard';
 
 // Lazy-loaded pages
 const Dashboard = React.lazy(() => import('../pages/dashboard/Dashboard'));
-// Removed: const Dashboard = React.lazy(() => import('../pages/dashboard/DashboardMetricCard')); // This line was problematic
+const InvoiceDashboard = React.lazy(() => import('../pages/invoice/invoicedashboard'));
 const Login = React.lazy(() => import('../pages/Login'));
 const Profile = React.lazy(() => import('../pages/Profile'));
 const Settings = React.lazy(() => import('../pages/Settings'));
@@ -31,6 +32,14 @@ export const appRoutes = [
     element: (
       <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
         <Dashboard />
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/invoicedashboard',
+    element: (
+      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
+        <InvoiceDashboard />
       </RoleGuard>
     ),
   },
