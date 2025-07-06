@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"; // Added useRef
+import React, { useState, useEffect, useRef } from "react";
 import axios from "../../api/axios";
 import {
   Card,
@@ -15,6 +15,7 @@ import {
   Space,
   Dropdown,
   Menu,
+  Spin // Added Spin for user loading
 } from "antd";
 import {
   PlusOutlined,
@@ -25,20 +26,20 @@ import {
   CustomerServiceOutlined,
   DeleteOutlined,
   MoreOutlined,
-  FilePdfOutlined, // Added for PDF export icon
-  FileExcelOutlined, // Added for Excel export icon
+  FilePdfOutlined,
+  FileExcelOutlined,
 } from "@ant-design/icons";
 import { toast } from "react-hot-toast";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import * as XLSX from "xlsx"; // Added for Excel export
+import * as XLSX from "xlsx";
 import BusinessAccountForm from "./BusinessAccountForm";
 import NotesDrawer from "./NotesDrawer";
 import FollowUpDrawer from "./FollowUpDrawer";
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
-const API_URL = "/api/accounts";
+const API_URL = "/api/accounts"; // Assuming your business account API base path
 
 const Leads = () => {
   const [formVisible, setFormVisible] = useState(false);
@@ -59,11 +60,17 @@ const Leads = () => {
   const [waitingLeadsCount, setWaitingLeadsCount] = useState(0);
   const [closedAccountsCount, setClosedAccountsCount] = useState(0);
 
+  // NEW: State for users to assign to
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   // Ref for the table element to capture for PDF/Excel export
   const tableRef = useRef(null);
 
+  // NEW: Fetch accounts and users on component mount or tab change
   useEffect(() => {
     fetchAccounts();
+    fetchUsers(); // Fetch users when the component mounts
   }, [activeTab]);
 
   const fetchAccounts = async () => {
@@ -104,13 +111,38 @@ const Leads = () => {
     }
   };
 
+  // NEW: Function to fetch all users
+const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      // Now fetching all users from the base /api/users endpoint
+      const response = await axios.get('/api/users'); 
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users for assignment.');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
   const handleSaveAccount = async (values) => {
     try {
       if (currentAccount) {
-        await axios.put(`${API_URL}/${currentAccount._id}`, values);
+        // When updating, if assignedTo is null, send it as null
+        // Otherwise, send the _id from the selected user
+        const dataToSend = {
+          ...values,
+          assignedTo: values.assignedTo === null ? null : values.assignedTo
+        };
+        await axios.put(`${API_URL}/${currentAccount._id}`, dataToSend);
         toast.success("Account updated successfully!");
       } else {
-        await axios.post(API_URL, values);
+        // When creating, if assignedTo is null, send it as null
+        const dataToSend = {
+          ...values,
+          assignedTo: values.assignedTo === null ? null : values.assignedTo
+        };
+        await axios.post(API_URL, dataToSend);
         toast.success("Account created successfully!");
       }
       setFormVisible(false);
@@ -142,18 +174,6 @@ const Leads = () => {
       );
     }
   };
-  // const handleDeleteAccount = async (id) => {
-  //   try {
-  //     // Assuming a soft delete mechanism where you update a 'deleted' flag or similar
-  //     // If it's a hard delete, the backend should remove the record completely.
-  //     await axios.delete(`${API_URL}/${id}`);
-  //     toast.success('Account deleted successfully (soft delete)!');
-  //     fetchAccounts(); // Re-fetch accounts to update the table
-  //   } catch (error) {
-  //     toast.error('Failed to delete account.');
-  //     console.error('Delete account error:', error.response?.data || error.message);
-  //   }
-  // };
 
   const showNotesDrawer = (account) => {
     setSelectedAccount(account);
@@ -198,9 +218,8 @@ const Leads = () => {
     setNewStatus(null);
   };
 
-  // Function to export the entire table to PDF
   const exportTableToPdf = async () => {
-    const input = tableRef.current; // Use the ref for the table
+    const input = tableRef.current;
     if (!input) {
       toast.error("Table content not found for PDF export.");
       return;
@@ -227,7 +246,7 @@ const Leads = () => {
         pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      pdf.save(`Leads_Customers_Data.pdf`); // Changed filename
+      pdf.save(`Leads_Customers_Data.pdf`);
       toast.success("PDF generated!", { id: "pdf-toast" });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -235,14 +254,12 @@ const Leads = () => {
     }
   };
 
-  // Function to export the entire table data to Excel
   const exportTableToExcel = () => {
     if (filteredAccounts.length === 0) {
       toast.error("No data to export to Excel.");
       return;
     }
 
-    // Prepare data for Excel: exclude `key` and `action` column, add S.No
     const dataForExcel = filteredAccounts.map((account, index) => {
       const row = {
         "S.No": index + 1,
@@ -253,7 +270,7 @@ const Leads = () => {
         "Lead Type": account.type,
         Status: account.status,
         "Source Type": account.sourceType,
-        // Add any other fields you want to export
+        "Assigned To": account.assignedTo?.name || "Unassigned", // NEW: Include assignedTo name
         "GST Number": account.gstNumber,
         "Phone Number": account.phoneNumber,
         "Address Line 1": account.addressLine1,
@@ -267,9 +284,6 @@ const Leads = () => {
         Website: account.website,
         "Is Customer": account.isCustomer ? "Yes" : "No",
         "Created At": new Date(account.createdAt).toLocaleString(),
-        // Notes and Follow-ups might need special handling if included,
-        // as they are nested arrays. For simplicity, we'll exclude them here
-        // or join them into a string if absolutely necessary.
       };
       return row;
     });
@@ -286,7 +300,7 @@ const Leads = () => {
       title: "S.No",
       key: "sno",
       render: (text, record, index) => index + 1,
-      width: 60, // Fixed width for S.No
+      width: 60,
     },
     {
       title: "Business Name",
@@ -328,25 +342,25 @@ const Leads = () => {
       ),
       onFilter: (value, record) =>
         record.businessName.toLowerCase().includes(value.toLowerCase()),
-      responsive: ["xs", "sm", "md", "lg"], // Visible on all screen sizes
+      responsive: ["xs", "sm", "md", "lg"],
     },
     {
       title: "Contact Name",
       dataIndex: "contactName",
       key: "contactName",
-      responsive: ["md", "lg"], // Hide on extra small and small screens
+      responsive: ["md", "lg"],
     },
     {
       title: "Email",
       dataIndex: "email",
       key: "email",
-      responsive: ["lg"], // Only visible on large screens
+      responsive: ["lg"],
     },
     {
       title: "Mobile Number",
       dataIndex: "mobileNumber",
       key: "mobileNumber",
-      responsive: ["md", "lg"], // Hide on extra small and small screens
+      responsive: ["md", "lg"],
     },
     {
       title: "Lead Type",
@@ -358,7 +372,7 @@ const Leads = () => {
         { text: "Cold", value: "Cold" },
       ],
       onFilter: (value, record) => record.type.indexOf(value) === 0,
-      responsive: ["md", "lg"], // Hide on extra small and small screens
+      responsive: ["md", "lg"],
     },
     {
       title: "Status",
@@ -391,7 +405,15 @@ const Leads = () => {
         { text: "Closed", value: "Closed" },
       ],
       onFilter: (value, record) => record.status.indexOf(value) === 0,
-      responsive: ["sm", "md", "lg"], // Hide on extra small screens
+      responsive: ["sm", "md", "lg"],
+    },
+    {
+      // NEW COLUMN: Assigned To
+      title: "Assigned To",
+      dataIndex: "assignedTo",
+      key: "assignedTo",
+      render: (assignedTo) => (assignedTo ? assignedTo.name : "Unassigned"),
+      responsive: ["md", "lg"],
     },
     {
       title: "Source Type",
@@ -406,7 +428,7 @@ const Leads = () => {
         { text: "Other", value: "Other" },
       ],
       onFilter: (value, record) => record.sourceType?.indexOf(value) === 0,
-      responsive: ["lg"], // Only visible on large screens
+      responsive: ["lg"],
     },
 
     {
@@ -483,7 +505,6 @@ const Leads = () => {
     },
   ];
 
-  // Original generatePdf function renamed to generatePdfSingleAccount
   const generatePdfSingleAccount = async (account) => {
     const input = document.getElementById(`lead-${account._id}`);
     if (!input) {
@@ -546,8 +567,6 @@ const Leads = () => {
           onChange={(e) => setSearchText(e.target.value)}
         />
         <Space>
-          {" "}
-          {/* Use Space for better button alignment */}
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -558,7 +577,6 @@ const Leads = () => {
           >
             Add New Account
           </Button>
-          {/* New buttons for exporting table data */}
           <Button icon={<FilePdfOutlined />} onClick={exportTableToPdf}>
             Export to PDF
           </Button>
@@ -578,7 +596,6 @@ const Leads = () => {
         />
       </Tabs>
 
-      {/* Attach ref to the Table component for PDF/Excel export */}
       <div ref={tableRef}>
         {filteredAccounts.length > 0 ? (
           <Table
@@ -597,6 +614,8 @@ const Leads = () => {
         onClose={() => setFormVisible(false)}
         onSave={handleSaveAccount}
         initialValues={currentAccount}
+        allUsers={users} // Pass the fetched users
+        loadingUsers={loadingUsers} // Pass the loading state of users
       />
 
       {selectedAccount && (

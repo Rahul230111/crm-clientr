@@ -58,6 +58,8 @@ const Dashboard = () => {
   const [totalLeads, setTotalLeads] = useState(0);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [totalClosedAccounts, setTotalClosedAccounts] = useState(0);
+  // New state for Total Pending Follow-ups
+  const [totalPendingFollowUpsThisMonth, setTotalPendingFollowUpsThisMonth] = useState(0);
 
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingFollowUp, setEditingFollowUp] = useState(null);
@@ -114,6 +116,16 @@ const Dashboard = () => {
     { x: "2024-06-01", y: 13, category: "trend" },
   ];
 
+  // New dummy trend data for pending follow-ups
+  const pendingFollowUpsTrendData = [
+    { x: "2024-01-01", y: 3, category: "trend" },
+    { x: "2024-02-01", y: 5, category: "trend" },
+    { x: "2024-03-01", y: 4, category: "trend" },
+    { x: "2024-04-01", y: 6, category: "trend" },
+    { x: "2024-05-01", y: 5, category: "trend" },
+    { x: "2024-06-01", y: 7, category: "trend" },
+  ];
+
   const fetchAllDashboardData = async (monthMoment = dayjs()) => {
     try {
       setLoading(true);
@@ -153,9 +165,9 @@ const Dashboard = () => {
       });
 
       // Metric Card Calculations
-      setTotalLeads(
-        accountsInSelectedMonth.filter((account) => !account.isCustomer).length
-      );
+      // Updated: This now counts all accounts in the selected month regardless of customer status
+      setTotalLeads(accountsInSelectedMonth.length);
+
       setTotalCustomers(
         accountsInSelectedMonth.filter(
           (account) =>
@@ -209,12 +221,21 @@ const Dashboard = () => {
       setCustomersPie(monthlyConvertedCustomers);
       setClosedAccountsPie(monthlyClosedAccounts);
 
-      await fetchAllFollowUps(
+      // Fetch all follow-ups and filter them by month
+      const { allAccountFUs, allQuotationFUs, allInvoiceFUs } = await fetchAllFollowUps(
         quotRes.data,
         accRes.data,
         invRes.data,
         monthMoment
       );
+
+      // Calculate Total Pending Follow-ups for the month
+      const pendingAccounts = allAccountFUs.filter(f => f.status === 'pending').length;
+      const pendingQuotations = allQuotationFUs.filter(f => f.status === 'pending').length;
+      const pendingInvoices = allInvoiceFUs.filter(f => f.status === 'pending').length;
+      setTotalPendingFollowUpsThisMonth(pendingAccounts + pendingQuotations + pendingInvoices);
+
+
     } catch (err) {
       console.error("Failed to load dashboard data", err);
       message.error("Failed to load dashboard data.");
@@ -223,7 +244,7 @@ const Dashboard = () => {
     }
   };
 
-  // Modified fetchAllFollowUps to include month filtering
+  // Modified fetchAllFollowUps to include month filtering and return filtered data
   const fetchAllFollowUps = async (
     quotations,
     accounts,
@@ -345,6 +366,9 @@ const Dashboard = () => {
       monthlyInvoiceFUs,
       setFilteredInvoiceFollowups
     );
+
+    // Return the monthly filtered follow-ups for further calculations in fetchAllDashboardData
+    return { allAccountFUs: monthlyAccountFUs, allQuotationFUs: monthlyQuotationFUs, allInvoiceFUs: monthlyInvoiceFUs };
   };
 
   useEffect(() => {
@@ -370,26 +394,6 @@ const Dashboard = () => {
       return false;
     });
     setFilteredState(filtered);
-  };
-
-  const handleFollowUpFilterChange = (value) => {
-    setFollowUpFilter(value);
-    // Re-apply the relative filter on the already month-filtered data
-    applyFollowUpFilter(
-      value,
-      allAccountFollowUps,
-      setFilteredAccountFollowups
-    );
-    applyFollowUpFilter(
-      value,
-      allQuotationFollowUps,
-      setFilteredQuotationFollowups
-    );
-    applyFollowUpFilter(
-      value,
-      allInvoiceFollowUps,
-      setFilteredInvoiceFollowups
-    );
   };
 
   const handleMonthChange = (month) => {
@@ -432,7 +436,25 @@ const Dashboard = () => {
     setEditingFollowUp(null);
     editForm.resetFields();
   };
-
+ const handleFollowUpFilterChange = (value) => {
+    setFollowUpFilter(value);
+    // Re-apply the relative filter on the already month-filtered data
+    applyFollowUpFilter(
+      value,
+      allAccountFollowUps,
+      setFilteredAccountFollowups
+    );
+    applyFollowUpFilter(
+      value,
+      allQuotationFollowUps,
+      setFilteredQuotationFollowups
+    );
+    applyFollowUpFilter(
+      value,
+      allInvoiceFollowUps,
+      setFilteredInvoiceFollowups
+    );
+  };
   const handleEditModalOk = async () => {
     try {
       const values = await editForm.validateFields();
@@ -642,6 +664,7 @@ const Dashboard = () => {
             trendLabel="Closed Accounts Trend"
           />
         </Col>
+      
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>

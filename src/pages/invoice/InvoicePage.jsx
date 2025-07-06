@@ -80,7 +80,7 @@ const InvoicePage = () => {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{}}>
       <InvoiceList
         invoices={filteredInvoices.length > 0 ? filteredInvoices : invoices}
         onAddNew={() => {

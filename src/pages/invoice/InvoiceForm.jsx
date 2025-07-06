@@ -22,11 +22,9 @@ import {
   MinusCircleOutlined,
 } from "@ant-design/icons";
 import { useState, useEffect, useCallback, useRef } from "react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 import dayjs from "dayjs";
-import axios from "../../api/axios";
-import { toast } from "react-hot-toast";
+import axios from "../../api/axios"; // Assuming this path is correct for your project
+import { toast } from "react-hot-toast"; // Assuming react-hot-toast is installed
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -34,30 +32,31 @@ const { useToken } = theme;
 
 const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
   const [form] = Form.useForm();
+  // State to manage individual invoice items
   const [items, setItems] = useState([
     {
-      id: 1,
-      productId: null,
+      id: 1, // Unique ID for each item in the UI
+      productId: null, // Stores the ID of the selected product
+      productName: "", // Stores the product name for display
       description: "",
       hsnSac: "",
       quantity: 1,
-      quantityType: "",
-      rate: 0,
-      specifications: [{ key: Date.now(), name: "", value: "" }],
+      quantityType: "", // e.g., "Nos", "Kgs"
+      rate: 0, // Price per unit
+      specifications: [{ key: Date.now(), name: "", value: "" }], // Product specifications
     },
   ]);
   const [paymentStatus, setPaymentStatus] = useState("pending");
-  const [invoiceTypes, setInvoiceTypes] = useState([]);
   const [dueDate, setDueDate] = useState(null);
-  const [businessOptions, setBusinessOptions] = useState([]);
-  const [taxRate, setTaxRate] = useState(); // Default GST rate to 18% for manual entry
-  const [productOptions, setProductOptions] = useState([]);
-  const [selectedBusinessDetails, setSelectedBusinessDetails] = useState(null);
-  const [gstType, setGstType] = useState(null); // Added GST Type for Invoice
+  const [businessOptions, setBusinessOptions] = useState([]); // Options for the business dropdown
+  const [taxRate, setTaxRate] = useState(18); // Default GST rate, can be manually entered
+  const [productOptions, setProductOptions] = useState([]); // Options for the product dropdown
+  const [selectedBusinessDetails, setSelectedBusinessDetails] = useState(null); // Details of the selected business
+  const [gstType, setGstType] = useState(null); // GST Type: "interstate" or "intrastate"
 
-  const { token } = useToken();
+  const { token } = useToken(); // Ant Design theme token for styling
 
-  // Styles derived from QuotationFormStyles for consistency
+  // Styles object for consistent styling across the form
   const styles = {
     mainCardTitle: {
       fontSize: "20px",
@@ -66,7 +65,6 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
     },
     quotationCard: {
       borderRadius: token.borderRadiusLG,
-      boxShadow: token.boxShadowSecondary,
     },
     formField: {
       width: "100%",
@@ -103,7 +101,6 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
     divider: {
       margin: "24px 0",
       borderColor: token.colorBorderSecondary,
-      borderStyle: "dashed",
     },
     itemCard: {
       marginBottom: token.margin,
@@ -166,9 +163,11 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
     },
   };
 
+  // Refs to prevent redundant API calls
   const hasFetchedBusinessOptions = useRef(false);
   const hasFetchedProductOptions = useRef(false);
 
+  // Helper function to get current user from local storage
   const getCurrentUser = () => {
     try {
       const user = JSON.parse(localStorage.getItem("user"));
@@ -178,6 +177,7 @@ const InvoiceForm = ({ onCancel, onSave, initialValues, isSaving }) => {
     }
   };
 
+  // Formats business information for display
   const formatBusinessInfo = useCallback((business) => {
     if (!business) return "";
     return `
@@ -192,6 +192,7 @@ ${business.gstNumber || ""}
 `.trim();
   }, []);
 
+  // Fetches business options from the API
   const fetchBusinessOptions = useCallback(async () => {
     if (hasFetchedBusinessOptions.current) return;
     hasFetchedBusinessOptions.current = true;
@@ -204,22 +205,11 @@ ${business.gstNumber || ""}
     } catch (error) {
       toast.error("Failed to load businesses", { id: toastId });
       console.error("Error fetching business options:", error);
-      hasFetchedBusinessOptions.current = false;
+      hasFetchedBusinessOptions.current = false; // Allow retry on failure
     }
   }, []);
 
-  const fetchInvoiceTypes = useCallback(async () => {
-    const toastId = toast.loading("Loading invoice types...");
-    try {
-      const res = await axios.get("/api/invoices/types");
-      setInvoiceTypes(res.data);
-      toast.success("Invoice types loaded", { id: toastId });
-    } catch (error) {
-      toast.error("Failed to load invoice types", { id: toastId });
-      console.error("Error fetching invoice types:", error);
-    }
-  }, []);
-
+  // Fetches product options from the API
   const fetchProductOptions = useCallback(async () => {
     if (hasFetchedProductOptions.current) return;
     hasFetchedProductOptions.current = true;
@@ -232,105 +222,153 @@ ${business.gstNumber || ""}
           ...p,
           hsnSac: p.hsnSac || "",
           quantityType: p.quantityType || "",
-          options: p.options || [],
+          options: p.options || [], // Ensure options array exists
         }))
       );
       toast.success("Product options loaded", { id: toastId });
     } catch (error) {
       toast.error("Failed to load products", { id: toastId });
       console.error("Error fetching product options:", error);
-      hasFetchedProductOptions.current = false;
+      hasFetchedProductOptions.current = false; // Allow retry on failure
     }
   }, []);
 
+  // Effect hook to load data and set initial form values when component mounts or initialValues change
   useEffect(() => {
     fetchBusinessOptions();
     fetchProductOptions();
-    fetchInvoiceTypes();
+  }, [fetchBusinessOptions, fetchProductOptions]); // Fetch options only once on mount
 
-    if (initialValues) {
+  // Separate useEffect for handling initialValues once options are loaded
+  useEffect(() => {
+    if (initialValues && productOptions.length > 0 && businessOptions.length > 0) {
+      console.log("Initial Values Effect triggered.");
+      console.log("initialValues:", initialValues);
+      console.log("productOptions:", productOptions);
+
+      // Determine the correct business ID, handling both object and string formats
       const selectedBusinessId =
         initialValues.businessId?._id || initialValues.businessId;
       const selectedBusiness = businessOptions.find(
         (b) => b._id === selectedBusinessId
       );
 
+      // Set form fields with initial values
       form.setFieldsValue({
         ...initialValues,
         date: initialValues.date ? dayjs(initialValues.date) : null,
         dueDate: initialValues.dueDate ? dayjs(initialValues.dueDate) : null,
         paymentStatus: initialValues.paymentStatus || "pending",
-        invoiceType: initialValues.invoiceType || "Invoice",
-        gstType: initialValues.gstType || null, // Set GST Type
+        invoiceType: "Invoice", // Hardcode to Invoice as per requirement
+        gstType: initialValues.gstType || null,
         businessName: selectedBusiness?.businessName,
         businessType: selectedBusiness?.type,
         businessInfo: selectedBusiness
           ? formatBusinessInfo(selectedBusiness)
-          : "", // Use formatBusinessInfo
+          : "",
         gstin: selectedBusiness?.gstNumber || "",
         businessId: selectedBusiness?._id,
+        // Set initial values for contactName, email, mobileNumber from initialValues
+        contactName: initialValues.contactName || "",
+        email: initialValues.email || "",
+        mobileNumber: initialValues.mobileNumber || "",
       });
 
-      setItems(initialValues.items || []);
+      // Map initialValues.items to include product names for display
+      const updatedItems = initialValues.items.map(item => {
+        // Ensure item.productId is a string ID for lookup
+        const currentProductId = item.productId?._id || item.productId;
+        const product = productOptions.find(p => p._id === currentProductId);
+
+        console.log(`--- Item Processing ---`);
+        console.log(`Original item.productId:`, item.productId);
+        console.log(`ID used for lookup (currentProductId):`, currentProductId);
+        console.log(`Found product:`, product);
+
+        return {
+          ...item,
+          id: item.id || Date.now() + Math.random(), // Ensure item has a unique ID for React keys
+          productId: currentProductId, // Ensure productId is just the string ID for the Select value
+          // Prioritize item.productName from initialValues, fallback to lookup, then description
+          productName: item.productName || (product ? (product.productName || product.name) : (item.description || "Product Not Found")),
+          rate: item.rate || (product ? product.price : 0), // Ensure rate is set, fallback to product price
+          description: item.description || (product ? product.description : ""), // Fallback for description
+          hsnSac: item.hsnSac || (product ? product.hsnSac : ""), // Fallback for HSN/SAC
+          quantityType: item.quantityType || (product ? product.quantityType : ""), // Fallback for quantityType
+          specifications: item.specifications || (product && product.options ? product.options.map((opt) => ({
+            key: Date.now() + Math.random(),
+            name: opt.type || "",
+            value: opt.description || "",
+          })) : [{ key: Date.now() + Math.random(), name: "", value: "" }]),
+        };
+      });
+      setItems(updatedItems);
+      console.log("Updated Items after mapping:", updatedItems);
+
       setPaymentStatus(initialValues.paymentStatus || "pending");
       setDueDate(initialValues.dueDate ? dayjs(initialValues.dueDate) : null);
-      setGstType(initialValues.gstType || null); // Set GST Type state
-      setTaxRate(initialValues.gstPercentage || 0);
+      setGstType(initialValues.gstType || null);
+      setTaxRate(initialValues.gstPercentage || 18); // Default to 18 if not set
       if (selectedBusiness) {
         setSelectedBusinessDetails(selectedBusiness);
       }
     }
   }, [
     initialValues,
-    businessOptions,
-    fetchBusinessOptions,
-    fetchProductOptions,
+    productOptions, // Dependency added for productOptions
+    businessOptions, // Dependency added for businessOptions
     form,
     formatBusinessInfo,
-    fetchInvoiceTypes,
   ]);
 
+
+  // Adds a new blank item row to the invoice
   const addItem = () => {
-    const nextId = Math.max(0, ...items.map((i) => i.id)) + 1;
+    const nextId = Math.max(0, ...items.map((i) => i.id)) + 1; // Generate unique ID
     setItems([
       ...items,
       {
         id: nextId,
         productId: null,
+        productName: "", // Initialize productName for new item
         description: "",
         hsnSac: "",
         quantity: 1,
         quantityType: "",
         rate: 0,
-        specifications: [{ key: Date.now(), name: "", value: "" }],
+        specifications: [{ key: Date.now() + Math.random(), name: "", value: "" }], // Ensure unique key for new spec
       },
     ]);
   };
 
+  // Updates a specific property of an item
   const updateItem = (id, key, value) => {
     setItems(
       items.map((item) => {
         if (item.id === id) {
           if (key === "productId") {
+            // If product is selected, populate related fields
             const selectedProduct = productOptions.find((p) => p._id === value);
             if (selectedProduct) {
               return {
                 ...item,
                 productId: value,
+                productName: selectedProduct.productName || selectedProduct.name, // Set product name for display
                 description: selectedProduct.description || "",
                 hsnSac: selectedProduct.hsnSac || "",
-                rate: selectedProduct.price || 0,
+                rate: selectedProduct.price || 0, // Crucial: Set rate from product's price
                 quantityType: selectedProduct.quantityType || "",
+                // Populate specifications from product options if available, otherwise default
                 specifications:
                   selectedProduct.options && selectedProduct.options.length > 0
                     ? selectedProduct.options.map((opt) => ({
-                        key: Date.now() + Math.random(),
+                        key: Date.now() + Math.random(), // Ensure unique key
                         name: opt.type || "",
                         value: opt.description || "",
                       }))
                     : [
                         {
-                          key: Date.now() + Math.random(),
+                          key: Date.now() + Math.random(), // Ensure unique key
                           name: "",
                           value: "",
                         },
@@ -338,17 +376,19 @@ ${business.gstNumber || ""}
               };
             }
           }
-          return { ...item, [key]: value };
+          return { ...item, [key]: value }; // Update other item properties
         }
         return item;
       })
     );
   };
 
+  // Removes an item row from the invoice
   const removeItem = (id) => {
     setItems(items.filter((item) => item.id !== id));
   };
 
+  // Adds a new specification field to a specific item
   const addSpecification = (itemId) => {
     setItems((prevItems) =>
       prevItems.map((item) =>
@@ -365,6 +405,7 @@ ${business.gstNumber || ""}
     );
   };
 
+  // Removes a specification field from a specific item
   const removeSpecification = (itemId, specKey) => {
     setItems((prevItems) =>
       prevItems.map((item) =>
@@ -380,6 +421,7 @@ ${business.gstNumber || ""}
     );
   };
 
+  // Updates a specific field of a specification for an item
   const updateSpecification = (itemId, specKey, field, value) => {
     setItems((prevItems) =>
       prevItems.map((item) =>
@@ -395,41 +437,54 @@ ${business.gstNumber || ""}
     );
   };
 
+  // Calculates the sum of all item totals
   const calculateSubTotal = () =>
     items.reduce(
       (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),
       0
     );
+
+  // Calculates the total GST amount based on sub-total and tax rate
   const calculateTotalGSTAmount = () => calculateSubTotal() * (taxRate / 100);
 
+  // Calculates IGST amount (for interstate)
   const calculateIGST = () => {
     return gstType === "interstate" ? calculateTotalGSTAmount() : 0;
   };
 
+  // Calculates CGST amount (for intrastate)
   const calculateCGST = () => {
     return gstType === "intrastate" ? calculateTotalGSTAmount() / 2 : 0;
   };
 
+  // Calculates SGST amount (for intrastate)
   const calculateSGST = () => {
     return gstType === "intrastate" ? calculateTotalGSTAmount() / 2 : 0;
   };
 
+  // Calculates the grand total of the invoice
   const calculateGrandTotal = () =>
     calculateSubTotal() + calculateTotalGSTAmount();
 
+  // Handles selection of a business from the dropdown
   const handleBusinessSelect = (id) => {
     const selected = businessOptions.find((b) => b._id === id);
     if (selected) {
       setSelectedBusinessDetails(selected);
       const fullInfo = formatBusinessInfo(selected);
+      // Set form fields related to the selected business
       form.setFieldsValue({
         businessId: selected._id,
         businessName: selected.businessName,
         businessType: selected.type,
         gstin: selected.gstNumber,
         businessInfo: fullInfo,
+        contactName: selected.contactName || "",
+        email: selected.email || "",
+        mobileNumber: selected.mobileNumber || "",
       });
     } else {
+      // Clear business-related fields if no business is selected
       setSelectedBusinessDetails(null);
       form.setFieldsValue({
         businessId: null,
@@ -437,10 +492,14 @@ ${business.gstNumber || ""}
         businessType: null,
         gstin: null,
         businessInfo: "",
+        contactName: "",
+        email: "",
+        mobileNumber: "",
       });
     }
   };
 
+  // Handles form submission
   const onFinish = (values) => {
     if (!items || items.length === 0) {
       toast.error("At least one item is required.");
@@ -453,8 +512,9 @@ ${business.gstNumber || ""}
 
     const subTotal = calculateSubTotal();
     const gstPercentage = taxRate;
-    const totalAmount = calculateGrandTotal(); // Use calculateGrandTotal for the final total
+    const totalAmount = calculateGrandTotal();
 
+    // Prepare new payment entry if provided
     const newPayment = {
       amount: values.newPaymentAmount,
       method: values.newPaymentMethod,
@@ -463,6 +523,7 @@ ${business.gstNumber || ""}
       addedBy: getCurrentUser(),
     };
 
+    // Construct the invoice data object to be saved
     const invoiceData = {
       ...values,
       date: values.date?.format("YYYY-MM-DD"),
@@ -471,19 +532,24 @@ ${business.gstNumber || ""}
       items,
       subTotal,
       gstPercentage: gstPercentage,
-      totalAmount, // This is the grand total
+      totalAmount,
       gstType: gstType,
       igstAmount: calculateIGST(),
       cgstAmount: calculateCGST(),
       sgstAmount: calculateSGST(),
+      invoiceType: "Invoice", // Hardcode invoiceType to Invoice
       businessName: selectedBusinessDetails?.businessName,
       businessType: selectedBusinessDetails?.type,
       gstin: selectedBusinessDetails?.gstNumber,
       businessInfo: selectedBusinessDetails
         ? formatBusinessInfo(selectedBusinessDetails)
         : "",
+      contactName: values.contactName,
+      email: values.email,
+      mobileNumber: values.mobileNumber,
     };
 
+    // Add new payment to history if valid
     if (newPayment.amount && newPayment.method) {
       invoiceData.paymentHistory = [
         ...(initialValues?.paymentHistory || []),
@@ -491,12 +557,61 @@ ${business.gstNumber || ""}
       ];
     }
 
+    // Remove temporary payment fields before saving
     delete invoiceData.newPaymentAmount;
     delete invoiceData.newPaymentMethod;
     delete invoiceData.newPaymentReference;
     delete invoiceData.newPaymentDate;
 
-    onSave(invoiceData);
+    onSave(invoiceData); // Call the onSave prop with the prepared invoice data
+  };
+
+  // Handles printing the invoice by opening a new tab
+  const handlePrintInvoice = () => {
+    const values = form.getFieldsValue(true); // Get all current form values
+
+    // Recalculate summary details for print
+    const subTotal = calculateSubTotal();
+    const gstPercentage = taxRate;
+    const totalAmount = calculateGrandTotal();
+
+    // Prepare invoice data for printing
+    const invoiceDataForPrint = {
+      ...values,
+      date: values.date?.format("YYYY-MM-DD"),
+      dueDate: dueDate?.format("YYYY-MM-DD"),
+      paymentStatus,
+      items,
+      subTotal,
+      gstPercentage: gstPercentage,
+      totalAmount,
+      gstType: gstType,
+      igstAmount: calculateIGST(),
+      cgstAmount: calculateCGST(),
+      sgstAmount: calculateSGST(),
+      invoiceNumber: initialValues?.invoiceNumber || "DRAFT", // Use existing or DRAFT
+      invoiceType: "Invoice", // Always Invoice
+      businessName: selectedBusinessDetails?.businessName,
+      businessType: selectedBusinessDetails?.type,
+      gstin: selectedBusinessDetails?.gstNumber,
+      businessInfo: selectedBusinessDetails
+        ? formatBusinessInfo(selectedBusinessDetails)
+        : "",
+      contactName: values.contactName,
+      email: values.email,
+      mobileNumber: values.mobileNumber,
+      companyName: "Your Company Name", // Placeholder: Replace with actual company details
+      companyAddress: "Your Company Address Line 1, City, State - PIN, Country", // Placeholder
+      companyGSTIN: "YOURGSTIN12345", // Placeholder
+      notes: initialValues?.notes || [], // Pass existing notes
+      paymentTerms:
+        initialValues?.paymentTerms ||
+        "Payment due within 15 days of invoice date", // Pass existing payment terms
+    };
+
+    // Store data in localStorage and open new tab for printing
+    localStorage.setItem("invoiceToPrint", JSON.stringify(invoiceDataForPrint));
+    window.open("/print-invoice", "_blank"); // Assumes a route '/print-invoice' exists
   };
 
   return (
@@ -510,6 +625,7 @@ ${business.gstNumber || ""}
       style={styles.quotationCard}
     >
       <Form form={form} layout="vertical" onFinish={onFinish}>
+        {/* Business and Invoice Details */}
         <Row gutter={[16, 24]}>
           <Col xs={24} md={12}>
             <Form.Item
@@ -537,6 +653,7 @@ ${business.gstNumber || ""}
                 ))}
               </Select>
             </Form.Item>
+            {/* Hidden input to store businessName for form submission if needed */}
             <Form.Item name="businessName" hidden>
               <Input />
             </Form.Item>
@@ -548,38 +665,27 @@ ${business.gstNumber || ""}
           </Col>
         </Row>
 
-  <Row gutter={[24]}>
-  <Col xs={24} md={12}>
-    <Form.Item label="Business Info">
-      <Card bordered style={styles.businessInfoCard}>
-        <pre style={styles.businessInfoPre}>
-          {form.getFieldValue("businessInfo") ||
-            "Select a business to view details..."}
-        </pre>
-      </Card>
-    </Form.Item>
-  </Col>
-  
-  <Col xs={24} md={12}>
-    <Form.Item
-      label="Invoice Type"
-      name="invoiceType"
-      rules={[{ required: true, message: 'Please select an invoice type' }]}
-    >
-      <Select
-        placeholder="Select invoice type"
-        style={styles.formField}
-        allowClear
-      >
-        {invoiceTypes.map((type) => (
-          <Option key={type} value={type}>
-            {type}
-          </Option>
-        ))}
-      </Select>
-    </Form.Item>
-  </Col>
-</Row>
+        <Row gutter={[24]}>
+          <Col xs={24} md={12}>
+            <Form.Item label="Business Info">
+              <Card bordered style={styles.businessInfoCard}>
+                <pre style={styles.businessInfoPre}>
+                  {form.getFieldValue("businessInfo") ||
+                    "Select a business to view details..."}
+                </pre>
+              </Card>
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item
+              label="Invoice Type"
+              name="invoiceType"
+              initialValue="Invoice" // Fixed to "Invoice"
+            >
+              <Input readOnly style={styles.readOnlyFormField} />
+            </Form.Item>
+          </Col>
+        </Row>
         <Row gutter={16}>
           {initialValues?.invoiceNumber && (
             <Col span={12}>
@@ -617,41 +723,60 @@ ${business.gstNumber || ""}
           </Col>
         </Row>
 
-        <Form.Item
-          label="Customer Name"
-          name="customerName"
-          rules={[{ required: true }]}
-        >
-          <Input style={styles.formField} />
-        </Form.Item>
-        <Form.Item
-          label="Customer Address"
-          name="customerAddress"
-          rules={[{ required: true }]}
-        >
-          <TextArea rows={2} style={styles.textAreaField} />
-        </Form.Item>
-
-        <Form.Item label="Payment Status" name="paymentStatus">
-          <Radio.Group
-            value={paymentStatus}
-            onChange={(e) => setPaymentStatus(e.target.value)}
-          >
-            <Radio.Button value="pending">Pending</Radio.Button>
-            <Radio.Button value="partial">Partial</Radio.Button>
-            <Radio.Button value="paid">Paid</Radio.Button>
-          </Radio.Group>
-        </Form.Item>
+        {/* Contact Person Details */}
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item
+              label="Contact Person"
+              name="contactName"
+              rules={[
+                {
+                  required: true,
+                  message: "Please enter contact person name!",
+                },
+              ]}
+            >
+              <Input style={styles.formField} />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label="Email"
+              name="email"
+              rules={[
+                {
+                  required: true,
+                  type: "email",
+                  message: "Please enter a valid email!",
+                },
+              ]}
+            >
+              <Input style={styles.formField} />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label="Mobile Number"
+              name="mobileNumber"
+              rules={[
+                { required: true, message: "Please enter mobile number!" },
+              ]}
+            >
+              <Input style={styles.formField} />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Divider style={styles.divider}>Invoice Items</Divider>
         {items.map((item, index) => {
-          const isProductSelected = item.productId !== null;
           return (
             <Card key={item.id} style={styles.itemCard} size="small">
               <Row gutter={[16, 16]} align="middle">
                 <Col xs={24} sm={8}>
+                  Product Name
                   <Form.Item label="Product" noStyle>
                     <Select
+                      key={item.productId || `new-item-${item.id}`} // Added key prop to force re-render
                       placeholder="Search or select a product"
                       showSearch
                       optionFilterProp="children"
@@ -663,18 +788,25 @@ ${business.gstNumber || ""}
                       onChange={(value) =>
                         updateItem(item.id, "productId", value)
                       }
-                      value={item.productId}
+                      value={item.productId} // This holds the product ID
                       style={styles.formField}
                     >
+                      {/* Display the product name from the item state, or fallback to the option's children */}
+                      {item.productName && !productOptions.some(p => p._id === item.productId) && (
+                        <Option key={item.productId} value={item.productId}>
+                          {item.productName}
+                        </Option>
+                      )}
                       {productOptions.map((p) => (
                         <Option key={p._id} value={p._id}>
-                          {p.productName || p.name}
+                          {p.productName || p.name} {/* Display product name */}
                         </Option>
                       ))}
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col xs={12} sm={4}>
+                <Col xs={12} sm={8}>
+                  Quantity
                   <Form.Item label="Qty" noStyle>
                     <InputNumber
                       placeholder="1"
@@ -685,19 +817,16 @@ ${business.gstNumber || ""}
                     />
                   </Form.Item>
                 </Col>
-                <Col xs={12} sm={6}>
-                  <Form.Item label="Unit Type" noStyle>
-                    <Input
-                      placeholder="e.g., Pcs, Kg, Mtr"
-                      value={item.quantityType}
-                      onChange={(e) =>
-                        updateItem(item.id, "quantityType", e.target.value)
-                      }
-                      style={
-                        isProductSelected
-                          ? styles.readOnlyFormField
-                          : styles.formField
-                      }
+                <Col xs={24} sm={8}>
+                  Price (per unit)
+                  <Form.Item label="Price (per unit)" noStyle>
+                    <InputNumber
+                      prefix="₹"
+                      value={item.rate}
+                      onChange={(val) => updateItem(item.id, "rate", val)}
+                      min={0}
+                      step={0.01}
+                      style={styles.formField}
                     />
                   </Form.Item>
                 </Col>
@@ -723,37 +852,9 @@ ${business.gstNumber || ""}
                   )}
                 </Col>
               </Row>
-              <Row gutter={[16, 16]} style={{ marginTop: token.marginS }}>
+              <Row gutter={[16, 16]} style={{ marginTop: token.margin }}>
                 <Col xs={24} sm={8}>
-                  <Form.Item label="Price (per unit)" noStyle>
-                    <Input
-                      prefix="₹"
-                      value={item.rate.toFixed(2)}
-                      readOnly
-                      style={styles.readOnlyFormField}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={16}>
-                  <Form.Item label="Description" noStyle>
-                    <TextArea
-                      placeholder="Detailed description of the item"
-                      value={item.description}
-                      onChange={(e) =>
-                        updateItem(item.id, "description", e.target.value)
-                      }
-                      style={
-                        isProductSelected
-                          ? styles.textAreaField
-                          : styles.textAreaField
-                      }
-                      rows={2}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={[16, 16]} style={{ marginTop: token.marginS }}>
-                <Col xs={24} sm={8}>
+                  HSN/SAC Code
                   <Form.Item label="HSN/SAC Code" noStyle>
                     <Input
                       placeholder="HSN/SAC"
@@ -761,15 +862,11 @@ ${business.gstNumber || ""}
                       onChange={(e) =>
                         updateItem(item.id, "hsnSac", e.target.value)
                       }
-                      style={
-                        isProductSelected
-                          ? styles.readOnlyFormField
-                          : styles.formField
-                      }
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
+                  Item Total
                   <Form.Item label="Item Total" noStyle>
                     <Input
                       value={`₹${(
@@ -780,7 +877,22 @@ ${business.gstNumber || ""}
                     />
                   </Form.Item>
                 </Col>
+                <Col xs={24} sm={8}>
+                  Description
+                  <Form.Item label="Description" noStyle>
+                    <TextArea
+                      placeholder="Detailed description of the item"
+                      value={item.description}
+                      onChange={(e) =>
+                        updateItem(item.id, "description", e.target.value)
+                      }
+                      rows={2}
+                    />
+                  </Form.Item>
+                </Col>
               </Row>
+
+              {/* Specifications Section */}
               {item.specifications && item.specifications.length > 0 && (
                 <>
                   <Divider
@@ -841,6 +953,7 @@ ${business.gstNumber || ""}
                               />
                             </Tooltip>
                           )}
+                          {/* Add new specification button only on the last spec row */}
                           {specIndex === item.specifications.length - 1 && (
                             <Tooltip title="Add New Specification">
                               <Button
@@ -857,6 +970,7 @@ ${business.gstNumber || ""}
                   ))}
                 </>
               )}
+              {/* Button to add first specification if none exist or last one is filled */}
               {(!item.specifications ||
                 item.specifications.length === 0 ||
                 (item.specifications.length > 0 &&
@@ -875,6 +989,7 @@ ${business.gstNumber || ""}
             </Card>
           );
         })}
+        {/* Button to add another item row */}
         <Button
           onClick={addItem}
           block
@@ -884,6 +999,7 @@ ${business.gstNumber || ""}
           + Add Another Item
         </Button>
 
+        {/* Summary Section */}
         <Divider style={styles.divider}>Summary</Divider>
         <Col xs={24} md={12}>
           <Form.Item
@@ -972,6 +1088,17 @@ ${business.gstNumber || ""}
           </Col>
         </Row>
 
+        {/* Payment Status and History */}
+        <Form.Item label="Payment Status" name="paymentStatus">
+          <Radio.Group
+            value={paymentStatus}
+            onChange={(e) => setPaymentStatus(e.target.value)}
+          >
+            <Radio.Button value="pending">Pending</Radio.Button>
+            <Radio.Button value="partial">Partial</Radio.Button>
+            <Radio.Button value="paid">Paid</Radio.Button>
+          </Radio.Group>
+        </Form.Item>
         <Divider>Payment History</Divider>
         {initialValues?.paymentHistory?.length > 0 && (
           <div style={{ marginBottom: 16 }}>
@@ -997,6 +1124,7 @@ ${business.gstNumber || ""}
           </div>
         )}
 
+        {/* Add New Payment Entry */}
         <Divider>Add Payment Entry</Divider>
         <Row gutter={16}>
           <Col span={6}>
@@ -1026,6 +1154,7 @@ ${business.gstNumber || ""}
           </Col>
         </Row>
 
+        {/* Action Buttons */}
         <Form.Item style={styles.buttonGroup}>
           <Space size="middle">
             <Button onClick={onCancel} size="large" disabled={isSaving}>
@@ -1043,7 +1172,7 @@ ${business.gstNumber || ""}
             <Button
               icon={<PrinterOutlined />}
               size="large"
-              onClick={() => window.print()}
+              onClick={handlePrintInvoice}
             >
               Print
             </Button>

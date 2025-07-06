@@ -1,18 +1,20 @@
+// routes.jsx
 import React from 'react';
 import RoleGuard from '../components/auth/RoleGuard';
-// import InvoiceDashboard from '../pages/invoice/invoicedashboard';
 
-// Lazy-loaded pages
+// Lazy-loaded pages - Correcting paths to match actual file system casing
 const Dashboard = React.lazy(() => import('../pages/dashboard/Dashboard'));
 const InvoiceDashboard = React.lazy(() => import('../pages/invoice/invoicedashboard'));
 const Login = React.lazy(() => import('../pages/Login'));
 const Profile = React.lazy(() => import('../pages/Profile'));
 const Settings = React.lazy(() => import('../pages/Settings'));
 
+// Corrected: Using 'quotation' (lowercase) based on the provided file structure image
 const QuotationPage = React.lazy(() => import('../pages/quotation/QuotationPage'));
 const QuotationForm = React.lazy(() => import('../pages/quotation/QuotationForm'));
 const QuotationList = React.lazy(() => import('../pages/quotation/QuotationList'));
 
+// Assuming your 'Invoice' folder is still PascalCase, as per previous structure
 const InvoicePage = React.lazy(() => import('../pages/Invoice/InvoicePage'));
 const InvoiceForm = React.lazy(() => import('../pages/Invoice/InvoiceForm'));
 const InvoiceList = React.lazy(() => import('../pages/Invoice/InvoiceList'));
@@ -92,7 +94,7 @@ export const appRoutes = [
     ),
   },
   {
-    path: '/products',  // Use plural route here for product list
+    path: '/products',    
     element: (
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <Product />

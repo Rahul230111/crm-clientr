@@ -1,5 +1,4 @@
-// Sidebar.jsx
-import { Menu } from 'antd';
+import { Menu } from "antd";
 import {
   DashboardOutlined,
   UserOutlined,
@@ -9,76 +8,99 @@ import {
   ShoppingOutlined,
   SolutionOutlined,
   AppstoreOutlined,
-  ProjectOutlined,
   SettingOutlined,
   UserSwitchOutlined,
-  // MobileOutlined,
-  // DesktopOutlined,
-  // TabletOutlined,
-  // GlobalOutlined
-} from '@ant-design/icons';
-import { useNavigate, useLocation } from 'react-router-dom';
+} from "@ant-design/icons";
+import { useNavigate, useLocation } from "react-router-dom";
 
-import logoCollapsed from '../../assets/Submark Logo 01.png';
-import logoExpanded from '../../assets/Primary Logo 01.png';
+import logoCollapsed from "../../assets/Submark Logo 01.png";
+import logoExpanded from "../../assets/Primary Logo 01.png";
 
 const Sidebar = ({ collapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // This logic ensures that if the URL is '/dashboard/deals', selectedKey becomes '/dashboard'
-  // for correct highlighting of the parent menu item.
-  const selectedKey = '/' + location.pathname.split('/')[1];
+  const selectedKey = "/" + location.pathname.split("/")[1];
 
-  const menuItems = [
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role;
+
+  // Define menu structure with role-based access
+  const rawMenuItems = [
     {
-      key: 'main-menu',
-      type: 'group',
-      // The label for the group is hidden when the sidebar is collapsed
-      label: collapsed ? null : 'MAIN MENU',
+      key: "main-menu",
+      type: "group",
+      label: collapsed ? null : "MAIN MENU",
       children: [
         {
-          key: '/dashboard',
+          key: "/dashboard",
           icon: <DashboardOutlined />,
-          label: collapsed ? null : 'Dashboard',
+          label: collapsed ? null : "Dashboard",
+          roles: ["Admin", "Superadmin", "Employee"],
           children: [
-            { key: '/dashboard/deals', label: 'Leads Dashboard' },
-            { key: '/dashboard', label: 'Quotation Dashboard' },
-            { key: '/invoicedashboard', label: 'Invoice Dashboard' }
-          ]
+            { key: "/dashboard/deals", label: "Leads Dashboard", roles: ["Admin", "Superadmin"] },
+            { key: "/invoicedashboard", label: "Invoice Dashboard", roles: ["Admin", "Superadmin", "Employee"] },
+          ],
         },
         {
-          key: '/application',
+          key: "/application",
           icon: <AppstoreOutlined />,
-          label: collapsed ? null : 'Application',
+          label: collapsed ? null : "Application",
+          roles: ["Admin", "Superadmin"],
           children: [
-            { key: '/leads', icon: <SolutionOutlined />, label: 'Leads' },
-            { key: '/customers', icon: <UserOutlined />, label: 'Customers' },
-            { key: '/quotation', icon: <FileTextOutlined />, label: 'Quotations' },
-            { key: '/invoice', icon: <ShoppingOutlined />, label: 'Invoices' },
-            { key: '/products', icon: <FileAddOutlined />, label: 'Products' }
-          ]
+            { key: "/leads", icon: <SolutionOutlined />, label: "Leads", roles: ["Admin", "Superadmin"] },
+            { key: "/customers", icon: <UserOutlined />, label: "Customers", roles: ["Admin", "Superadmin"] },
+            { key: "/quotation", icon: <FileTextOutlined />, label: "Quotations", roles: ["Admin", "Superadmin"] },
+            { key: "/invoice", icon: <ShoppingOutlined />, label: "Invoices", roles: ["Admin", "Superadmin"] },
+            { key: "/products", icon: <FileAddOutlined />, label: "Products", roles: ["Admin", "Superadmin"] },
+          ],
         },
         {
-          key: '/super-admin',
+          key: "/super-admin",
           icon: <UserSwitchOutlined />,
-          label: collapsed ? null : 'Super Admin',
+          label: collapsed ? null : "Super Admin",
+          roles: ["Superadmin"],
           children: [
-            { key: '/users', icon: <UsergroupAddOutlined />, label: 'User Management' },
-            { key: '/settings', icon: <SettingOutlined />, label: 'Settings' }
-          ]
-        }
-      ]
-    }
+            {
+              key: "/users",
+              icon: <UsergroupAddOutlined />,
+              label: "User Management",
+              roles: ["Superadmin"],
+            },
+            {
+              key: "/settings",
+              icon: <SettingOutlined />,
+              label: "Settings",
+              roles: ["Superadmin", "Admin", "Employee"],
+            },
+          ],
+        },
+      ],
+    },
   ];
 
-  const handleMenuClick = ({ key }) => { // Removed 'keyPath' as it's not used
-    // Determine if the clicked item is a leaf node (i.e., has no children)
-    // Only navigate if it's a leaf node to avoid navigating when clicking on a parent that expands/collapses.
-    const isLeafNode = !menuItems.some(group =>
-      group.children?.some(item =>
-        item.key === key && item.children
-      )
+  // Filter logic to include only allowed menu items
+  const filterByRole = (items) => {
+    return items
+      .map((item) => {
+        if (item.children) {
+          const filteredChildren = filterByRole(item.children);
+          if (filteredChildren.length > 0 && (!item.roles || item.roles.includes(role))) {
+            return { ...item, children: filteredChildren };
+          }
+          return null;
+        } else {
+          return (!item.roles || item.roles.includes(role)) ? item : null;
+        }
+      })
+      .filter(Boolean);
+  };
+
+  const menuItems = filterByRole(rawMenuItems);
+
+  const handleMenuClick = ({ key }) => {
+    const isLeafNode = !menuItems.some((group) =>
+      group.children?.some((item) => item.key === key && item.children)
     );
 
     if (isLeafNode) {
@@ -89,33 +111,30 @@ const Sidebar = ({ collapsed }) => {
   return (
     <div
       style={{
-        // These styles make the sidebar sticky
-        position: 'sticky',
+        position: "sticky",
         top: 0,
-        height: '100vh', // Occupy full viewport height
-        overflowY: 'auto', // Enable scrolling if menu content exceeds viewport height
-        background: '#fafafa', // Ensures background color for the sticky element
-        // You might want to define a width here, or rely on a parent layout component (e.g., Ant Design's Sider)
-        // width: collapsed ? 80 : 200, // Example: adjust width based on collapsed state if not using AntD Sider directly
+        height: "100vh",
+        overflowY: "auto",
+        background: "#fafafa",
       }}
     >
       <div
         style={{
-          height: 64, // Fixed height for the logo area
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'white',
-          borderBottom: '1px solid #f0f0f0'
+          height: 64,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "white",
+          borderBottom: "1px solid #f0f0f0",
         }}
       >
         <img
           src={collapsed ? logoCollapsed : logoExpanded}
           alt="Logo"
           style={{
-            height: 40,
-            width: 'auto',
-            transition: 'all 0.3s' // Smooth transition for logo size/visibility
+            height: 59,
+            width: "auto",
+            transition: "all 0.3s",
           }}
         />
       </div>
@@ -123,19 +142,16 @@ const Sidebar = ({ collapsed }) => {
       <Menu
         mode="inline"
         selectedKeys={[selectedKey]}
-        // defaultOpenKeys keeps these sections expanded on initial load.
-        // You might want to make this dynamic based on selectedKey or user preferences.
-        defaultOpenKeys={['/dashboard', '/application', '/super-admin']} // Open all main sections by default
+        defaultOpenKeys={["/dashboard", "/application", "/super-admin"]}
         onClick={handleMenuClick}
         style={{
-          // Adjust menu height to fill the remaining space after the logo
-          height: 'calc(100% - 64px)',
-          borderRight: 0, // Remove default border
-          background: '#fafafa'
+          height: "calc(100% - 64px)",
+          borderRight: 0,
+          background: "#fafafa",
         }}
         items={menuItems}
-        theme="light" // Use light theme for the menu
-        inlineCollapsed={collapsed} // Crucial Ant Design prop to collapse/expand the menu
+        theme="light"
+        inlineCollapsed={collapsed}
       />
     </div>
   );

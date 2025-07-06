@@ -2,22 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../api/axios';
 import {
-  Card, Input, Button, Table, Tabs, Typography, Empty, Tag, Switch, Modal,
-  Dropdown, // NEW IMPORT
-  Menu,     // NEW IMPORT
+  Card, Input, Button, Table, Tabs, Typography, Empty, Tag, Modal, Dropdown, Menu
 } from 'antd';
 import {
   SearchOutlined, EditOutlined, MessageOutlined, EyeOutlined,
-  PrinterOutlined, // Added for PDF generation if needed, though not directly used in existing actions
-  CustomerServiceOutlined, DeleteOutlined,
-  MoreOutlined, // NEW IMPORT for the 3-dot icon
+  PrinterOutlined, CustomerServiceOutlined, DeleteOutlined, MoreOutlined
 } from '@ant-design/icons';
 import { toast } from 'react-hot-toast';
 import BusinessAccountForm from './BusinessAccountForm';
 import NotesDrawer from './NotesDrawer';
 import FollowUpDrawer from './FollowUpDrawer';
-import jsPDF from 'jspdf'; // Import jsPDF for PDF generation
-import html2canvas from 'html2canvas'; // Import html2canvas for PDF generation
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
@@ -27,6 +23,9 @@ const Customers = () => {
   const [activeTab, setActiveTab] = useState('active');
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const [formVisible, setFormVisible] = useState(false);
   const [currentCustomer, setCurrentCustomer] = useState(null);
@@ -49,19 +48,30 @@ const Customers = () => {
     axios
       .get('/api/accounts/customers')
       .then((res) => {
-        const data = Array.isArray(res.data) ? res.data : [];
-        setCustomers(data);
-        toast.success('Customers loaded');
+        setCustomers(Array.isArray(res.data) ? res.data : []);
       })
       .catch(() => {
         toast.error('Failed to load customers');
-        setCustomers([]);
       })
       .finally(() => setLoading(false));
   };
 
+  const fetchAllUsers = () => {
+    setLoadingUsers(true);
+    axios
+      .get('/api/accounts/users/all')
+      .then((res) => {
+        setUsers(res.data);
+      })
+      .catch(() => {
+        toast.error('Failed to load user list');
+      })
+      .finally(() => setLoadingUsers(false));
+  };
+
   useEffect(() => {
     fetchCustomers();
+    fetchAllUsers();
   }, []);
 
   const handleEdit = (record) => {
@@ -155,7 +165,7 @@ const Customers = () => {
   const generatePdf = async (account) => {
     const input = document.getElementById(`customer-pdf-content-${account._id}`);
     if (!input) {
-      toast.error('PDF content not found. Please ensure the customer details are rendered when generating PDF.');
+      toast.error('PDF content not found.');
       return;
     }
 
@@ -167,7 +177,7 @@ const Customers = () => {
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgWidth = 210;
       const pageHeight = 297;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
 
@@ -180,14 +190,13 @@ const Customers = () => {
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
+
       pdf.save(`${account.businessName}-details.pdf`);
       toast.success('PDF generated!', { id: 'pdf-toast' });
     } catch (error) {
-      console.error("Error generating PDF:", error);
       toast.error('Failed to generate PDF.', { id: 'pdf-toast' });
     }
   };
-
 
   const filtered = customers.filter((account) => {
     const search = searchText.toLowerCase();
@@ -217,9 +226,18 @@ const Customers = () => {
   const columns = [
     { title: 'Sno.', render: (_, __, i) => i + 1, width: 60 },
     { title: 'Business Name', dataIndex: 'businessName' },
-    { title: 'Contact Name', dataIndex: 'contactName', responsive: ['md', 'lg'] },
-    { title: 'Email Id', dataIndex: 'email', responsive: ['lg'] },
-    { title: 'Type', dataIndex: 'type', render: typeTag, responsive: ['md', 'lg'] },
+    { title: 'Contact Name', dataIndex: 'contactName' },
+    { title: 'Email Id', dataIndex: 'email' },
+    { title: 'Type', dataIndex: 'type', render: typeTag },
+    {
+      title: 'Assigned To',
+      render: (_, record) =>
+        record.assignedTo ? (
+          <span>{record.assignedTo.name} ({record.assignedTo.role})</span>
+        ) : (
+          <em>Unassigned</em>
+        )
+    },
     {
       title: 'Latest Note',
       render: (_, record) => {
@@ -230,8 +248,7 @@ const Customers = () => {
             {note.text}
           </div>
         ) : <em>No notes</em>;
-      },
-      responsive: ['lg']
+      }
     },
     {
       title: 'Status',
@@ -239,102 +256,54 @@ const Customers = () => {
         <Tag color={record.status === 'Active' ? 'green' : 'red'}>
           {record.status}
         </Tag>
-      ),
-      responsive: ['sm', 'md', 'lg']
+      )
     },
     {
       title: 'Actions',
-      width: 80, // Adjusted width for dropdown
       render: (_, record) => (
         <Dropdown
           overlay={
             <Menu>
-              <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-                Edit Customer
-              </Menu.Item>
-              <Menu.Item key="notes" icon={<MessageOutlined />} onClick={() => handleOpenNotesDrawer(record)}>
-                View/Add Notes
-              </Menu.Item>
-              <Menu.Item key="followups" icon={<CustomerServiceOutlined />} onClick={() => handleOpenFollowUpDrawer(record)}>
-                View/Add Follow-ups
-              </Menu.Item>
-              <Menu.Item key="view-profile" icon={<EyeOutlined />} onClick={() => goToCustomerProfile(record)}>
-                View Profile
-              </Menu.Item>
-              <Menu.Item key="generate-pdf" icon={<PrinterOutlined />} onClick={() => generatePdf(record)}>
-                Generate PDF
-              </Menu.Item>
-              {/* Conditional menu item for changing status */}
+              <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => handleEdit(record)}>Edit Customer</Menu.Item>
+              <Menu.Item key="notes" icon={<MessageOutlined />} onClick={() => handleOpenNotesDrawer(record)}>View/Add Notes</Menu.Item>
+              <Menu.Item key="followups" icon={<CustomerServiceOutlined />} onClick={() => handleOpenFollowUpDrawer(record)}>View/Add Follow-ups</Menu.Item>
+              <Menu.Item key="view-profile" icon={<EyeOutlined />} onClick={() => goToCustomerProfile(record)}>View Profile</Menu.Item>
+              <Menu.Item key="generate-pdf" icon={<PrinterOutlined />} onClick={() => generatePdf(record)}>Generate PDF</Menu.Item>
               {record.status === 'Active' ? (
-                <Menu.Item
-                  key="change-to-inactive"
-                  onClick={() => handleStatusChange(false, record)}
-                >
-                  Change to Inactive
-                </Menu.Item>
+                <Menu.Item key="inactive" onClick={() => handleStatusChange(false, record)}>Change to Inactive</Menu.Item>
               ) : (
-                <Menu.Item
-                  key="change-to-active"
-                  onClick={() => handleStatusChange(true, record)}
-                >
-                  Change to Active
-                </Menu.Item>
+                <Menu.Item key="active" onClick={() => handleStatusChange(true, record)}>Change to Active</Menu.Item>
               )}
-              {/* Delete action using Modal.confirm */}
-              <Menu.Item
-                key="delete"
-                icon={<DeleteOutlined />}
-                danger
-                onClick={() => handleDelete(record)} // handleDelete will show the Modal.confirm
-              >
-                Delete Customer
-              </Menu.Item>
+              <Menu.Item key="delete" icon={<DeleteOutlined />} danger onClick={() => handleDelete(record)}>Delete Customer</Menu.Item>
             </Menu>
           }
-          trigger={['click']}
         >
           <Button icon={<MoreOutlined />} />
         </Dropdown>
-      ),
-    },
+      )
+    }
   ];
 
   return (
     <div style={{ padding: '24px' }}>
       <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap' }}>
           <Title level={4}>Customers</Title>
           <Input
             placeholder="Search by Business Name, Contact Name or Email"
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: '100%', maxWidth: 400 }} // Make search input responsive
+            style={{ width: '100%', maxWidth: 400 }}
           />
         </div>
 
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           <TabPane tab={`Active (${active.length})`} key="active">
-            <Table
-              columns={columns}
-              dataSource={active}
-              rowKey="_id"
-              pagination={{ pageSize: 10 }} // Added pagination
-              loading={loading}
-              locale={{ emptyText: <Empty description="No active customers" /> }}
-              scroll={{ x: 'max-content' }} // Ensure horizontal scrollability
-            />
+            <Table columns={columns} dataSource={active} rowKey="_id" pagination={{ pageSize: 10 }} loading={loading} scroll={{ x: 'max-content' }} />
           </TabPane>
           <TabPane tab={`Inactive (${inactive.length})`} key="inactive">
-            <Table
-              columns={columns}
-              dataSource={inactive}
-              rowKey="_id"
-              pagination={{ pageSize: 10 }} // Added pagination
-              loading={loading}
-              locale={{ emptyText: <Empty description="No inactive customers" /> }}
-              scroll={{ x: 'max-content' }} // Ensure horizontal scrollability
-            />
+            <Table columns={columns} dataSource={inactive} rowKey="_id" pagination={{ pageSize: 10 }} loading={loading} scroll={{ x: 'max-content' }} />
           </TabPane>
         </Tabs>
       </Card>
@@ -344,25 +313,25 @@ const Customers = () => {
         onClose={() => setFormVisible(false)}
         onSave={handleSave}
         initialValues={currentCustomer}
+        allUsers={users}
+        loadingUsers={loadingUsers}
       />
 
       <Modal
         title="Confirm Status Change"
-        open={isModalVisible} // Use 'open' instead of 'visible'
+        open={isModalVisible}
         onOk={confirmStatusChange}
         onCancel={() => setIsModalVisible(false)}
         okText="Yes"
         cancelText="No"
         confirmLoading={loading}
       >
-        <p>
-          Are you sure you want to change the status of <strong>{accountToUpdate?.businessName}</strong> to <strong>{newStatus}</strong>?
-        </p>
+        <p>Are you sure you want to change the status of <strong>{accountToUpdate?.businessName}</strong> to <strong>{newStatus}</strong>?</p>
       </Modal>
 
       <Modal
         title="Confirm Delete"
-        open={deleteModalVisible} // Use 'open' instead of 'visible'
+        open={deleteModalVisible}
         onOk={confirmDelete}
         onCancel={() => setDeleteModalVisible(false)}
         okText="Delete"
@@ -370,9 +339,7 @@ const Customers = () => {
         cancelText="Cancel"
         confirmLoading={loading}
       >
-        <p>
-          Are you sure you want to delete <strong>{customerToDelete?.businessName}</strong>?
-        </p>
+        <p>Are you sure you want to delete <strong>{customerToDelete?.businessName}</strong>?</p>
       </Modal>
 
       {selectedAccount && (

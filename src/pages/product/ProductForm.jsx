@@ -35,6 +35,7 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
       stockLoadDate: rest.stockLoadDate ? rest.stockLoadDate.toISOString() : null,
       isActive: rest.isActive || false,
       options: (rest.options || []).filter(opt => opt?.type?.trim() && opt?.description?.trim())
+      // hsnSac is automatically included in 'rest' now
     };
 
     try {
@@ -83,29 +84,46 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
           </Col>
         </Row>
 
+        {/* New Row for HSN/SAC Field */}
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="quantity" label="Quantity">
-              <Input type="number" placeholder="Quantity" />
+            <Form.Item
+              name="hsnSac" // The name of your field in the form data
+              label="HSN/SAC"
+              // You can add rules here if it's required or needs a specific format
+              // rules={[{ required: true, message: 'Please enter HSN/SAC code' }]}
+            >
+              <Input placeholder="HSN/SAC Code" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="inStock" label="In Stock">
-              <Input type="number" placeholder="In Stock" />
+            <Form.Item name="quantity" label="Quantity">
+              <Input type="number" placeholder="Quantity" />
             </Form.Item>
           </Col>
         </Row>
 
         <Row gutter={16}>
           <Col span={12}>
+            <Form.Item name="inStock" label="In Stock">
+              <Input type="number" placeholder="In Stock" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
             <Form.Item name="outStock" label="Out Stock">
               <Input type="number" placeholder="Out Stock" />
             </Form.Item>
           </Col>
+        </Row>
+
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="stockLoadDate" label="Stock Load Date">
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
+          </Col>
+          <Col span={12}>
+            {/* You can add another field here if needed, or leave blank */}
           </Col>
         </Row>
 

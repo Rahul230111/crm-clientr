@@ -4,16 +4,13 @@ export const generateQuotationFormStyles = (token) => ({
   // Main Card & Page Layout
   quotationCard: {
     borderRadius: token.borderRadiusXL, // More rounded corners for a softer, modern look
-    boxShadow: token.boxShadowSecondary, // Enhanced shadow for depth
     border: `1px solid ${token.colorBorderBg}`, // Subtle border
     backgroundColor: token.colorBgContainer,
-    padding: token.paddingLG, // More internal padding
   },
   mainCardTitle: {
     color: token.colorPrimary, // Highlight with primary color
     fontSize: token.fontSizeHeading2, // Larger, more prominent title
     fontWeight: token.fontWeightStronger, // Bolder font
-    marginBottom: token.marginLG,
     textAlign: 'center',
     textTransform: 'uppercase', // Make it stand out
     letterSpacing: '1px',
@@ -24,10 +21,9 @@ export const generateQuotationFormStyles = (token) => ({
     background: `linear-gradient(135deg, ${token.colorFillQuaternary} 0%, ${token.colorFillAlter} 100%)`, // Gradient background
     border: `1px solid ${token.colorBorderSecondary}`,
     borderRadius: token.borderRadiusLG,
-    padding: token.paddingMD,
+
     minHeight: '80px', // Increased height for visual weight
     boxShadow: token.boxShadowTertiary,
-    marginBottom: token.marginLG, // More space
     display: 'flex',
     alignItems: 'center',
     transition: 'all 0.3s ease-in-out', // Smooth transitions on hover
@@ -85,17 +81,10 @@ export const generateQuotationFormStyles = (token) => ({
   // Dividers - More Artistic Separation
   divider: {
     borderColor: token.colorBorderSecondary,
-    borderStyle: 'dashed', // Dashed border for a lighter feel
-    margin: `${token.marginXL}px 0`, // More vertical margin
     color: token.colorTextTertiary, // Muted text color
     fontWeight: token.fontWeightStrong,
   },
-  specificationDivider: {
-    borderColor: token.colorBorderSecondary,
-    borderStyle: 'dotted', // Dotted for specifications
-    margin: `${token.margin}px 0 ${token.marginS}px 0`,
-    color: token.colorTextQuaternary,
-  },
+ 
 
   // Item Card - Clean and Interactive
   itemCard: {

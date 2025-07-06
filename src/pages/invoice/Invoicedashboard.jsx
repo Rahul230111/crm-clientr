@@ -165,7 +165,7 @@ const InvoiceDashboard = () => {
       currentFiltered = currentFiltered.filter(
         (inv) =>
           inv?.businessName?.toLowerCase().includes(lowerCaseSearchText) ||
-          inv?.customerName?.toLowerCase().includes(lowerCaseSearchText) ||
+          inv?.contactName?.toLowerCase().includes(lowerCaseSearchText) ||
           inv?.invoiceNumber?.toLowerCase().includes(lowerCaseSearchText) ||
           inv?.proformaNumber?.toLowerCase().includes(lowerCaseSearchText) ||
           inv?.paymentStatus?.toLowerCase().includes(lowerCaseSearchText)
@@ -221,15 +221,15 @@ const InvoiceDashboard = () => {
       width: 180, // Give more width
       align: 'left',
     },
-    {
-      title: 'Customer',
-      dataIndex: 'customerName',
-      key: 'customer',
-      sorter: (a, b) => (a.customerName || '').localeCompare(b.customerName || ''),
-      ellipsis: true, // Add ellipsis for long text
-      width: 180, // Give more width
-      align: 'left',
-    },
+    // {
+    //   title: 'Customer',
+    //   dataIndex: 'customerName',
+    //   key: 'customer',
+    //   sorter: (a, b) => (a.contactName || '').localeCompare(b.contactName || ''),
+    //   ellipsis: true, // Add ellipsis for long text
+    //   width: 180, // Give more width
+    //   align: 'left',
+    // },
     {
       title: 'Amount (₹)',
       dataIndex: 'totalAmount',

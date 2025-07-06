@@ -1,23 +1,32 @@
 // BusinessAccountForm.jsx
-import React from 'react';
-import { Form, Input, Button, Drawer, Row, Col, InputNumber, Select } from 'antd';
+import React, { useEffect, useState } from 'react'; // Added useEffect and useState
+import { Form, Input, Button, Drawer, Row, Col, InputNumber, Select, Spin } from 'antd'; // Added Spin
 import { toast } from 'react-hot-toast';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
-const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
+// Added 'allUsers' prop for the dropdown, and 'loadingUsers' for UI feedback
+const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers, loadingUsers }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = useState(false); // Changed from React.useState
   const sourceType = Form.useWatch('sourceType', form); // Watch for changes in sourceType
 
-  React.useEffect(() => {
+  useEffect(() => { // Changed from React.useEffect
     form.resetFields();
     if (initialValues) {
-      form.setFieldsValue(initialValues);
+      // Set initial values for all fields, including assignedTo
+      form.setFieldsValue({ 
+        ...initialValues,
+        assignedTo: initialValues.assignedTo?._id || null // Set assignedTo to ID or null
+      });
     } else {
-      // Set default value for sourceType and status when adding a new account
-      form.setFieldsValue({ sourceType: 'Direct', status: 'Active' }); // Added default status
+      // Set default value for sourceType, status, and assignedTo when adding a new account
+      form.setFieldsValue({ 
+        sourceType: 'Direct', 
+        status: 'Active',
+        assignedTo: null // Default to unassigned for new accounts
+      }); 
     }
   }, [initialValues, form]);
 
@@ -35,7 +44,10 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
 
         const dataToSave = {
           ...values,
-          notes: updatedNotes
+          notes: updatedNotes,
+          // Include assignedTo field directly from form values
+          // If the selected value is null, it will correctly unassign
+          assignedTo: values.assignedTo === null ? null : values.assignedTo, 
         };
 
         // Remove noteInput as it's not part of the schema
@@ -53,7 +65,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
       })
       .catch(info => {
         console.log('Validate Failed:', info);
-        toast.error('Please fill in all required fields.');
+        toast.error('Please fill in all required fields correctly.');
       });
   };
 
@@ -76,7 +88,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
       <Form
         form={form}
         layout="vertical"
-        initialValues={initialValues}
+        // initialValues prop is handled by useEffect for dynamic setting
       >
         <Row gutter={16}>
           <Col span={12}>
@@ -92,7 +104,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
         </Row>
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="contactName" label="Contact Person Name" rules={[{ required: true, message: 'Please enter contact person name' }]}>
+            <Form.Item name="contactName" label="Customer Name" rules={[{ required: true, message: 'Please enter contact person name' }]}>
               <Input placeholder="Contact Person Name" />
             </Form.Item>
           </Col>
@@ -164,7 +176,6 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
           </Select>
         </Form.Item>
 
-        {/* Status Field: Added to allow setting/editing account status */}
         <Form.Item
           name="status"
           label="Account Status"
@@ -178,7 +189,6 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
           </Select>
         </Form.Item>
 
-        {/* ✨ NEW: Source Type Field ✨ */}
         <Form.Item
           name="sourceType"
           label="Source Type"
@@ -194,7 +204,6 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
           </Select>
         </Form.Item>
 
-        {/* ✨ NEW: Conditional Referral Person Name Field ✨ */}
         {sourceType === 'Facebook Referral' && (
           <Form.Item
             name="referralPersonName"
@@ -204,6 +213,31 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues }) => {
             <Input placeholder="Name of the person who referred from Facebook" />
           </Form.Item>
         )}
+
+        {/* ✨ NEW: Assigned To Field ✨ */}
+        <Form.Item
+          name="assignedTo"
+          label="Assigned To"
+        >
+          <Select
+            placeholder="Select a user to assign to (optional)"
+            allowClear // Allows clearing the selection to unassign
+            loading={loadingUsers} // Show loading state for users
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+            }
+          >
+            {/* The value for Option should be the user's _id */}
+            {allUsers && allUsers.map(user => (
+              <Option key={user._id} value={user._id}>
+                {user.name} ({user.role})
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+        {/* End of NEW: Assigned To Field */}
 
         <Form.Item name="noteInput" label="Add Note">
           <TextArea rows={3} placeholder="Add a note (it will be timestamped)" />

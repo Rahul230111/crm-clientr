@@ -5,7 +5,7 @@ import {
   Empty, Table, Collapse, Tag
 } from 'antd';
 import { ArrowLeftOutlined, FallOutlined, FormOutlined, DollarOutlined, SolutionOutlined, BookOutlined } from '@ant-design/icons';
-import axios from 'axios'; // Corrected: Importing axios directly
+import axios from '../api/axios'; // Corrected: Importing axios directly
 
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
