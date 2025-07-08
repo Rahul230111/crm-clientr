@@ -165,8 +165,8 @@ const Product = () => {
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Header style={{ color: "white", fontSize: 20 }}>
-        📦 Product Inventory
+      <Header style={{ background: "#fff", padding: 0, marginBottom: 20 }}>
+        <h2 style={{ margin: 0, padding: 20 }}>Product Management</h2>
       </Header>
       <Content style={{ padding: 20 }}>
         <Tabs defaultActiveKey="1">

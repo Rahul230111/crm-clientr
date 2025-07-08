@@ -85,12 +85,8 @@ const generateInvoiceHtml = (invoiceData) => {
     const customerAddress =  invoiceData.businessId ?
             `${invoiceData.businessId.addressLine1 || ''}, ${invoiceData.businessId.addressLine2 || ''}, ${invoiceData.businessId.addressLine3 || ''}, ${invoiceData.businessId.city || ''} - ${invoiceData.businessId.pincode || ''}, ${invoiceData.businessId.state || ''}, ${invoiceData.businessId.country || ''}`
             : invoiceData.customerAddress || "N/A";
-     
 
 
-      
-
-      
     // Calculate totals
     const subTotal = parseFloat(invoiceData.subTotal) || 0;
     const igstAmount = parseFloat(invoiceData.igstAmount) || 0;
@@ -220,7 +216,7 @@ const generateInvoiceHtml = (invoiceData) => {
                                 <th style="border: 1px solid #2c3e50; padding: 8px; text-align: center;">S.No</th>
                                 <th style="border: 1px solid #2c3e50; padding: 8px; text-align: left;">Product Name</th>
                                 <th style="border: 1px solid #2c3e50; padding: 8px; text-align: left;">Specification</th>
-                                <th style="border: 1px solid #2c3e50; padding: 8px; text-align: center;">Qty</th>
+                                <th style="1px solid #2c3e50; padding: 8px; text-align: center;">Qty</th>
                                 <th style="border: 1px solid #2c3e50; padding: 8px; text-align: center;">Unit</th>
                                 <th style="border: 1px solid #2c3e50; padding: 8px; text-align: center;">HSN/SAC</th>
                                 <th style="border: 1px solid #2c3e50; padding: 8px; text-align: right;">Unit Price (₹)</th>
@@ -310,7 +306,7 @@ const generateInvoiceHtml = (invoiceData) => {
             <p style="margin: 1px 0;">Bank Name: Your Bank Name</p>
             <p style="margin: 1px 0;">Account Number: XXXXXXXXXXXX</p>
             <p style="margin: 1px 0;">IFSC Code: XXXXXXXXXX</p>
-            <p style="margin: 1px 0;">Branch: Your Branch Name</p>
+            <p style="1px 0;">Branch: Your Branch Name</p>
         </div>
 
         <div style="margin-top: 25px; border-top: 1px solid #eee; padding-top: 15px;">
@@ -356,7 +352,7 @@ const generateInvoicePdf = async (invoiceData) => {
 
         const pdfWidth = doc.internal.pageSize.getWidth();
         const pdfHeight = doc.internal.pageSize.getHeight();
-        const padding = 5; // Reduced global padding for the PDF page itself
+        const padding = 5;
 
         // Create a temporary div element to render HTML content for html2canvas
         tempDiv = document.createElement("div");
@@ -375,7 +371,7 @@ const generateInvoicePdf = async (invoiceData) => {
         await new Promise((resolve) => setTimeout(resolve, 200));
 
         const canvas = await html2canvas(tempDiv, {
-            scale: 3,
+            scale: 2, // Adjusted scale from 3 to 2 for smaller file size
             useCORS: true,
             logging: false,
             allowTaint: true,
@@ -383,9 +379,9 @@ const generateInvoicePdf = async (invoiceData) => {
             backgroundColor: "#ffffff"
         });
 
-        const imgData = canvas.toDataURL("image/png", 1.0);
+        const imgData = canvas.toDataURL("image/jpeg", 0.8); // Changed to JPEG with 0.8 quality
         const imgProps = doc.getImageProperties(imgData);
-        const imgHeight = (imgProps.height * (pdfWidth - 2 * padding)) / imgProps.width; // Use new padding here
+        const imgHeight = (imgProps.height * (pdfWidth - 2 * padding)) / imgProps.width;
 
         let currentY = padding;
         let pageHeight = pdfHeight - 2 * padding;
@@ -394,25 +390,25 @@ const generateInvoicePdf = async (invoiceData) => {
             let heightLeft = imgHeight;
             let position = 0;
 
-            doc.addImage(imgData, "PNG", padding, currentY, pdfWidth - 2 * padding, imgHeight);
+            doc.addImage(imgData, "JPEG", padding, currentY, pdfWidth - 2 * padding, imgHeight); // Changed format to JPEG
             heightLeft -= pageHeight;
             position -= pageHeight;
 
             while (heightLeft > 0) {
                 doc.addPage();
-                doc.addImage(imgData, "PNG", padding, position + currentY, pdfWidth - 2 * padding, imgHeight);
+                doc.addImage(imgData, "JPEG", padding, position + currentY, pdfWidth - 2 * padding, imgHeight); // Changed format to JPEG
                 heightLeft -= pageHeight;
                 position -= pageHeight;
             }
         } else {
-            doc.addImage(imgData, "PNG", padding, currentY, pdfWidth - 2 * padding, imgHeight);
+            doc.addImage(imgData, "JPEG", padding, currentY, pdfWidth - 2 * padding, imgHeight); // Changed format to JPEG
         }
 
         const pdfBlob = doc.output("blob");
         saveAs(
             pdfBlob,
             `invoice-${invoiceData.invoiceNumber || "draft"}.pdf`
-        );  
+        );
         toast.success("Invoice PDF downloaded successfully!", { id: toastId });
     } catch (error) {
         console.error("Error generating PDF:", error);

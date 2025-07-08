@@ -286,7 +286,6 @@ const Profile = () => {
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
         padding: "40px 20px",
       }}
     >
@@ -296,7 +295,6 @@ const Profile = () => {
           style={{
             marginBottom: "24px",
             borderRadius: "16px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
             border: "none",
           }}
         >
@@ -338,16 +336,7 @@ const Profile = () => {
                 >
                   Edit Profile
                 </Button>
-                <Button
-                  type="primary"
-                  danger
-                  icon={<LogoutOutlined />}
-                  onClick={handleLogout}
-                  size="large"
-                  style={{ borderRadius: "8px" }}
-                >
-                  Logout
-                </Button>
+               
               </Space>
             </Col>
           </Row>
@@ -363,7 +352,6 @@ const Profile = () => {
           }
           style={{
             borderRadius: "16px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
             border: "none",
           }}
           headStyle={{

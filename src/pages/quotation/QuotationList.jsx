@@ -166,6 +166,24 @@ const QuotationList = ({
         ),
     },
     {
+      title: "Status", // New Status Column
+      dataIndex: "status",
+      render: (status) => {
+        let color = 'default';
+        if (status === 'Approved') {
+          color = 'green';
+        } else if (status === 'Pending') {
+          color = 'orange';
+        } else if (status === 'Rejected') {
+          color = 'red';
+        } else if (status === 'Draft') {
+          color = 'blue';
+        }
+        return <Tag color={color}>{status || 'N/A'}</Tag>;
+      },
+      sorter: (a, b) => (a.status || "").localeCompare(b.status || ""),
+    },
+    {
       title: "Items Count",
       render: (_, record) => (
         <Tag color="geekblue">
@@ -395,6 +413,18 @@ const QuotationList = ({
                 {selectedQuotation.date
                   ? new Date(selectedQuotation.date).toLocaleDateString("en-IN")
                   : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Status"> {/* Added Status to Modal */}
+                <Tag 
+                  color={
+                    selectedQuotation.status === 'Approved' ? 'green' : 
+                    selectedQuotation.status === 'Pending' ? 'orange' : 
+                    selectedQuotation.status === 'Rejected' ? 'red' :
+                    'blue' // Default color for other statuses
+                  } 
+                  className="rounded-full px-3 py-1 text-sm font-medium">
+                  {selectedQuotation.status || 'N/A'}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Business Name">
                 {selectedQuotation.businessName || "N/A"}

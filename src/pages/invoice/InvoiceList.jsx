@@ -14,7 +14,7 @@ import {
   Select,
   Typography,
   DatePicker,
-  List,
+  List, // Keep List if you want to use it elsewhere, but it's replaced in itemViewModalVisible
   Divider,
   Dropdown,
   Menu,
@@ -34,7 +34,7 @@ import {
   ScheduleOutlined,
   MoreOutlined,
 } from "@ant-design/icons";
-import { saveAs } from "file-saver"; // Still needed if you export Excel from here
+import { saveAs } from "file-saver";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import NotesDrawer from "./NotesDrawer.jsx";
@@ -42,7 +42,7 @@ import PaymentHistoryDrawer from "././PaymentHistoryDrawer.jsx";
 import FollowUpDrawer from "././FollowUpDrawer.jsx";
 import axios from "../../api/axios.js";
 
-import generateInvoicePdf from './generateInvoicePdf.js'; 
+import generateInvoicePdf from './generateInvoicePdf.js';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -96,7 +96,12 @@ const InvoiceList = ({
     setInvoiceStatusMap(newStatusMap);
   }, [invoices, calculatePaymentStatus]);
 
-  // Removed numberToWords and formatIndianCurrency from here as they are now in generateInvoicePdf.js
+  useEffect(() => {
+    if (selectedInvoice) {
+      console.log(`Selected Invoice ${selectedInvoice.invoiceNumber} isClosed: ${selectedInvoice.isClosed}`);
+    }
+  }, [selectedInvoice]);
+
   const formatIndianCurrency = useCallback((num) => {
     if (isNaN(num)) return "0.00";
     return num.toLocaleString("en-IN", {
@@ -104,7 +109,6 @@ const InvoiceList = ({
       maximumFractionDigits: 2,
     });
   }, []);
-
 
   const handleSearch = (value) => {
     setSearchTerm(value);
@@ -141,7 +145,7 @@ const InvoiceList = ({
     try {
       await axios.patch(`/api/invoices/${id}/close`);
       toast.success("Invoice closed successfully", { id: toastId });
-      refreshInvoices?.();
+      refreshInvoices();
     } catch (error) {
       console.error("Error closing invoice:", error);
       toast.error("Failed to close invoice", { id: toastId });
@@ -153,7 +157,7 @@ const InvoiceList = ({
     try {
       await axios.patch(`/api/invoices/${id}/unlock`);
       toast.success("Invoice unlocked successfully", { id: toastId });
-      refreshInvoices?.();
+      refreshInvoices();
     } catch (error) {
       console.error("Error unlocking invoice:", error);
       toast.error("Failed to unlock invoice", { id: toastId });
@@ -173,7 +177,6 @@ const InvoiceList = ({
       Date: inv.date,
       DueDate: inv.dueDate || "",
       Status: invoiceStatusMap[inv._id] || inv.paymentStatus,
-      Closed: inv.isClosed ? "Yes" : "No",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -394,7 +397,7 @@ const InvoiceList = ({
               <Menu.Item
                 key="generate-pdf"
                 icon={<PrinterOutlined />}
-                onClick={() => generateInvoicePdf(record)} // Use the imported function
+                onClick={() => generateInvoicePdf(record)}
               >
                 Generate PDF
               </Menu.Item>
@@ -419,6 +422,7 @@ const InvoiceList = ({
               >
                 View Payments
               </Menu.Item>
+
               {!record.isClosed && (
                 <Menu.Item
                   key="edit"
@@ -428,51 +432,18 @@ const InvoiceList = ({
                   Edit Invoice
                 </Menu.Item>
               )}
-              {!record.isClosed ? (
-                <Menu.Item
-                  key="lock"
-                  icon={<LockOutlined />}
-                  onClick={() => {
-                    Modal.confirm({
-                      title: "Close Invoice",
-                      content:
-                        "Are you sure you want to close this invoice? It will become uneditable.",
-                      okText: "Yes, Close",
-                      cancelText: "No",
-                      okButtonProps: { danger: true },
-                      onOk: () => handleCloseInvoice(record._id),
-                    });
-                  }}
-                >
-                  Lock Invoice
-                </Menu.Item>
-              ) : (
-                <Menu.Item
-                  key="unlock"
-                  icon={<UnlockOutlined />}
-                  onClick={() => {
-                    Modal.confirm({
-                      title: "Unlock Invoice",
-                      content:
-                        "Are you sure you want to unlock this invoice? It will become editable again.",
-                      okText: "Yes, Unlock",
-                      cancelText: "No",
-                      onOk: () => handleUnlockInvoice(record._id),
-                    });
-                  }}
-                >
-                  Unlock Invoice
-                </Menu.Item>
-              )}
+
               <Menu.Item
                 key="delete"
                 icon={<DeleteOutlined />}
+                disabled={record.isClosed}
               >
                 <Popconfirm
-                  title="Are you sure you want to delete this invoice?"
+                  title={record.isClosed ? "This invoice is locked and cannot be deleted." : "Are you sure you want to delete this invoice? This action cannot be undone."}
                   onConfirm={() => onDelete(record._id)}
-                  okText="Yes"
+                  okText="Yes, Delete"
                   cancelText="No"
+                  disabled={record.isClosed}
                 >
                   Delete Invoice
                 </Popconfirm>
@@ -544,6 +515,7 @@ const InvoiceList = ({
         />
       </Card>
 
+      {/* Modal for viewing Invoice Details - remains unchanged */}
       <Modal
         title="Invoice Details"
         open={viewModalVisible}
@@ -657,12 +629,12 @@ const InvoiceList = ({
                         <Table.Summary.Row>
                           <Table.Summary.Cell
                             index={0}
-                            colSpan={5}
+                            colSpan={7}
                             align="right"
                           >
                             <Text strong>Sub Total:</Text>
                           </Table.Summary.Cell>
-                          <Table.Summary.Cell index={5}>
+                          <Table.Summary.Cell index={7}>
                             <Text strong>{formatIndianCurrency(subTotal)}</Text>
                           </Table.Summary.Cell>
                         </Table.Summary.Row>
@@ -670,23 +642,23 @@ const InvoiceList = ({
                           <Table.Summary.Row>
                             <Table.Summary.Cell
                               index={0}
-                              colSpan={5}
+                              colSpan={7}
                               align="right"
                             >
                               <Text strong>IGST ({gstPercentage}%):</Text>
                             </Table.Summary.Cell>
-                            <Table.Summary.Cell index={5}>
+                            <Table.Summary.Cell index={7}>
                               <Text strong>
                                 {formatIndianCurrency(igstAmount)}
                               </Text>
-                            </Table.Summary.Cell>
+                            </Table.Summary.Cell> {/* Corrected closing tag here */}
                           </Table.Summary.Row>
                         ) : (
                           <>
                             <Table.Summary.Row>
                               <Table.Summary.Cell
                                 index={0}
-                                colSpan={5}
+                                colSpan={7}
                                 align="right"
                               >
                                 <Text strong>CGST ({gstPercentage / 2}%):</Text>
@@ -716,7 +688,7 @@ const InvoiceList = ({
                         <Table.Summary.Row>
                           <Table.Summary.Cell
                             index={0}
-                            colSpan={5}
+                            colSpan={7}
                             align="right"
                           >
                             <Text strong>Grand Total:</Text>
@@ -731,10 +703,7 @@ const InvoiceList = ({
                           <Table.Summary.Cell index={0} colSpan={6}>
                             <Text italic>
                               Amount in words:{" "}
-                              {/* You might need to expose numberToWords from generateInvoicePdf.js or redefine it here */}
-                              {/* For simplicity, if numberToWords is only for PDF, you can remove it from here. */}
-                              {/* If you need it for display in the modal, you'd redefine it or import it. */}
-                              {/* For now, I'll assume you only need it in the PDF for this example. */}
+                              Rupees Only
                             </Text>
                           </Table.Summary.Cell>
                         </Table.Summary.Row>
@@ -746,7 +715,7 @@ const InvoiceList = ({
             )}
 
             <Descriptions
-              column={2}
+              column={4}
               bordered
               size="small"
               style={{ marginTop: "20px" }}
@@ -775,22 +744,19 @@ const InvoiceList = ({
               </Descriptions.Item>
               <Descriptions.Item label="Amount in Words" span={2}>
                 <Text italic>
-                  {/* If you need numberToWords here, you will need to re-implement it or export it from generateInvoicePdf.js */}
-                  {/* For now, removing the call since it's moved */}
-                  {/* {numberToWords(Math.floor(selectedInvoice.totalAmount || 0))}{" "} */}
                   Rupees Only
                 </Text>
               </Descriptions.Item>
               <Descriptions.Item label="Status" span={2}>
                 {getStatusTag(invoiceStatusMap[selectedInvoice._id])}
               </Descriptions.Item>
-              <Descriptions.Item label="Closed" span={2}>
+              {/* <Descriptions.Item label="Closed" span={2}>
                 {selectedInvoice.isClosed ? (
                   <Tag color="red">Yes</Tag>
                 ) : (
                   <Tag color="green">No</Tag>
                 )}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
             </Descriptions>
 
             {selectedInvoice.notes?.length > 0 && (
@@ -811,6 +777,7 @@ const InvoiceList = ({
         )}
       </Modal>
 
+      {/* Modal for viewing Item Specifications (Updated to match the image UI) */}
       <Modal
         title="Item Specifications"
         open={itemViewModalVisible}
@@ -820,46 +787,55 @@ const InvoiceList = ({
         }
         width={800}
       >
-        {selectedInvoice && selectedInvoice.items && (
-          <List
-            itemLayout="vertical"
-            dataSource={selectedInvoice.items}
-            renderItem={(item, index) => (
-              <List.Item key={index}>
-                <List.Item.Meta
-                  title={
-                    <Text strong>{item.description || "No Description"}</Text>
-                  }
-                  description={
-                    <>
-                      <Text>Quantity: {item.quantity}</Text>
-                      <br />
-                      <Text>Rate: ₹{formatIndianCurrency(item.rate)}</Text>
-                      <br />
-                      {item.hsnSac && <Text>HSN/SAC: {item.hsnSac}</Text>}
-                      {item.specifications &&
-                        item.specifications.length > 0 && (
-                          <>
-                            <br />
-                            <Text strong>Specifications:</Text>
-                            <ul>
-                              {item.specifications.map((spec, specIndex) => (
-                                <li key={specIndex}>
-                                  {spec.name}: {spec.value}
-                                </li>
-                              ))}
-                            </ul>
-                          </>
-                        )}
-                    </>
-                  }
+        {selectedInvoice && selectedInvoice.items && selectedInvoice.items.map((item, index) => (
+          <div key={index} style={{ marginBottom: '20px', border: '1px solid #f0f0f0', padding: '15px', borderRadius: '5px' }}>
+            <Text strong style={{ fontSize: '16px', marginBottom: '10px', display: 'block' }}>
+              Item {index + 1}: {item.productName || item.description || "N/A"}
+            </Text>
+            <Descriptions bordered column={2} size="small" style={{ marginBottom: '15px' }}>
+         
+              <Descriptions.Item label="Name">
+                 {item.productName || item.description || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Price">
+                ₹{formatIndianCurrency(item.rate)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Qty">
+                {item.quantity}
+              </Descriptions.Item>
+           
+              <Descriptions.Item label="Description">
+                {item.description || "N/A"}
+              </Descriptions.Item>
+              {/* <Descriptions.Item label="Status">
+                <Tag color={item.isActive === 'Active' ? 'green' : 'red'}>{item.isActive || "N/A"}</Tag>
+              </Descriptions.Item> */}
+            </Descriptions>
+
+            {item.specifications && item.specifications.length > 0 && (
+              <>
+                <Divider orientation="left" style={{ margin: '15px 0' }}>
+                  <Text strong>Product Options</Text>
+                </Divider>
+                <Table
+                  dataSource={item.specifications}
+                  columns={[
+                    { title: "Type", dataIndex: "name", render: (text) => text || "N/A" },
+                    { title: "Description", dataIndex: "value", render: (text) => text || "N/A" },
+                  ]}
+                  pagination={false}
+                  size="small"
+                  rowKey={(spec, idx) => `spec-${idx}`}
+                  bordered
                 />
-              </List.Item>
+              </>
             )}
-          />
-        )}
+          </div>
+        ))}
       </Modal>
 
+
+      {/* Notes Drawer */}
       {selectedInvoice && (
         <NotesDrawer
           visible={notesDrawerVisible}
@@ -869,6 +845,7 @@ const InvoiceList = ({
         />
       )}
 
+      {/* Follow-up Drawer */}
       {selectedInvoice && (
         <FollowUpDrawer
           visible={followUpDrawerVisible}
@@ -878,6 +855,7 @@ const InvoiceList = ({
         />
       )}
 
+      {/* Payment History Drawer */}
       <PaymentHistoryDrawer
         visible={paymentDrawerVisible}
         onClose={() => setPaymentDrawerVisible(false)}

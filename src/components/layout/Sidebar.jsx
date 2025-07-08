@@ -111,7 +111,7 @@ const Sidebar = ({ collapsed }) => {
   return (
     <div
       style={{
-        position: "sticky",
+        position: "fixed",
         top: 0,
         height: "100vh",
         overflowY: "auto",

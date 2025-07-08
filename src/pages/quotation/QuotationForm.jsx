@@ -50,10 +50,12 @@ const QuotationForm = ({ onCancel, onSave, initialValues, isSaving }) => {
   const [items, setItems] = useState([]); // State for quotation line items
   const [notes, setNotes] = useState([]); // State for quotation notes
   const [gstType, setGstType] = useState(null); // State for selected GST type (intrastate/interstate)
-  const [manualGstAmount, setManualGstAmount] = useState(null); // State for manual total GST override (absolute amount)
-  const [manualSgstPercentage, setManualSgstPercentage] = useState(null); // State for manual SGST override (percentage)
-  const [manualCgstPercentage, setManualCgstPercentage] = useState(null); // State for manual CGST override (percentage)
+  // For frontend display only, backend will calculate based on percentages
+  const [manualGstAmount, setManualGstAmount] = useState(null); 
+  const [manualSgstPercentage, setManualSgstPercentage] = useState(null); 
+  const [manualCgstPercentage, setManualCgstPercentage] = useState(null); 
   const [selectedBusinessDetails, setSelectedBusinessDetails] = useState(null); // Details of the selected business
+  const [status, setStatus] = useState('Draft'); // State for quotation status, default to 'Draft'
   const { token } = useToken(); // Ant Design token for theme variables (e.g., spacing, colors)
   const styles = generateQuotationFormStyles(token); // Custom styles generated using theme tokens
 
@@ -146,6 +148,7 @@ ${business.email || ""}`.trim();
         noteText: "", // New notes start blank
         customerName: initialValues.customerName || "",
         customerEmail: initialValues.customerEmail || "",
+        status: initialValues.status || 'Draft', // Set status from initialValues
       });
 
       // Map initial items to ensure unique IDs and proper structure for specifications
@@ -165,11 +168,11 @@ ${business.email || ""}`.trim();
       setItems(mappedInitialItems); // Set the form's items state
       setNotes(initialValues.notes || []); // Set existing notes
       setGstType(initialValues.gstType || null); // Set initial GST type
-      setManualGstAmount(initialValues.gstDetails?.manualGstAmount || null); // Set initial manual total GST if available
-      // Set manual SGST/CGST as percentages
+      // Set manual GST values for display purposes only
+      setManualGstAmount(initialValues.gstDetails?.manualGstAmount || null); 
       setManualSgstPercentage(initialValues.gstDetails?.manualSgstPercentage || null);
       setManualCgstPercentage(initialValues.gstDetails?.manualCgstPercentage || null);
-
+      setStatus(initialValues.status || 'Draft'); // Set status state
 
       // If a business was pre-selected, find its details and update related form fields
       // Get the business ID, handling both string ID and populated object cases
@@ -234,45 +237,6 @@ ${business.email || ""}`.trim();
       ? { text: values.noteText, timestamp }
       : null;
 
-    const subTotal = calculateSubTotal();
-    const gstBreakdown = calculateTotalGst(); // Get the breakdown (calculated from items)
-
-    let finalTaxAmountUsed = 0;
-    let finalSgstAmount = 0;
-    let finalCgstAmount = 0;
-    let finalIgstAmount = 0;
-
-
-    if (manualGstAmount !== null) {
-        // If overall manual total GST is set, use it directly (highest precedence)
-        finalTaxAmountUsed = manualGstAmount;
-        // When manual total GST is set, individual SGST/CGST/IGST are not directly used for the final total
-        // but we can derive them for storage if needed, or set to 0.
-        // For simplicity, if manualGstAmount is used, we'll just store that.
-        if (gstType === "intrastate") {
-            finalSgstAmount = finalTaxAmountUsed / 2;
-            finalCgstAmount = finalTaxAmountUsed / 2;
-        } else if (gstType === "interstate") {
-            finalIgstAmount = finalTaxAmountUsed;
-        }
-
-    } else if (gstType === "intrastate" && (manualSgstPercentage !== null || manualCgstPercentage !== null)) {
-        // If intrastate and manual SGST/CGST percentages are set, use them
-        finalSgstAmount = (manualSgstPercentage !== null ? (subTotal * (manualSgstPercentage / 100)) : gstBreakdown.sgst);
-        finalCgstAmount = (manualCgstPercentage !== null ? (subTotal * (manualCgstPercentage / 100)) : gstBreakdown.cgst);
-        finalTaxAmountUsed = finalSgstAmount + finalCgstAmount;
-        finalIgstAmount = 0; // Ensure IGST is 0 for intrastate
-
-    } else {
-        // Otherwise, use the automatically calculated total GST
-        finalTaxAmountUsed = gstBreakdown.totalGst;
-        finalSgstAmount = gstBreakdown.sgst;
-        finalCgstAmount = gstBreakdown.cgst;
-        finalIgstAmount = gstBreakdown.igst;
-    }
-
-    const total = subTotal + finalTaxAmountUsed; // Calculate grand total
-
     // Construct the quotation object to be saved
     const quotation = {
       ...values,
@@ -280,22 +244,12 @@ ${business.email || ""}`.trim();
       validUntil: values.validUntil?.format("YYYY-MM-DD"), // Format date for backend
       items, // Include the current items array (with productName and gstPercentage)
       notes: newNote ? [...notes, newNote] : notes, // Add new note to existing ones
-      subTotal: subTotal,
-      tax: finalTaxAmountUsed, // This will be the total calculated GST or manual override
-      total: total,
-      createdDate: new Date().toLocaleDateString(), // Consider using ISO string for consistency
       gstType: gstType,
-      // Include the detailed GST breakdown in the saved quotation
-      gstDetails: {
-        sgst: finalSgstAmount, // Store the final SGST amount used
-        cgst: finalCgstAmount, // Store the final CGST amount used
-        igst: finalIgstAmount, // Store the final IGST amount used
-        calculatedTotalGst: gstBreakdown.totalGst, // Store the calculated total before any manual override
-        manualGstAmount: manualGstAmount, // Store the overall manual override amount (absolute)
-        manualSgstPercentage: manualSgstPercentage, // Store the manual SGST percentage
-        manualCgstPercentage: manualCgstPercentage, // Store the manual CGST percentage
-        finalTaxAmountUsed: finalTaxAmountUsed, // Store the final tax amount that was actually used
-      },
+      status: status, // Include the status
+      // Send manual GST percentages to backend for calculation
+      manualGstAmount: manualGstAmount, 
+      manualSgstPercentage: manualSgstPercentage, 
+      manualCgstPercentage: manualCgstPercentage, 
       // Include selected business details directly in the quotation object
       businessName: selectedBusinessDetails?.businessName,
       businessType: selectedBusinessDetails?.type,
@@ -660,9 +614,9 @@ ${business.email || ""}`.trim();
         </Row>
 
         {/* Quotation Details Section */}
-        <Divider style={styles.divider}>Quotation Validate Date</Divider>
+        <Divider style={styles.divider}>Quotation Details</Divider> {/* Changed divider title */}
         <Row gutter={[16, 24]}>
-          <Col xs={24} md={12}>
+          <Col xs={24} md={8}> {/* Adjusted column size */}
             <Form.Item
               name="date"
               label="Date"
@@ -671,9 +625,28 @@ ${business.email || ""}`.trim();
               <DatePicker style={styles.formField} format="DD/MM/YYYY" />
             </Form.Item>
           </Col>
-          <Col xs={24} md={12}>
+          <Col xs={24} md={8}> {/* Adjusted column size */}
             <Form.Item name="validUntil" label="Valid Until">
               <DatePicker style={styles.formField} format="DD/MM/YYYY" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={8}> {/* Added new column for Status */}
+            <Form.Item
+              name="status"
+              label="Status"
+              rules={[{ required: true, message: "Please select a status!" }]}
+            >
+              <Select
+                placeholder="Select status"
+                onChange={(value) => setStatus(value)}
+                value={status}
+                style={styles.formField}
+              >
+                <Option value="Draft">Draft</Option>
+                <Option value="Pending">Pending</Option>
+                <Option value="Approved">Approved</Option>
+                <Option value="Rejected">Rejected</Option>
+              </Select>
             </Form.Item>
           </Col>
         </Row>
