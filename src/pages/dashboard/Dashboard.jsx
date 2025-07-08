@@ -19,6 +19,18 @@ import axios from "../../api/axios";
 import "./Dashboard.css";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween"; // Import the plugin
+import {
+  GlobalOutlined,
+  TeamOutlined,
+  FacebookOutlined,
+  GoogleOutlined,
+  ShopOutlined,
+  QuestionCircleOutlined,
+  FireOutlined, // Icon for Hot Lead
+  ThunderboltOutlined, // Icon for Warm Lead
+  CloudOutlined, // Icon for Cold Lead
+  ShareAltOutlined // Icon for Referral
+} from '@ant-design/icons'; // Import Ant Design Icons
 
 import DashboardMetricCard from "./DashboardMetricCard";
 
@@ -60,6 +72,27 @@ const Dashboard = () => {
   const [totalClosedAccounts, setTotalClosedAccounts] = useState(0);
   // New state for Total Pending Follow-ups
   const [totalPendingFollowUpsThisMonth, setTotalPendingFollowUpsThisMonth] = useState(0);
+
+  // New state for Source data as requested by the user
+  const [sourceData, setSourceData] = useState({
+    Direct: 0,
+    Facebook: 0, // Changed from FacebookReferral to Facebook
+    GoogleAds: 0,
+    Website: 0,
+    Other: 0,
+  });
+  // New state to store the total number of leads from all sources
+  const [totalSourceLeads, setTotalSourceLeads] = useState(0);
+
+  // New states for Lead Type data
+  const [leadTypeData, setLeadTypeData] = useState({
+    WarmLead: 0,
+    ColdLead: 0,
+    HotLead: 0,
+    Other: 0,
+  });
+  const [totalLeadTypes, setTotalLeadTypes] = useState(0);
+
 
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingFollowUp, setEditingFollowUp] = useState(null);
@@ -126,6 +159,40 @@ const Dashboard = () => {
     { x: "2024-06-01", y: 7, category: "trend" },
   ];
 
+  const getSourceIcon = (sourceType) => {
+    switch (sourceType) {
+      case 'Direct':
+        return <ShopOutlined />;
+      case 'Facebook':
+        return <FacebookOutlined />;
+      case 'GoogleAds':
+        return <GoogleOutlined />;
+      case 'Website':
+        return <GlobalOutlined />;
+      case 'Other':
+        return <QuestionCircleOutlined />;
+      default:
+        return null;
+    }
+  };
+
+  const getLeadTypeIcon = (leadType) => {
+    switch (leadType) {
+      case 'HotLead':
+        return <FireOutlined style={{ color: '#ff4d4f' }} />; // Red for Hot
+      case 'WarmLead':
+        return <ThunderboltOutlined style={{ color: '#faad14' }} />; // Orange for Warm
+      case 'ColdLead':
+        return <CloudOutlined style={{ color: '#1890ff' }} />; // Blue for Cold
+      // Green for Referral
+      case 'Other':
+        return <QuestionCircleOutlined style={{ color: '#bfbfbf' }} />; // Grey for Other
+      default:
+        return null;
+    }
+  };
+
+
   const fetchAllDashboardData = async (monthMoment = dayjs()) => {
     try {
       setLoading(true);
@@ -156,12 +223,12 @@ const Dashboard = () => {
       setAllAccounts(accRes.data); // Keep all accounts in state for broader analysis
 
       // Filter accounts for the selected month for metric cards AND new pie chart
+      // IMPORTANT: Added condition to exclude soft-deleted accounts (assuming a 'isDeleted' field)
       const accountsInSelectedMonth = accRes.data.filter((account) => {
-        // Assuming 'createdAt' is the relevant date for general account entry/activity for the month.
-        // This filter determines which accounts are considered for this month's stats.
         if (!account.createdAt) return false;
         const accountDate = dayjs(account.createdAt);
-        return accountDate.isBetween(monthStart, monthEnd, null, "[]");
+        // Exclude accounts where isDeleted is true. If your soft-delete field is different (e.g., 'deletedAt'), adjust this line.
+        return accountDate.isBetween(monthStart, monthEnd, null, "[]") && !account.isDeleted;
       });
 
       // Metric Card Calculations
@@ -198,7 +265,7 @@ const Dashboard = () => {
         (account) => !account.isCustomer && account.status === "Active"
       ).length;
       const monthlyWaitingLeads = accountsInSelectedMonth.filter(
-        (account) => !account.isCustomer && account.status === "Waiting"
+        (account) => !account.isCustomer && account.status === "Pipeline"
       ).length;
       const monthlyConvertedCustomers = accountsInSelectedMonth.filter(
         (account) =>
@@ -220,6 +287,81 @@ const Dashboard = () => {
       setWaitingLeadsPie(monthlyWaitingLeads);
       setCustomersPie(monthlyConvertedCustomers);
       setClosedAccountsPie(monthlyClosedAccounts);
+
+      // Calculate Source Data for the new card
+      const currentSourceCounts = {
+        Direct: 0,
+        Facebook: 0,
+        GoogleAds: 0,
+        Website: 0,
+        Other: 0,
+      };
+
+      // Using all accounts for overall source distribution
+      accRes.data.forEach(account => {
+        if (!account.isDeleted) {
+          let sourceKey = 'Other';
+          switch (account.sourceType) {
+            case 'Direct':
+              sourceKey = 'Direct';
+              break;
+            case 'Facebook':
+              sourceKey = 'Facebook';
+              break;
+            case 'GoogleAds':
+              sourceKey = 'GoogleAds';
+              break;
+            case 'Website':
+              sourceKey = 'Website';
+              break;
+            default:
+              sourceKey = 'Other';
+          }
+          currentSourceCounts[sourceKey]++;
+        }
+      });
+      setSourceData(currentSourceCounts);
+
+      // Calculate the total number of leads from all sources
+      const total = Object.values(currentSourceCounts).reduce((sum, count) => sum + count, 0);
+      setTotalSourceLeads(total);
+
+      // Calculate Lead Type Data
+      const currentLeadTypeCounts = {
+        WarmLead: 0,
+        ColdLead: 0,
+        HotLead: 0,
+        Other: 0,
+      };
+
+      // Corrected: Using 'account.type' and mapping to specific keys
+      accRes.data.forEach(account => {
+        if (!account.isDeleted) {
+          let leadTypeKey = 'Other';
+
+          switch (account.type) {
+            case 'Hot':
+              leadTypeKey = 'HotLead';
+              break;
+            case 'Warm':
+              leadTypeKey = 'WarmLead';
+              break;
+            case 'Cold':
+              leadTypeKey = 'ColdLead';
+              break;
+            case 'Referral':
+              leadTypeKey = 'Referral';
+              break;
+            default:
+              leadTypeKey = 'Other';
+          }
+          currentLeadTypeCounts[leadTypeKey]++;
+        }
+      });
+      setLeadTypeData(currentLeadTypeCounts);
+      const totalTypes = Object.values(currentLeadTypeCounts).reduce((sum, count) => sum + count, 0);
+      setTotalLeadTypes(totalTypes);
+
 
       // Fetch all follow-ups and filter them by month
       const { allAccountFUs, allQuotationFUs, allInvoiceFUs } = await fetchAllFollowUps(
@@ -409,7 +551,7 @@ const Dashboard = () => {
       case "Inactive":
         color = "red";
         break;
-      case "Waiting":
+      case "Pipeline":
         color = "orange";
         break;
       case "Closed":
@@ -531,7 +673,7 @@ const Dashboard = () => {
           default:
             color = "blue";
         }
-        return <Tag color={color}>{status || "N/A"}</Tag>;
+        return <Tag color={color}>{status}</Tag>;
       },
     },
     {
@@ -664,11 +806,47 @@ const Dashboard = () => {
             trendLabel="Closed Accounts Trend"
           />
         </Col>
-      
+        {/* Leads by Source Card with updated UI and Icon */}
+        
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} lg={12}>
+        <Col xs={24} sm={12} lg={8}>
+          <Card
+            title={
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <GlobalOutlined /> Leads by Source (Overall) ({totalSourceLeads})
+              </span>
+            }
+            bordered
+            style={{ height: '100%' }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {Object.entries(sourceData).map(([source, count]) => (
+                <div key={source} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 15px',
+                  backgroundColor: '#f0f2f5', // Light grey background for each item
+                  borderRadius: '8px', // Rounded corners for each item
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)', // Subtle shadow
+                }}>
+                  <Typography.Text strong style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {getSourceIcon(source)} {source.replace(/([A-Z])/g, ' $1').trim()} {/* Formats camelCase to "Camel Case" for display */}
+                  </Typography.Text>
+                  <Tag color="blue" style={{ fontSize: '14px', padding: '5px 10px', borderRadius: '4px' }}>
+                    {count}
+                  </Tag>
+                </div>
+              ))}
+              {/* Display the total number of leads from all sources */}
+            
+            </div>
+          </Card>
+        </Col>
+        {/* Account Status Distribution Pie Chart */}
+        <Col xs={24} lg={8}>
           <Card
             title={
               <div
@@ -678,7 +856,10 @@ const Dashboard = () => {
                   alignItems: "center",
                 }}
               >
-                <span>Account Status Distribution (This Month)</span>
+                <span>Account Status  (This Month)   ({activeLeadsPie +
+                  waitingLeadsPie +
+                  customersPie +
+                  closedAccountsPie}  )</span>
                 <DatePicker
                   picker="month"
                   onChange={handleMonthChange}
@@ -699,18 +880,47 @@ const Dashboard = () => {
               )}
             </div>
             {/* You can add summary info related to these account types if needed */}
-            <div className="invoice-summary-info">
-              <p>
-                <strong>Total Accounts (This Month):</strong>{" "}
-                {activeLeadsPie +
-                  waitingLeadsPie +
-                  customersPie +
-                  closedAccountsPie}
-              </p>
-            </div>
+           
           </Card>
         </Col>
 
+        {/* New Lead Type Card with Icon */}
+        <Col xs={24} sm={12} lg={8}>
+          <Card
+            title={
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TeamOutlined /> Leads by Type (Overall) ({totalLeadTypes})
+              </span>
+            }
+            bordered
+            style={{ height: '100%' }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {Object.entries(leadTypeData).map(([type, count]) => (
+                <div key={type} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 15px',
+                  backgroundColor: '#f0f2f5',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                }}>
+                  <Typography.Text strong style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {getLeadTypeIcon(type)} {type.replace(/([A-Z])/g, ' $1').trim()}
+                  </Typography.Text>
+                  <Tag color="purple" style={{ fontSize: '14px', padding: '5px 10px', borderRadius: '4px' }}>
+                    {count}
+                  </Tag>
+                </div>
+              ))}
+             
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card
             title="Recently Created Leads"
@@ -725,9 +935,7 @@ const Dashboard = () => {
             />
           </Card>
         </Col>
-      </Row>
 
-      <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card
             title="Latest Quotations"
@@ -742,7 +950,9 @@ const Dashboard = () => {
             />
           </Card>
         </Col>
+      </Row>
 
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         <Col xs={24} lg={12}>
           <Card
             title="Latest Invoices (This Month)"
@@ -758,10 +968,7 @@ const Dashboard = () => {
             />
           </Card>
         </Col>
-      </Row>
-
-      {/* Follow-up sections - now split by type */}
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+        {/* Follow-up sections - now split by type */}
         {/* Account Follow-ups Card */}
         <Col xs={24} lg={12}>
           <Card
@@ -805,7 +1012,8 @@ const Dashboard = () => {
             />
           </Card>
         </Col>
-
+      </Row>
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         {/* Quotation Follow-ups Card */}
         <Col xs={24} lg={12}>
           <Card
@@ -849,8 +1057,6 @@ const Dashboard = () => {
             />
           </Card>
         </Col>
-      </Row>
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         {/* Invoice Follow-ups Card */}
         <Col xs={24} lg={12}>
           <Card

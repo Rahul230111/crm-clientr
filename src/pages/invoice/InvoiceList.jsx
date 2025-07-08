@@ -14,10 +14,12 @@ import {
   Select,
   Typography,
   DatePicker,
-  List, // Keep List if you want to use it elsewhere, but it's replaced in itemViewModalVisible
+  List,
+  Tabs,
   Divider,
   Dropdown,
   Menu,
+  Radio, // Import Radio component
 } from "antd";
 import {
   PlusOutlined,
@@ -213,8 +215,8 @@ const InvoiceList = ({
       statusFilter === "all"
         ? true
         : statusFilter === "overdue"
-        ? calculatedStatus !== "paid" && new Date(inv.dueDate) < new Date()
-        : calculatedStatus === statusFilter;
+          ? calculatedStatus !== "paid" && new Date(inv.dueDate) < new Date()
+          : calculatedStatus === statusFilter;
     const matchesBusiness =
       businessFilter === "all" ? true : inv.businessName === businessFilter;
 
@@ -465,17 +467,8 @@ const InvoiceList = ({
         extra={
           <Space wrap>
             <RangePicker onChange={setDateRange} format="YYYY-MM-DD" />
-            <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              style={{ width: 140 }}
-            >
-              <Select.Option value="all">All Status</Select.Option>
-              <Select.Option value="paid">Paid</Select.Option>
-              <Select.Option value="pending">Pending</Select.Option>
-              <Select.Option value="partial">Partial</Select.Option>
-              <Select.Option value="overdue">Overdue</Select.Option>
-            </Select>
+            {/* Replaced Select with Radio.Group for status filter */}
+
             <Select
               value={businessFilter}
               onChange={setBusinessFilter}
@@ -505,6 +498,20 @@ const InvoiceList = ({
           </Space>
         }
       >
+        {/* Replaced Radio.Group with Tabs for status filter */}
+        <Tabs
+          activeKey={statusFilter}
+          onChange={setStatusFilter} // Tabs onChange directly gives the key
+          type="card" // Optional: gives a card-like appearance
+          size="small" // Optional: adjust size
+        >
+          <Tabs.TabPane tab="All" key="all" />       
+          <Tabs.TabPane tab="Partial" key="partial" />
+            <Tabs.TabPane tab="Pending" key="pending" />
+          <Tabs.TabPane tab="Paid" key="paid" />
+
+          <Tabs.TabPane tab="Overdue" key="overdue" /> {/* Add overdue tab if applicable */}
+        </Tabs>
         <Table
           dataSource={filteredInvoices}
           columns={columns}
@@ -539,8 +546,8 @@ const InvoiceList = ({
               <Descriptions.Item label="Due Date">
                 {selectedInvoice.dueDate
                   ? new Date(selectedInvoice.dueDate).toLocaleDateString(
-                      "en-IN"
-                    )
+                    "en-IN"
+                  )
                   : "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Business">
@@ -651,7 +658,7 @@ const InvoiceList = ({
                               <Text strong>
                                 {formatIndianCurrency(igstAmount)}
                               </Text>
-                            </Table.Summary.Cell> {/* Corrected closing tag here */}
+                            </Table.Summary.Cell>
                           </Table.Summary.Row>
                         ) : (
                           <>
@@ -750,13 +757,6 @@ const InvoiceList = ({
               <Descriptions.Item label="Status" span={2}>
                 {getStatusTag(invoiceStatusMap[selectedInvoice._id])}
               </Descriptions.Item>
-              {/* <Descriptions.Item label="Closed" span={2}>
-                {selectedInvoice.isClosed ? (
-                  <Tag color="red">Yes</Tag>
-                ) : (
-                  <Tag color="green">No</Tag>
-                )}
-              </Descriptions.Item> */}
             </Descriptions>
 
             {selectedInvoice.notes?.length > 0 && (
@@ -793,9 +793,9 @@ const InvoiceList = ({
               Item {index + 1}: {item.productName || item.description || "N/A"}
             </Text>
             <Descriptions bordered column={2} size="small" style={{ marginBottom: '15px' }}>
-         
+
               <Descriptions.Item label="Name">
-                 {item.productName || item.description || "N/A"}
+                {item.productName || item.description || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Price">
                 ₹{formatIndianCurrency(item.rate)}
@@ -803,13 +803,10 @@ const InvoiceList = ({
               <Descriptions.Item label="Qty">
                 {item.quantity}
               </Descriptions.Item>
-           
+
               <Descriptions.Item label="Description">
                 {item.description || "N/A"}
               </Descriptions.Item>
-              {/* <Descriptions.Item label="Status">
-                <Tag color={item.isActive === 'Active' ? 'green' : 'red'}>{item.isActive || "N/A"}</Tag>
-              </Descriptions.Item> */}
             </Descriptions>
 
             {item.specifications && item.specifications.length > 0 && (

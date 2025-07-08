@@ -53,11 +53,6 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
         // Remove noteInput as it's not part of the schema
         delete dataToSave.noteInput;
 
-        // If sourceType is not 'Facebook Referral', ensure referralPersonName is not sent
-        if (dataToSave.sourceType !== 'Facebook Referral') {
-          delete dataToSave.referralPersonName;
-        }
-
         onSave(dataToSave);
         toast.success(`Account ${initialValues ? 'updated' : 'created'} successfully!`);
         setLoading(false);
@@ -184,7 +179,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
           <Select placeholder="Select Status">
             <Option value="Active">Active</Option>
             <Option value="Inactive">Inactive</Option>
-            <Option value="Waiting">Waiting</Option>
+            <Option value="Pipeline">Pipeline</Option>
             <Option value="Closed">Closed</Option>
           </Select>
         </Form.Item>
@@ -196,23 +191,13 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
         >
           <Select placeholder="How did you hear about us?">
             <Option value="Direct">Direct</Option>
-            <Option value="Facebook Referral">Facebook Referral</Option>
+            <Option value="Facebook">Facebook </Option>
             <Option value="Google Ads">Google Ads</Option>
             <Option value="Website">Website</Option>
             <Option value="Cold Call">Cold Call</Option>
             <Option value="Other">Other</Option>
           </Select>
         </Form.Item>
-
-        {sourceType === 'Facebook Referral' && (
-          <Form.Item
-            name="referralPersonName"
-            label="Referral Person Name"
-            rules={[{ required: true, message: 'Please enter the referral person\'s name' }]}
-          >
-            <Input placeholder="Name of the person who referred from Facebook" />
-          </Form.Item>
-        )}
 
         {/* ✨ NEW: Assigned To Field ✨ */}
         <Form.Item

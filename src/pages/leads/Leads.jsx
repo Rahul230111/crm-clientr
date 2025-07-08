@@ -83,7 +83,7 @@ const Leads = () => {
       );
       const customersData = allAccounts.filter((account) => account.isCustomer);
       const waitingLeadsData = allAccounts.filter(
-        (account) => account.status === "Waiting" && !account.isCustomer
+        (account) => account.status === "Pipeline" && !account.isCustomer
       );
       const closedAccountsData = allAccounts.filter(
         (account) => account.status === "Closed"
@@ -98,7 +98,7 @@ const Leads = () => {
         setAccounts(activeLeadsData);
       } else if (activeTab === "customers") {
         setAccounts(customersData);
-      } else if (activeTab === "waiting") {
+      } else if (activeTab === "Pipeline") {
         setAccounts(waitingLeadsData);
       } else if (activeTab === "closed") {
         setAccounts(closedAccountsData);
@@ -112,11 +112,11 @@ const Leads = () => {
   };
 
   // NEW: Function to fetch all users
-const fetchUsers = async () => {
+  const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
       // Now fetching all users from the base /api/users endpoint
-      const response = await axios.get('/api/users'); 
+      const response = await axios.get('/api/users');
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -387,7 +387,7 @@ const fetchUsers = async () => {
           case "Inactive":
             color = "red";
             break;
-          case "Waiting":
+          case "Pipeline":
             color = "orange";
             break;
           case "Closed":
@@ -401,7 +401,7 @@ const fetchUsers = async () => {
       filters: [
         { text: "Active", value: "Active" },
         { text: "Inactive", value: "Inactive" },
-        { text: "Waiting", value: "Waiting" },
+        { text: "Pipeline", value: "Pipeline" },
         { text: "Closed", value: "Closed" },
       ],
       onFilter: (value, record) => record.status.indexOf(value) === 0,
@@ -421,7 +421,7 @@ const fetchUsers = async () => {
       key: "sourceType",
       filters: [
         { text: "Direct", value: "Direct" },
-        { text: "Facebook Referral", value: "Facebook Referral " },
+        { text: "Facebook Referral", value: "Facebook  " },
         { text: "Google Ads", value: "Google Ads" },
         { text: "Website", value: "Website" },
         { text: "Cold Call", value: "Cold Call" },
@@ -491,7 +491,7 @@ const fetchUsers = async () => {
                   okText="Yes"
                   cancelText="No"
                 >
-                  <DeleteOutlined /> 
+                  <DeleteOutlined />
                   Delete Account
                 </Popconfirm>
               </Menu.Item>
@@ -588,8 +588,9 @@ const fetchUsers = async () => {
 
       <Tabs defaultActiveKey="active" onChange={setActiveTab}>
         <TabPane tab={`Active Leads (${activeLeadsCount})`} key="active" />
+        <TabPane tab={`PipeLine Leads (${waitingLeadsCount})`} key="Pipeline" />
+
         <TabPane tab={`Customers (${customersCount})`} key="customers" />
-        <TabPane tab={`Waiting Leads (${waitingLeadsCount})`} key="waiting" />
         <TabPane
           tab={`Closed Accounts (${closedAccountsCount})`}
           key="closed"
