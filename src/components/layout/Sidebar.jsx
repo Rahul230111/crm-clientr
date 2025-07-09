@@ -76,7 +76,7 @@ const Sidebar = ({ collapsed }) => {
             {
               key: "/profile",
               icon: <UserOutlined/>,
-              label: "Settings",
+              label: "Profile",
               roles: ["Superadmin", "Admin", "Employee"],
             },
           ],
