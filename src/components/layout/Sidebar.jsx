@@ -67,9 +67,15 @@ const Sidebar = ({ collapsed }) => {
               label: "User Management",
               roles: ["Superadmin"],
             },
+            // {
+            //   key: "/settings",
+            //   icon: <SettingOutlined />,
+            //   label: "Settings",
+            //   roles: ["Superadmin", "Admin", "Employee"],
+            // },
             {
-              key: "/settings",
-              icon: <SettingOutlined />,
+              key: "/profile",
+              icon: <UserOutlined/>,
               label: "Settings",
               roles: ["Superadmin", "Admin", "Employee"],
             },

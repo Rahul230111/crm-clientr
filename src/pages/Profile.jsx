@@ -300,15 +300,16 @@ const Profile = () => {
         >
           <Row align="middle" gutter={24}>
             <Col>
-              <Avatar
-                size={80}
-                icon={<UserOutlined />}
-                style={{
-                  backgroundColor: "#1890ff",
-                  fontSize: "32px",
-                }}
-              />
-            </Col>
+  <Avatar
+    size={80}
+    style={{
+      backgroundColor: "#1890ff",
+      fontSize: "32px",
+    }}
+  >
+    {user.name ? user.name.charAt(0).toUpperCase() : <UserOutlined />}
+  </Avatar>
+</Col>
             <Col flex={1}>
               <Title level={2} style={{ margin: 0, color: "#1890ff" }}>
                 {user.name}
