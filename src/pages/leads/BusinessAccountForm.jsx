@@ -1,32 +1,29 @@
 // BusinessAccountForm.jsx
-import React, { useEffect, useState } from 'react'; // Added useEffect and useState
-import { Form, Input, Button, Drawer, Row, Col, InputNumber, Select, Spin } from 'antd'; // Added Spin
+import React, { useEffect, useState } from 'react';
+import { Form, Input, Button, Drawer, Row, Col, InputNumber, Select, Spin } from 'antd';
 import { toast } from 'react-hot-toast';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
-// Added 'allUsers' prop for the dropdown, and 'loadingUsers' for UI feedback
 const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers, loadingUsers }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false); // Changed from React.useState
-  const sourceType = Form.useWatch('sourceType', form); // Watch for changes in sourceType
+  const [loading, setLoading] = useState(false);
+  const sourceType = Form.useWatch('sourceType', form);
 
-  useEffect(() => { // Changed from React.useEffect
+  useEffect(() => {
     form.resetFields();
     if (initialValues) {
-      // Set initial values for all fields, including assignedTo
-      form.setFieldsValue({ 
+      form.setFieldsValue({
         ...initialValues,
-        assignedTo: initialValues.assignedTo?._id || null // Set assignedTo to ID or null
+        assignedTo: initialValues.assignedTo?._id || null
       });
     } else {
-      // Set default value for sourceType, status, and assignedTo when adding a new account
-      form.setFieldsValue({ 
-        sourceType: 'Direct', 
+      form.setFieldsValue({
+        sourceType: 'Direct',
         status: 'Active',
-        assignedTo: null // Default to unassigned for new accounts
-      }); 
+        assignedTo: null
+      });
     }
   }, [initialValues, form]);
 
@@ -45,12 +42,9 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
         const dataToSave = {
           ...values,
           notes: updatedNotes,
-          // Include assignedTo field directly from form values
-          // If the selected value is null, it will correctly unassign
-          assignedTo: values.assignedTo === null ? null : values.assignedTo, 
+          assignedTo: values.assignedTo === null ? null : values.assignedTo,
         };
 
-        // Remove noteInput as it's not part of the schema
         delete dataToSave.noteInput;
 
         onSave(dataToSave);
@@ -73,8 +67,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
       bodyStyle={{ paddingBottom: 80 }}
       footer={
         <div style={{ textAlign: 'right' }}>
-          <Button onClick={onClose} style={{ marginRight: 8 }}
-          >Cancel</Button>
+          <Button onClick={onClose} style={{ marginRight: 8 }}>Cancel</Button>
           <Button onClick={handleSubmit} type="primary" loading={loading}
            style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}>
             {initialValues ? 'Update Account' : 'Create Account'}
@@ -85,7 +78,6 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
       <Form
         form={form}
         layout="vertical"
-        // initialValues prop is handled by useEffect for dynamic setting
       >
         <Row gutter={16}>
           <Col span={12}>
@@ -183,6 +175,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
             <Option value="Inactive">Inactive</Option>
             <Option value="Pipeline">Pipeline</Option>
             <Option value="Closed">Closed</Option>
+            <Option value="Customer">Customer</Option> {/* Added Customer option */}
           </Select>
         </Form.Item>
 
@@ -197,28 +190,26 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
             <Option value="Google Ads">Google Ads</Option>
             <Option value="Website">Website</Option>
             <Option value="Cold Call">Cold Call</Option>
-            <Option value="client">Client</Option> {/* Corrected value to lowercase 'client' */}
-            <Option value="tradefair">Tradefair</Option> {/* Corrected value to lowercase 'tradefair' */}
+            <Option value="Client">Client</Option> {/* Added Client */}
+            <Option value="Tradefair">Tradefair</Option> {/* Added Tradefair */}
             <Option value="Other">Other</Option>
           </Select>
         </Form.Item>
 
-        {/* ✨ NEW: Assigned To Field ✨ */}
         <Form.Item
           name="assignedTo"
           label="Assigned To"
         >
           <Select
             placeholder="Select a user to assign to (optional)"
-            allowClear // Allows clearing the selection to unassign
-            loading={loadingUsers} // Show loading state for users
+            allowClear
+            loading={loadingUsers}
             showSearch
             optionFilterProp="children"
             filterOption={(input, option) =>
               option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }
           >
-            {/* The value for Option should be the user's _id */}
             {allUsers && allUsers.map(user => (
               <Option key={user._id} value={user._id}>
                 {user.name} ({user.role})
@@ -226,7 +217,6 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
             ))}
           </Select>
         </Form.Item>
-        {/* End of NEW: Assigned To Field */}
 
         <Form.Item name="noteInput" label="Add Note">
           <TextArea rows={3} placeholder="Add a note (it will be timestamped)" />
