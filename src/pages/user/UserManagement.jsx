@@ -108,7 +108,9 @@
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h2>User Management</h2>
-            <Button type="primary" icon={<UserAddOutlined />} onClick={openDrawerForCreate}>
+            <Button type="primary"
+             style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+            icon={<UserAddOutlined />} onClick={openDrawerForCreate}>
               Create User
             </Button>
           </div>
@@ -129,7 +131,9 @@
             footer={
               <div style={{ textAlign: 'right' }}>
                 <Button onClick={() => setDrawerOpen(false)} style={{ marginRight: 8 }}>Cancel</Button>
-                <Button type="primary" onClick={handleDrawerSubmit}>
+                <Button type="primary"
+                   style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+                 onClick={handleDrawerSubmit}>
                   {editingUser ? 'Update' : 'Create'}
                 </Button>
               </div>

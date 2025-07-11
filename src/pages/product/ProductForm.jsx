@@ -166,7 +166,9 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" block>
+          <Button type="primary"
+           style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+          htmlType="submit" block>
             {initialValues ? 'Update' : 'Create'}
           </Button>
         </Form.Item>

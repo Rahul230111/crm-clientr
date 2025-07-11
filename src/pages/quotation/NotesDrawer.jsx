@@ -99,6 +99,7 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
           </Form.Item>
           <Button
             type="primary"
+             style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
             htmlType="submit"
             loading={loading}
             block

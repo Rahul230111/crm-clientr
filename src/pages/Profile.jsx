@@ -247,6 +247,8 @@ const Profile = () => {
           <Space>
             <Button
               type="primary"
+                          style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+
               onClick={handleRefresh}
               icon={<ReloadOutlined />}
             >
@@ -273,8 +275,9 @@ const Profile = () => {
         <div>Unable to load profile data. Please log in again.</div>
         <Button
           type="primary"
+                      style={{ marginTop: "16px",backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+
           onClick={() => navigate("/login")}
-          style={{ marginTop: "16px" }}
         >
           Back to Login
         </Button>
@@ -303,7 +306,7 @@ const Profile = () => {
   <Avatar
     size={80}
     style={{
-      backgroundColor: "#1890ff",
+      backgroundColor: "#ef7a1b",
       fontSize: "32px",
     }}
   >
@@ -311,7 +314,7 @@ const Profile = () => {
   </Avatar>
 </Col>
             <Col flex={1}>
-              <Title level={2} style={{ margin: 0, color: "#1890ff" }}>
+              <Title level={2} style={{ margin: 0, color: "#ef7a1b" }}>
                 {user.name}
               </Title>
               <Text type="secondary" style={{ fontSize: "16px" }}>
@@ -375,7 +378,7 @@ const Profile = () => {
                   }}
                 >
                   <UserOutlined
-                    style={{ marginRight: "8px", color: "#1890ff" }}
+                    style={{ marginRight: "8px", color: "#ef7a1b" }}
                   />
                   <Text style={{ fontSize: "16px" }}>{user.name}</Text>
                 </div>
@@ -518,6 +521,8 @@ const Profile = () => {
               <Button onClick={() => setEditDrawerOpen(false)}>Cancel</Button>
               <Button
                 type="primary"
+                            style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+
                 icon={<SaveOutlined />}
                 loading={updating}
                 onClick={handleUpdateProfile}
@@ -604,7 +609,7 @@ const Profile = () => {
                 </Select.Option>
                 <Select.Option value="Admin">
                   <Space>
-                    <CrownOutlined style={{ color: "#1890ff" }} />
+                    <CrownOutlined style={{ color: "#ef7a1b" }} />
                     <span>Admin</span>
                   </Space>
                 </Select.Option>

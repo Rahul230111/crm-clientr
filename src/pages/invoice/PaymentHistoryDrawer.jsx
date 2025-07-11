@@ -246,7 +246,9 @@
                 <Form.Item name="date" label="Date" rules={[{ required: true, message: 'Please select date!' }]}>
                   <DatePicker style={{ width: '100%' }} defaultValue={dayjs()} format="DD/MM/YYYY" />
                 </Form.Item>
-                <Button type="primary" htmlType="submit" loading={loading}>Add Payment</Button>
+                <Button type="primary"
+                 style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+                 htmlType="submit" loading={loading}>Add Payment</Button>
               </Space>
             </Form>
           </>

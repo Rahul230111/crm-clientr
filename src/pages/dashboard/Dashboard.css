@@ -1,3 +1,29 @@
+/* Make tables scroll on small screens */
+.responsive-table {
+  overflow-x: auto; /* This is the key property for horizontal scrolling */
+  -webkit-overflow-scrolling: touch; /* Improves scrolling on iOS devices */
+}
+
+/* Optional: You might want to style the scrollbar for better appearance */
+.responsive-table::-webkit-scrollbar {
+  height: 8px;
+}
+
+.responsive-table::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.responsive-table::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.responsive-table::-webkit-scrollbar-track {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+/* Other existing styles in Dashboard.css */
 .chart-wrapper {
   width: 100%;
   height: auto;
@@ -8,12 +34,6 @@
   margin-top: 16px;
   font-size: 14px;
   line-height: 1.6;
-}
-
-/* Make tables scroll on small screens */
-.responsive-table {
-  overflow-x: auto;
-  width: 100%;
 }
 
 .responsive-table .ant-table {
@@ -32,7 +52,6 @@
 /* Dashboard.css */
 
 .dashboard-container {
-  padding: 24px;
   background-color: #f0f2f5; /* Light grey background for the whole page */
   min-height: 100vh; /* Ensure it takes full viewport height */
 }
@@ -92,7 +111,7 @@
 
 .ant-table-thead > tr > th {
   background-color: #e6f7ff; /* Light blue header for tables */
-  color: #1890ff; /* Ant Design blue text */
+  color: #ef7a1b; /* Ant Design blue text */
   font-weight: 600;
   border-bottom: 1px solid #a0d911; /* Green border for header */
 }
@@ -127,12 +146,12 @@
 }
 
 .dashboard-select .ant-select-arrow {
-  color: #1890ff;
+  color: #ef7a1b;
 }
 
 /* Link styles within cards */
 .ant-card-extra a {
-  color: #1890ff;
+  color: #ef7a1b;
   font-weight: 500;
 }
 

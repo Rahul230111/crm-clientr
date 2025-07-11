@@ -492,7 +492,9 @@ const InvoiceList = ({
               prefix={<SearchOutlined />}
             />
             <Button onClick={exportToExcel}>Export Excel</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={onAddNew}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={onAddNew}
+             style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+            >
               New Invoice
             </Button>
           </Space>

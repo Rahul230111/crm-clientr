@@ -13,8 +13,8 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import logoCollapsed from "../../assets/Submark Logo 01.png";
-import logoExpanded from "../../assets/Primary Logo 01.png";
+import logoCollapsed from "../../assets/megacranesmall.png";
+import logoExpanded from "../../assets/megacrane.png";
 
 const Sidebar = ({ collapsed }) => {
   const navigate = useNavigate();
@@ -75,7 +75,7 @@ const Sidebar = ({ collapsed }) => {
             // },
             {
               key: "/profile",
-              icon: <UserOutlined/>,
+              icon: <UserOutlined />,
               label: "Profile",
               roles: ["Superadmin", "Admin", "Employee"],
             },
@@ -138,9 +138,9 @@ const Sidebar = ({ collapsed }) => {
           src={collapsed ? logoCollapsed : logoExpanded}
           alt="Logo"
           style={{
-            height: 59,
-            width: "auto",
-            transition: "all 0.3s",
+            height: "auto", // Fixed height
+            width: collapsed ? 59 : 200, // Dynamic width based on 'collapsed'
+            transition: "all 0.3s", // Smooth transition for changes
           }}
         />
       </div>
@@ -153,7 +153,6 @@ const Sidebar = ({ collapsed }) => {
         style={{
           height: "calc(100% - 64px)",
           borderRight: 0,
-          background: "#fafafa",
         }}
         items={menuItems}
         theme="light"

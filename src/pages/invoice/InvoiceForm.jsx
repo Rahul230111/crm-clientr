@@ -1162,6 +1162,7 @@ ${business.gstNumber || ""}
             </Button>
             <Button
               type="primary"
+               style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
               htmlType="submit"
               icon={<SaveOutlined />}
               size="large"

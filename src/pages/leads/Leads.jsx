@@ -246,7 +246,7 @@ const Leads = () => {
         pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      pdf.save(`Leads_Customers_Data.pdf`);
+      pdf.save(`${account.businessName}-details.pdf`);
       toast.success("PDF generated!", { id: "pdf-toast" });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -327,7 +327,7 @@ const Leads = () => {
             onClick={() => confirm()}
             icon={<SearchOutlined />}
             size="small"
-            style={{ width: 90, marginRight: 8 }}
+             style={{  width: 90, marginRight: 8,backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
           >
             Search
           </Button>
@@ -421,10 +421,12 @@ const Leads = () => {
       key: "sourceType",
       filters: [
         { text: "Direct", value: "Direct" },
-        { text: "Facebook Referral", value: "Facebook  " },
+        { text: "Facebook", value: "Facebook" },
         { text: "Google Ads", value: "Google Ads" },
         { text: "Website", value: "Website" },
         { text: "Cold Call", value: "Cold Call" },
+        { text: "Client", value: "Client" }, // Corrected filter value to match text casing
+        { text: "Tradefair", value: "Tradefair" }, // Corrected filter value to match text casing
         { text: "Other", value: "Other" },
       ],
       onFilter: (value, record) => record.sourceType?.indexOf(value) === 0,
@@ -570,6 +572,7 @@ const Leads = () => {
           <Button
             type="primary"
             icon={<PlusOutlined />}
+            style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
             onClick={() => {
               setCurrentAccount(null);
               setFormVisible(true);
@@ -577,6 +580,7 @@ const Leads = () => {
           >
             Add New Account
           </Button>
+
           <Button icon={<FilePdfOutlined />} onClick={exportTableToPdf}>
             Export to PDF
           </Button>

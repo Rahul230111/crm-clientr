@@ -347,6 +347,7 @@ const QuotationList = ({
         />
         <Button
           type="primary"
+           style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
           onClick={() => {
             onAddNew();
             toast.success("Prepare to create a new quotation.", {

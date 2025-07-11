@@ -71,7 +71,7 @@ const TopNavbar = ({ collapsed, setCollapsed }) => {
             }}
           >
             {getInitial()}
-          </Avatar>
+          </Avatar >
         </Dropdown>
       </Space>
     </div>

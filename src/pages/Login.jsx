@@ -5,7 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import axios from '../api/axios'; // ✅ use configured axios
 import toast from 'react-hot-toast';
 import '../css/Login.css';
-import loginImage from '../assets/side.png';
+import loginImage from '../assets/login.png';
+import {
+  
+  UserOutlined,
+  
+} from "@ant-design/icons";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -34,7 +39,9 @@ const Login = () => {
     <div className="login-wrapper">
       <div className="login-left">
         <Card className="login-card" bordered={false}>
-          <h2 className="login-title">Log In 😊</h2>
+          <h2 className="login-title">Log In  <UserOutlined style={{ background: "#f48d41", color: "white", padding: "20px",  borderRadius: "50%" }} />
+
+</h2>
           <p className="login-subtitle">Welcome back! Please enter your details</p>
           <Form layout="vertical" onFinish={onFinish}>
             <Form.Item
@@ -67,7 +74,7 @@ const Login = () => {
       </div>
 
       <div className="login-right">
-        <img src={loginImage} alt="Login visual" />
+        <img src={loginImage} alt="Login visual" className='loginimg' />
       </div>
     </div>
   );

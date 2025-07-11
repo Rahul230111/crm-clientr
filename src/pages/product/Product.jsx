@@ -172,13 +172,14 @@ const Product = () => {
         <Tabs defaultActiveKey="1">
           <TabPane tab="Active Products" key="1">
             <Button
+
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => {
                 setEditingProduct(null);
                 setDrawerVisible(true);
               }}
-              style={{ marginBottom: 16 }}
+               style={{marginBottom: 16 , backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
             >
               Add Product
             </Button>

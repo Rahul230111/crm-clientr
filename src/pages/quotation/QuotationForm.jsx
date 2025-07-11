@@ -1082,6 +1082,7 @@ ${business.email || ""}`.trim();
             <Button
               htmlType="submit"
               type="primary"
+               style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
               icon={<SaveOutlined />}
               loading={isSaving}
               size="large"

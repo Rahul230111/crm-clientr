@@ -192,7 +192,9 @@ const CompanyProfile = () => {
         <Form.Item style={{ marginTop: 24, textAlign: "right" }}>
           {" "}
           {/* Align button to the right */}
-          <Button type="primary" htmlType="submit">
+          <Button type="primary"
+           style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+           htmlType="submit">
             Save Changes
           </Button>
         </Form.Item>

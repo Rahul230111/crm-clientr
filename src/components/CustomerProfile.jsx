@@ -49,10 +49,10 @@ const CustomerProfile = () => {
       .finally(() => setLoading(false)); // Set loading to false once all promises settle
   }, [id]); // Rerun effect if customer ID changes
 
-  // Display a loading spinner while data is being fetched
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-50">
+        
         <Spin size="large" tip="Loading Customer Profile..." />
       </div>
     );
@@ -200,7 +200,7 @@ const CustomerProfile = () => {
                 <Statistic 
                   title={<Text strong className="text-gray-700">Total Quotations</Text>} 
                   value={quotations.length} 
-                  valueStyle={{ color: '#1890ff', fontWeight: 'bold' }}
+                  valueStyle={{ color: '#ef7a1b', fontWeight: 'bold' }}
                 />
               </Card>
             </Col>

@@ -29,7 +29,7 @@ import {
   FireOutlined, // Icon for Hot Lead
   ThunderboltOutlined, // Icon for Warm Lead
   CloudOutlined, // Icon for Cold Lead
-  ShareAltOutlined // Icon for Referral
+  ShareAltOutlined, // Icon for Referral
 } from '@ant-design/icons'; // Import Ant Design Icons
 
 import DashboardMetricCard from "./DashboardMetricCard";
@@ -76,20 +76,22 @@ const Dashboard = () => {
   // New state for Source data as requested by the user
   const [sourceData, setSourceData] = useState({
     Direct: 0,
-    Facebook: 0, // Changed from FacebookReferral to Facebook
-    GoogleAds: 0,
+    Facebook: 0,
+    'Google Ads': 0, // UPDATED: Changed from 'GoogleAds' to 'Google Ads'
     Website: 0,
+    client: 0,
+    tradefair: 0,
     Other: 0,
   });
   // New state to store the total number of leads from all sources
   const [totalSourceLeads, setTotalSourceLeads] = useState(0);
 
-  // New states for Lead Type data
+  // New states for Lead Type data - ONLY HotLead, WarmLead, ColdLead, and Other
   const [leadTypeData, setLeadTypeData] = useState({
     WarmLead: 0,
     ColdLead: 0,
     HotLead: 0,
-    Other: 0,
+    Other: 0, // 'Other' to catch any types not explicitly listed as Hot, Warm, or Cold
   });
   const [totalLeadTypes, setTotalLeadTypes] = useState(0);
 
@@ -159,23 +161,49 @@ const Dashboard = () => {
     { x: "2024-06-01", y: 7, category: "trend" },
   ];
 
+  // New dummy trend data for pipeline leads
+  const pipelineLeadsTrendData = [
+    { x: "2024-01-01", y: 10, category: "trend" },
+    { x: "2024-02-01", y: 15, category: "trend" },
+    { x: "2024-03-01", y: 12, category: "trend" },
+    { x: "2024-04-01", y: 18, category: "trend" },
+    { x: "2024-05-01", y: 16, category: "trend" },
+    { x: "2024-06-01", y: 20, category: "trend" },
+  ];
+
+  /**
+   * Returns the appropriate Ant Design Icon for a given source type.
+   * Ensures all defined source types have a specific icon and provides a fallback.
+   * @param {string} sourceType - The type of lead source (e.g., 'Direct', 'Facebook', 'client').
+   * @returns {JSX.Element} An Ant Design Icon component.
+   */
   const getSourceIcon = (sourceType) => {
     switch (sourceType) {
       case 'Direct':
-        return <ShopOutlined />;
+        return <ShopOutlined />; // Represents direct interaction or walk-in
       case 'Facebook':
-        return <FacebookOutlined />;
-      case 'GoogleAds':
-        return <GoogleOutlined />;
+        return <FacebookOutlined />; // Represents Facebook as a source
+      case 'Google Ads': // UPDATED: Matched backend enum 'Google Ads'
+        return <GoogleOutlined />; // Represents Google Ads as a source
       case 'Website':
-        return <GlobalOutlined />;
+        return <GlobalOutlined />; // Represents website traffic as a source
+      case 'client':
+        return <TeamOutlined />; // Represents referrals from existing clients/teams
+      case 'tradefair':
+        return <GlobalOutlined />; // Represents leads from a trade fair or exhibition (global event)
       case 'Other':
-        return <QuestionCircleOutlined />;
+        return <QuestionCircleOutlined />; // Fallback for 'Other' explicitly defined
       default:
-        return null;
+        return <QuestionCircleOutlined />; // General fallback for any unhandled source types
     }
   };
 
+  /**
+   * Returns the appropriate Ant Design Icon for a given lead type.
+   * Ensures only 'HotLead', 'WarmLead', 'ColdLead', and 'Other' are handled with specific icons.
+   * @param {string} leadType - The type of lead (e.g., 'HotLead', 'WarmLead', 'ColdLead').
+   * @returns {JSX.Element} An Ant Design Icon component with specific styling.
+   */
   const getLeadTypeIcon = (leadType) => {
     switch (leadType) {
       case 'HotLead':
@@ -183,12 +211,11 @@ const Dashboard = () => {
       case 'WarmLead':
         return <ThunderboltOutlined style={{ color: '#faad14' }} />; // Orange for Warm
       case 'ColdLead':
-        return <CloudOutlined style={{ color: '#1890ff' }} />; // Blue for Cold
-      // Green for Referral
+        return <CloudOutlined style={{ color: '#ef7a1b' }} />; // Blue for Cold
       case 'Other':
         return <QuestionCircleOutlined style={{ color: '#bfbfbf' }} />; // Grey for Other
       default:
-        return null;
+        return <QuestionCircleOutlined style={{ color: '#bfbfbf' }} />; // General fallback for any unhandled lead types
     }
   };
 
@@ -292,8 +319,10 @@ const Dashboard = () => {
       const currentSourceCounts = {
         Direct: 0,
         Facebook: 0,
-        GoogleAds: 0,
+        'Google Ads': 0, // UPDATED: Key matches backend enum
         Website: 0,
+        client: 0,
+        tradefair: 0,
         Other: 0,
       };
 
@@ -301,6 +330,7 @@ const Dashboard = () => {
       accRes.data.forEach(account => {
         if (!account.isDeleted) {
           let sourceKey = 'Other';
+          // Use a switch statement to correctly map sourceType to the keys in currentSourceCounts
           switch (account.sourceType) {
             case 'Direct':
               sourceKey = 'Direct';
@@ -308,14 +338,21 @@ const Dashboard = () => {
             case 'Facebook':
               sourceKey = 'Facebook';
               break;
-            case 'GoogleAds':
-              sourceKey = 'GoogleAds';
+            case 'Google Ads': // UPDATED: Case matches backend enum
+              sourceKey = 'Google Ads';
               break;
             case 'Website':
               sourceKey = 'Website';
               break;
+            
+            case 'client': // Handle 'client' source type
+              sourceKey = 'client';
+              break;
+            case 'tradefair': // Handle 'tradefair' source type
+              sourceKey = 'tradefair';
+              break;
             default:
-              sourceKey = 'Other';
+              sourceKey = 'Other'; // Any other source type falls into 'Other'
           }
           currentSourceCounts[sourceKey]++;
         }
@@ -326,18 +363,18 @@ const Dashboard = () => {
       const total = Object.values(currentSourceCounts).reduce((sum, count) => sum + count, 0);
       setTotalSourceLeads(total);
 
-      // Calculate Lead Type Data
+      // Calculate Lead Type Data - Only Hot, Warm, Cold
       const currentLeadTypeCounts = {
         WarmLead: 0,
         ColdLead: 0,
         HotLead: 0,
-        Other: 0,
+        Other: 0, // For any lead types not explicitly Hot, Warm, or Cold
       };
 
       // Corrected: Using 'account.type' and mapping to specific keys
       accRes.data.forEach(account => {
         if (!account.isDeleted) {
-          let leadTypeKey = 'Other';
+          let leadTypeKey = 'Other'; // Default to 'Other'
 
           switch (account.type) {
             case 'Hot':
@@ -349,10 +386,8 @@ const Dashboard = () => {
             case 'Cold':
               leadTypeKey = 'ColdLead';
               break;
-            case 'Referral':
-              leadTypeKey = 'Referral';
-              break;
             default:
+              // Any other 'account.type' (like 'Referral', 'client', 'tradefair') will fall into 'Other'
               leadTypeKey = 'Other';
           }
           currentLeadTypeCounts[leadTypeKey]++;
@@ -636,13 +671,14 @@ const Dashboard = () => {
   };
 
   const columnsFollowups = [
-    { title: "S.No", render: (_, __, i) => i + 1 },
+    { title: "S.No", render: (_, __, i) => i + 1, fixed: 'left', width: 50 }, // Fixed to the left
     {
-      title: "Parent Type",
-      dataIndex: "type",
+      title: "Business Name",
+      dataIndex: "parentName",
       render: (type) => type.charAt(0).toUpperCase() + type.slice(1),
+      fixed: 'left', // Fixed to the left
+      width: 100,
     },
-    { title: "Business Name", dataIndex: "parentName" },
     {
       title: "Follow-up Comment",
       dataIndex: "note",
@@ -661,6 +697,7 @@ const Dashboard = () => {
     {
       title: "Status", // Added Status column to follow-up table
       dataIndex: "status",
+       width: 10,
       render: (status) => {
         let color;
         switch (status) {
@@ -674,12 +711,15 @@ const Dashboard = () => {
             color = "blue";
         }
         return <Tag color={color}>{status}</Tag>;
+        
       },
     },
     {
       title: "Action",
       key: "action",
       render: (_, record) => <a onClick={() => showEditModal(record)}>Edit</a>,
+      fixed: 'right', // Fixed to the right
+      width: 80,
     },
   ];
 
@@ -737,7 +777,7 @@ const Dashboard = () => {
   // New Pie Chart Data for Accounts Distribution
   const accountsPieData = [
     { type: "Active Leads", value: activeLeadsPie },
-    { type: "Waiting Leads", value: waitingLeadsPie },
+    { type: "PipeLine Leads", value: waitingLeadsPie },
     { type: "Converted Customers", value: customersPie },
     { type: "Closed Accounts", value: closedAccountsPie },
   ].filter((item) => item.value > 0); // Only show categories with a value > 0
@@ -772,41 +812,53 @@ const Dashboard = () => {
 
       {/* Metric Cards for Business Accounts, Converted Customers, and Total Invoice Amount */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={8}>
+        <Col xs={24} sm={12} lg={6}>
           <DashboardMetricCard
             title="Total Business Accounts (This Month)"
             value={totalLeads}
             valuePrefix=""
             percentageChange={15} // This is static, would need dynamic calculation for real trend
-            trendData={totalLeadsTrendData} // This is static, would need dynamic calculation for real trend
-            cardColor="linear-gradient(135deg, #4CAF50, #8BC34A)"
+            trendData={totalLeadsTrendData} 
+            cardColor="linear-gradient(135deg, #2196F3, #64B5F6)"
             trendLabel="Accounts Growth"
           />
         </Col>
-        <Col xs={24} sm={12} lg={8}>
+          <Col xs={24} sm={12} lg={6}>
+          <DashboardMetricCard
+            title="Total Pipeline Leads (This Month)"
+            value={waitingLeadsPie}
+            valuePrefix=""
+            percentageChange={5} // Dummy percentage change
+            trendData={pipelineLeadsTrendData} // Dummy trend data
+            cardColor="linear-gradient(135deg, #f7b414,#f7b414)" // Yellow/Amber for Pipeline
+            trendLabel="Pipeline Growth"
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
           <DashboardMetricCard
             title="Converted Customers (This Month)"
             value={totalCustomers}
             valuePrefix=""
             percentageChange={20} // This is static, would need dynamic calculation for real trend
             trendData={convertedCustomersTrendData} // This is static, would need dynamic calculation for real trend
-            cardColor="linear-gradient(135deg, #2196F3, #64B5F6)"
+            cardColor="linear-gradient(135deg, #4CAF50, #8BC34A)"            
             trendLabel="Customer Conversion"
           />
         </Col>
+      
         {/* Metric Card for Closed Accounts */}
-        <Col xs={24} sm={12} lg={8}>
+        <Col xs={24} sm={12} lg={6}>
           <DashboardMetricCard
             title="Closed Accounts (This Month)"
             value={totalClosedAccounts}
             valuePrefix=""
             percentageChange={10} // Dummy percentage change, would need dynamic calculation for real trend
             trendData={closedAccountsTrendData} // Dummy trend data, would need dynamic calculation for real trend
-            cardColor="linear-gradient(135deg, #673AB7, #9575CD)"
+            cardColor="linear-gradient(135deg,rgb(216, 87, 28),rgb(205, 182, 117))"
             trendLabel="Closed Accounts Trend"
           />
         </Col>
-        {/* Leads by Source Card with updated UI and Icon */}
+        {/* New Metric Card for Pipeline Leads */}
         
       </Row>
 
@@ -896,7 +948,10 @@ const Dashboard = () => {
             style={{ height: '100%' }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {Object.entries(leadTypeData).map(([type, count]) => (
+              {/* Filter leadTypeData to only show HotLead, WarmLead, ColdLead, and Other */}
+              {Object.entries(leadTypeData).filter(([type]) => 
+                ['HotLead', 'WarmLead', 'ColdLead', 'Other'].includes(type)
+              ).map(([type, count]) => (
                 <div key={type} style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -920,7 +975,7 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]}>
+      {/* <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card
             title="Recently Created Leads"
@@ -950,10 +1005,10 @@ const Dashboard = () => {
             />
           </Card>
         </Col>
-      </Row>
+      </Row> */}
 
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        <Col xs={24} lg={12}>
+        {/* <Col xs={24} lg={12}>
           <Card
             title="Latest Invoices (This Month)"
             bordered
@@ -967,7 +1022,7 @@ const Dashboard = () => {
               locale={{ emptyText: "No invoices for this month" }}
             />
           </Card>
-        </Col>
+        </Col> */}
         {/* Follow-up sections - now split by type */}
         {/* Account Follow-ups Card */}
         <Col xs={24} lg={12}>
@@ -976,14 +1031,14 @@ const Dashboard = () => {
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent: "space-around",
                   alignItems: "center",
                 }}
               >
                 <span>
                   {followUpFilter.charAt(0).toUpperCase() +
                     followUpFilter.slice(1)}{" "}
-                  Account Follow-ups
+                  Leads Follow-ups
                 </span>
                 <Select
                   value={followUpFilter}
@@ -999,29 +1054,29 @@ const Dashboard = () => {
             bordered
             extra={<a href="/leads">View All Leads</a>}
           >
-            <Table
-              columns={columnsFollowups}
-              dataSource={filteredAccountFollowups}
-              rowKey={(record, index) =>
-                `${record.parentId || "no-parent"}-${
-                  record.originalIndex || index
-                }`
-              }
-              pagination={false}
-              locale={{ emptyText: "No account follow-ups in this category" }}
-            />
+            <div className="responsive-table"> {/* Added responsive-table class */}
+              <Table
+                columns={columnsFollowups}
+                dataSource={filteredAccountFollowups}
+                rowKey={(record, index) =>
+                  `${record.parentId || "no-parent"}-${
+                    record.originalIndex || index
+                  }`
+                }
+                pagination={false}
+                locale={{ emptyText: "No account follow-ups in this category" }}
+                scroll={{ x: 'max-content' }} // Enable horizontal scrolling for fixed columns
+              />
+            </div>
           </Card>
         </Col>
-      </Row>
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        {/* Quotation Follow-ups Card */}
-        <Col xs={24} lg={12}>
+         <Col xs={24} lg={12}>
           <Card
             title={
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent: "space-around",
                   alignItems: "center",
                 }}
               >
@@ -1044,19 +1099,26 @@ const Dashboard = () => {
             bordered
             extra={<a href="/quotation">View All Quotations</a>}
           >
-            <Table
-              columns={columnsFollowups}
-              dataSource={filteredQuotationFollowups}
-              rowKey={(record, index) =>
-                `${record.parentId || "no-parent"}-${
-                  record.originalIndex || index
-                }`
-              }
-              pagination={false}
-              locale={{ emptyText: "No quotation follow-ups in this category" }}
-            />
+            <div className="responsive-table"> {/* Added responsive-table class */}
+              <Table
+                columns={columnsFollowups}
+                dataSource={filteredQuotationFollowups}
+                rowKey={(record, index) =>
+                  `${record.parentId || "no-parent"}-${
+                    record.originalIndex || index
+                  }`
+                }
+                pagination={false}
+                locale={{ emptyText: "No quotation follow-ups in this category" }}
+                scroll={{ x: 'max-content' }} // Enable horizontal scrolling for fixed columns
+              />
+            </div>
           </Card>
         </Col>
+      </Row>
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+        {/* Quotation Follow-ups Card */}
+       
         {/* Invoice Follow-ups Card */}
         <Col xs={24} lg={12}>
           <Card
@@ -1064,7 +1126,7 @@ const Dashboard = () => {
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent: "space-around",
                   alignItems: "center",
                 }}
               >
@@ -1087,17 +1149,20 @@ const Dashboard = () => {
             bordered
             extra={<a href="/invoice">View All Invoices</a>}
           >
-            <Table
-              columns={columnsFollowups}
-              dataSource={filteredInvoiceFollowups}
-              rowKey={(record, index) =>
-                `${record.parentId || "no-parent"}-${
-                  record.originalIndex || index
-                }`
-              }
-              pagination={false}
-              locale={{ emptyText: "No invoice follow-ups in this category" }}
-            />
+            <div className="responsive-table"> {/* Added responsive-table class */}
+              <Table
+                columns={columnsFollowups}
+                dataSource={filteredInvoiceFollowups}
+                rowKey={(record, index) =>
+                  `${record.parentId || "no-parent"}-${
+                    record.originalIndex || index
+                  }`
+                }
+                pagination={false}
+                locale={{ emptyText: "No invoice follow-ups in this category" }}
+                scroll={{ x: 'max-content' }} // Enable horizontal scrolling for fixed columns
+              />
+            </div>
           </Card>
         </Col>
       </Row>

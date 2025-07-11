@@ -1,7 +1,7 @@
 .login-wrapper {
   display: flex;
   min-height: 100vh;
-  background-color: #f3e8ff;
+  background-color: #fff;
 }
 
 .login-left {
@@ -24,7 +24,7 @@
 .login-title {
   font-size: 28px;
   font-weight: bold;
-  color: #1e459b;
+  color: #f48d41;
   margin-bottom: 5px;
 }
 
@@ -40,12 +40,12 @@
 }
 
 .forgot-password {
-  color: #1e459b;
+  color: #f48d41;
   font-size: 13px;
 }
 
 .login-button {
-  background-color: #1e459b;
+  background-color: #f48d41;
   border: none;
   height: 40px;
 }
@@ -73,21 +73,16 @@
   border: 1px solid #ddd;
 }
 
-.signup-text {
-  margin-top: 25px;
-  text-align: center;
-  font-size: 14px;
-  color: #777;
-}
 
-.signup-text a {
-  color: #7c3aed;
-  font-weight: 500;
-}
 
+.loginimg{
+  width: 500px !important;
+  height: 500px !important;
+  object-fit: cover;
+}
 .login-right {
   flex: 1;
-  background: linear-gradient(to top right, #f0e1ff, #dbb4ff);
+  background: linear-gradient(to top right, #f0e1ff, #f57c1b);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -95,7 +90,27 @@
 }
 
 .login-right img {
-  width: 100%;
+  width: 100%;  
   height: 100vh;
   object-fit: cover;
+}
+@media (max-width: 768px) {
+  .login-wrapper {
+    flex-direction: column;
+  }
+
+  .login-left {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .login-right {
+    display: none;
+  }
+
+  .login-card {
+    padding: 20px;
+    box-shadow: none;
+    border-radius: 0;
+  }
 }

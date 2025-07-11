@@ -73,8 +73,10 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
       bodyStyle={{ paddingBottom: 80 }}
       footer={
         <div style={{ textAlign: 'right' }}>
-          <Button onClick={onClose} style={{ marginRight: 8 }}>Cancel</Button>
-          <Button onClick={handleSubmit} type="primary" loading={loading}>
+          <Button onClick={onClose} style={{ marginRight: 8 }}
+          >Cancel</Button>
+          <Button onClick={handleSubmit} type="primary" loading={loading}
+           style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}>
             {initialValues ? 'Update Account' : 'Create Account'}
           </Button>
         </div>
@@ -191,10 +193,12 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
         >
           <Select placeholder="How did you hear about us?">
             <Option value="Direct">Direct</Option>
-            <Option value="Facebook">Facebook </Option>
+            <Option value="Facebook">Facebook</Option>
             <Option value="Google Ads">Google Ads</Option>
             <Option value="Website">Website</Option>
             <Option value="Cold Call">Cold Call</Option>
+            <Option value="client">Client</Option> {/* Corrected value to lowercase 'client' */}
+            <Option value="tradefair">Tradefair</Option> {/* Corrected value to lowercase 'tradefair' */}
             <Option value="Other">Other</Option>
           </Select>
         </Form.Item>
