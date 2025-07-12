@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import toast from "react-hot-toast";
-import Logo from '../../assets/Primary Logo 01.png'; // Ensure this path is correct
+import Logo from '../../assets/megacrane.png'; // Ensure this path is correct
 
 // Helper functions (keeping these as is, no changes needed for file size here)
 const formatCurrency = (amount) => {
@@ -90,7 +90,7 @@ const generateQuotationHtmlParts = (quotation) => {
     <div style="margin-bottom: 20px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <div style="display: flex; align-items: center;">
-          <img src="${companyLogoSrc}" alt="Company Logo" style="height: 70px; margin-right: 15px;">
+         <img src="${companyLogoSrc}" alt="Company Logo" style="width: 200px; height: 70px; margin-right: 15px;">
           <div>
             <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #2c3e50; margin-bottom: 5px;">ACE AUTOMATION</h2>
             <p style="margin: 2px 0; font-size: 10px; color: #555;">S.F. No. 91, 14B, Padiveedu Thottam,</p>

@@ -729,7 +729,7 @@
         title: "Action",
         key: "action",
         render: (_, record) => <a onClick={() => showEditModal(record)}><EditOutlined /></a>,
-        fixed: 'right', // Fixed to the right
+        // Fixed to the right
         width: 80,
       },
       {
@@ -841,7 +841,7 @@
     if (loading) return <Spin fullscreen />;
 
     return (
-      <div style={{ padding: 24 }}>
+      <div>
         <Title level={2}>Dashboard</Title>
 
         {/* Metric Cards for Business Accounts, Converted Customers, and Total Invoice Amount */}
@@ -946,7 +946,7 @@
                     waitingLeadsPie +
                     customersPie +
                     closedAccountsPie} )</span>
-                  {/* Replaced DatePicker with a Button to open the Calendar Modal */}
+                 
                   <Button onClick={() => setIsCalendarModalVisible(true)}>
                     <CalendarOutlined /> Select Month
                   </Button>
@@ -980,13 +980,12 @@
               style={{ height: '100%' }}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {/* Filter leadTypeData to only show HotLead, WarmLead, ColdLead, and Other */}
                 {Object.entries(leadTypeData).filter(([type]) =>
                   ['HotLead', 'WarmLead', 'ColdLead', 'Other'].includes(type)
                 ).map(([type, count]) => (
                   <div key={type} style={{
                     display: 'flex',
-                    justifyContent: 'space-between',
+                     justifyContent: 'space-around',
                     alignItems: 'center',
                     padding: '10px 15px',
                     backgroundColor: '#f0f2f5',
@@ -1058,93 +1057,95 @@
           {/* Follow-up sections - now split by type */}
           {/* Account Follow-ups Card */}
           <Col xs={24} sm={24} md={12} lg={12}>
-            <Card
-              title={
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-around",
-                    alignItems: "center",
-                  }}
-                >
-                  <span>
-                    {followUpFilter.charAt(0).toUpperCase() +
-                      followUpFilter.slice(1)}{" "}
-                    Leads Follow-ups
-                  </span>
-                  <Select
-                    value={followUpFilter}
-                    onChange={handleFollowUpFilterChange}
-                    style={{ width: 120 }}
-                  >
-                    <Option value="today">Today</Option>
-                    <Option value="upcoming">Upcoming</Option>
-                    <Option value="past">Past</Option>
-                  </Select>
-                </div>
-              }
-              bordered
-              extra={<a href="/leads">View All Leads</a>}
-            >
-              <div className="responsive-table"> {/* Added responsive-table class */}
-                <Table
-                  columns={columnsFollowups}
-                  dataSource={filteredAccountFollowups}
-                  rowKey={(record, index) =>
-                    `${record.parentId || "no-parent"}-${record.originalIndex || index
-                    }`
-                  }
-                  pagination={false}
-                  locale={{ emptyText: "No account follow-ups in this category" }}
-                  scroll={{ x: 'max-content' }} // Enable horizontal scrolling for fixed columns
-                />
-              </div>
-            </Card>
-          </Col>
-          <Col xs={24} sm={24} md={12} lg={12}>
-            <Card
-              title={
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-around",
-                    alignItems: "center",
-                  }}
-                >
-                  <span>
-                    {followUpFilter.charAt(0).toUpperCase() +
-                      followUpFilter.slice(1)}{" "}
-                    Quotation Follow-ups
-                  </span>
-                  <Select
-                    value={followUpFilter}
-                    onChange={handleFollowUpFilterChange}
-                    style={{ width: 120 }}
-                  >
-                    <Option value="today">Today</Option>
-                    <Option value="upcoming">Upcoming</Option>
-                    <Option value="past">Past</Option>
-                  </Select>
-                </div>
-              }
-              bordered
-              extra={<a href="/quotation">View All Quotations</a>}
-            >
-              <div className="responsive-table"> {/* Added responsive-table class */}
-                <Table
-                  columns={columnsFollowups}
-                  dataSource={filteredQuotationFollowups}
-                  rowKey={(record, index) =>
-                    `${record.parentId || "no-parent"}-${record.originalIndex || index
-                    }`
-                  }
-                  pagination={false}
-                  locale={{ emptyText: "No quotation follow-ups in this category" }}
-                  scroll={{ x: 'max-content' }} // Enable horizontal scrolling for fixed columns
-                />
-              </div>
-            </Card>
-          </Col>
+  <Card
+    title={
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-around",
+          alignItems: "left",
+          flexWrap: "wrap",
+          gap: "8px",
+        }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 500 }}>
+          {followUpFilter.charAt(0).toUpperCase() + followUpFilter.slice(1)} Leads Follow-ups
+        </span>
+        <Select
+          value={followUpFilter}
+          onChange={handleFollowUpFilterChange}
+          style={{ width: 90 }}
+          size="small"
+        >
+          <Option value="today">Today</Option>
+          <Option value="upcoming">Upcoming</Option>
+          <Option value="past">Past</Option>
+        </Select>
+      </div>
+    }
+    bordered
+    extra={<a href="/leads">All Leads</a>}
+    style={{ width: "100%" }}
+  >
+    <div style={{ overflowX: "auto" }}>
+      <Table
+        columns={columnsFollowups}
+        dataSource={filteredAccountFollowups}
+        rowKey={(record, index) => `${record.parentId || "no-parent"}-${record.originalIndex || index}`}
+        pagination={false}
+        scroll={{ x: "max-content" }}
+        size="small"
+        locale={{ emptyText: "No account follow-ups in this category" }}
+      />
+    </div>
+  </Card>
+</Col>
+
+<Col xs={24} sm={24} md={12} lg={12}>
+  <Card
+    title={
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-around",
+          alignItems: "left",
+          flexWrap: "wrap",
+          gap: "8px",
+        }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 500, width: 180 }}>
+          {followUpFilter.charAt(0).toUpperCase() + followUpFilter.slice(1)} Quotation Follow-ups
+        </span>
+        <Select
+          value={followUpFilter}
+          onChange={handleFollowUpFilterChange}
+          style={{ width: 90 }}
+          size="small"
+        >
+          <Option value="today">Today</Option>
+          <Option value="upcoming">Upcoming</Option>
+          <Option value="past">Past</Option>
+        </Select>
+      </div>
+    }
+    bordered
+    extra={<a href="/quotation"> All Quotations</a>}
+    style={{ width: "100%" }}
+  >
+    <div style={{ overflowX: "auto" }}>
+      <Table
+        columns={columnsFollowups}
+        dataSource={filteredQuotationFollowups}
+        rowKey={(record, index) => `${record.parentId || "no-parent"}-${record.originalIndex || index}`}
+        pagination={false}
+        scroll={{ x: "max-content" }}
+        size="small"
+        locale={{ emptyText: "No quotation follow-ups in this category" }}
+      />
+    </div>
+  </Card>
+</Col>
+
         </Row>
         {/* <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         

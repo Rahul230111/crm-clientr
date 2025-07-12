@@ -58,7 +58,7 @@ const Sidebar = ({ collapsed }) => {
         {
           key: "/super-admin",
           icon: <UserSwitchOutlined />,
-          label: collapsed ? null : "User Management",
+          label: collapsed ? null : "User Manage",
           roles: ["Superadmin", "Admin", "Employee"],
           children: [
             { 

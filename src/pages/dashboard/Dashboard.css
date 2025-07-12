@@ -188,3 +188,8 @@
     height: 250px; /* Adjust height for smaller screens */
   }
 }
+
+/* Dashboard.css */
+.responsive-table {
+  overflow-x: auto;
+}

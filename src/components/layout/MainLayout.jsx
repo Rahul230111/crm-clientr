@@ -37,6 +37,7 @@ const MainLayout = ({ children }) => {
             onCollapse={handleCollapse}
             breakpoint="lg"
             collapsedWidth="80"
+      
             className="sidebar"
             theme="light"
           >
