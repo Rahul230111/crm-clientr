@@ -127,10 +127,18 @@ const CustomerProfile = () => {
   const totalPendingAmount = totalInvoicesAmount - totalPaidAmount;
 
   return (
+    
     <div className="p-6 bg-gray-50 min-h-screen font-sans">
+      <Button
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center space-x-2"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(-1)}
+        >
+          Back
+        </Button>
       {/* Breadcrumb navigation */}
       <Breadcrumb
-        className="mb-4 text-gray-600"
+        className="mb-4 text-gray-600 mt-5 font-medium"
         items={[
           { title: 'Customers', href: '/customers' },
           { title: customer.businessName || 'Profile' },
@@ -139,13 +147,7 @@ const CustomerProfile = () => {
 
       {/* Header with back button and title */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-        <Button
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center space-x-2"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-        >
-          Back
-        </Button>
+        
         <Title level={2} className="text-gray-800 font-extrabold mb-0 text-center sm:text-left">
           {customer.businessName} Profile
         </Title>
@@ -189,7 +191,7 @@ const CustomerProfile = () => {
       </Card>
 
       {/* Dashboard Section (now outside of Tabs) */}
-      <Card
+      {/* <Card
         title={<Title level={4} className="text-gray-800 font-bold mb-0 flex items-center space-x-2"><DashboardOutlined /><span>Summary Dashboard</span></Title>}
         className="shadow-xl rounded-xl mb-8 border-t-8 border-purple-600 transform hover:scale-100 transition duration-300 ease-in-out"
       >
@@ -237,7 +239,7 @@ const CustomerProfile = () => {
             </Col>
           </Row>
         </div>
-      </Card>
+      </Card> */}
 
       {/* Tabs for related data (now starting with Quotations) */}
       <Tabs 
@@ -328,7 +330,7 @@ const CustomerProfile = () => {
         </TabPane>
 
         {/* Invoices Tab */}
-        <TabPane
+        {/* <TabPane
           tab={
             <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
               <SolutionOutlined className="text-xl" />
@@ -409,7 +411,7 @@ const CustomerProfile = () => {
               ))}
             </Collapse>
           )}
-        </TabPane>
+        </TabPane> */}
 
         {/* Follow-ups Tab */}
         <TabPane
@@ -451,7 +453,7 @@ const CustomerProfile = () => {
         </TabPane>
 
         {/* Payments Tab */}
-        <TabPane
+        {/* <TabPane
           tab={
             <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
               <DollarOutlined className="text-xl" />
@@ -481,7 +483,7 @@ const CustomerProfile = () => {
               )}
             />
           )}
-        </TabPane>
+        </TabPane> */}
 
         {/* Notes Tab */}
         <TabPane

@@ -39,7 +39,7 @@ const Sidebar = ({ collapsed }) => {
           roles: ["Admin", "Superadmin", "Employee"],
           children: [
             { key: "/dashboard/deals", label: "Leads Dashboard", roles: ["Admin", "Superadmin"] },
-            { key: "/invoicedashboard", label: "Invoice Dashboard", roles: ["Admin", "Superadmin", "Employee"] },
+            // { key: "/invoicedashboard", label: "Invoice Dashboard", roles: ["Admin", "Superadmin", "Employee"] },
           ],
         },
         {
@@ -48,20 +48,20 @@ const Sidebar = ({ collapsed }) => {
           label: collapsed ? null : "Application",
           roles: ["Admin", "Superadmin"],
           children: [
-            { key: "/leads", icon: <SolutionOutlined />, label: "Leads", roles: ["Admin", "Superadmin"] },
+            { key: "/leads", icon: <SolutionOutlined />, label: "Enquiry Leads", roles: ["Admin", "Superadmin"] },
             { key: "/customers", icon: <UserOutlined />, label: "Customers", roles: ["Admin", "Superadmin"] },
             { key: "/quotation", icon: <FileTextOutlined />, label: "Quotations", roles: ["Admin", "Superadmin"] },
-            { key: "/invoice", icon: <ShoppingOutlined />, label: "Invoices", roles: ["Admin", "Superadmin"] },
+            // { key: "/invoice", icon: <ShoppingOutlined />, label: "Invoices", roles: ["Admin", "Superadmin"] },
             { key: "/products", icon: <FileAddOutlined />, label: "Products", roles: ["Admin", "Superadmin"] },
           ],
         },
         {
           key: "/super-admin",
           icon: <UserSwitchOutlined />,
-          label: collapsed ? null : "Super Admin",
-          roles: ["Superadmin"],
+          label: collapsed ? null : "User Management",
+          roles: ["Superadmin", "Admin", "Employee"],
           children: [
-            {
+            { 
               key: "/users",
               icon: <UsergroupAddOutlined />,
               label: "User Management",
@@ -138,8 +138,9 @@ const Sidebar = ({ collapsed }) => {
           src={collapsed ? logoCollapsed : logoExpanded}
           alt="Logo"
           style={{
+            padding: 10,
             height: "auto", // Fixed height
-            width: collapsed ? 59 : 200, // Dynamic width based on 'collapsed'
+            width: collapsed ? 59 : 170, // Dynamic width based on 'collapsed'
             transition: "all 0.3s", // Smooth transition for changes
           }}
         />

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../api/axios';
 import {
-  Card, Input, Button, Table, Tabs, Typography, Empty, Tag, Modal, Dropdown, Menu
+  Card, Input, Button, Table, Tabs, Typography, Empty, Tag, Modal, Dropdown, Menu, Popconfirm
 } from 'antd';
 import {
   SearchOutlined, EditOutlined, MessageOutlined, EyeOutlined,
@@ -34,8 +34,9 @@ const Customers = () => {
   const [accountToUpdate, setAccountToUpdate] = useState(null);
   const [newStatus, setNewStatus] = useState(null); // This will now hold string status 'Active' or 'Inactive'
 
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState(null);
+  // Removed: deleteModalVisible and customerToDelete state variables
+  // const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  // const [customerToDelete, setCustomerToDelete] = useState(null);
 
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
   const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
@@ -47,15 +48,8 @@ const Customers = () => {
   const fetchCustomers = () => {
     setLoading(true);
     axios
-      .get('/api/accounts/customers') // This endpoint should specifically return 'Customer' status accounts
+      .get('/api/accounts/customers')
       .then((res) => {
-        // Filter further if the backend /customers endpoint returns all accounts
-        // and you specifically need 'Active' and 'Inactive' sub-categories *of customers*.
-        // Based on the backend, this endpoint already filters for status 'Customer'.
-        // So, the 'active' and 'inactive' tabs below refer to customers having status 'Active' or 'Inactive' which is a bit contradictory.
-        // Assuming 'active' and 'inactive' here refer to some sub-state or if the customer is converted back to a lead.
-        // For strict 'Customer' status display, you might just have one tab or filter on a new 'customerSubStatus' field.
-        // For now, I'm filtering based on the main 'status' field to demonstrate.
         const allFetchedCustomers = Array.isArray(res.data) ? res.data : [];
         setCustomers(allFetchedCustomers);
       })
@@ -111,24 +105,20 @@ const Customers = () => {
       });
   };
 
-  // Modified handleStatusChange to set the 'status' field to 'Active' or 'Inactive'
-  // Note: Changing status to 'Active' or 'Inactive' will make the account disappear from this 'Customers' view
-  // if the '/api/accounts/customers' endpoint strictly filters for `status: 'Customer'`.
   const handleStatusChange = (statusValue, record) => {
     setAccountToUpdate(record);
-    setNewStatus(statusValue ? 'Active' : 'Inactive'); // 'Active' or 'Inactive'
+    setNewStatus(statusValue ? 'Active' : 'Inactive');
     setIsModalVisible(true);
   };
 
   const confirmStatusChange = () => {
     setLoading(true);
-    // The backend will handle setting isCustomer based on the new status
     const updated = { ...accountToUpdate, status: newStatus };
     axios
       .put(`/api/accounts/${accountToUpdate._id}`, updated)
       .then(() => {
         toast.success(`Status updated to ${newStatus}`);
-        fetchCustomers(); // Re-fetch to update the table
+        fetchCustomers();
       })
       .catch((err) => {
         toast.error('Failed to update status');
@@ -142,29 +132,21 @@ const Customers = () => {
       });
   };
 
-  // Modified handleDelete to perform a soft delete (set status to 'Closed')
-  const handleDelete = (record) => {
-    setCustomerToDelete(record);
-    setDeleteModalVisible(true);
-  };
-
-  const confirmDelete = () => {
-    if (!customerToDelete?._id) return;
+  // Modified handleDeleteAccount to perform a soft delete (set status to 'Closed')
+  const handleDeleteAccount = (recordId) => {
     setLoading(true);
-    // Send a PUT request to update the status to 'Closed' (soft delete)
     axios
-      .put(`/api/accounts/${customerToDelete._id}`, { status: 'Closed', isCustomer: false })
+      .put(`/api/accounts/${recordId}`, { status: 'Closed', isCustomer: false })
       .then(() => {
         toast.success('Customer status set to Closed');
-        fetchCustomers(); // Re-fetch to update the table
+        fetchCustomers();
       })
       .catch((err) => {
         toast.error('Failed to close customer account');
         console.error("Soft delete error:", err.response?.data || err.message);
       })
       .finally(() => {
-        setDeleteModalVisible(false);
-        setCustomerToDelete(null);
+        // Removed: setDeleteModalVisible(false) and setCustomerToDelete(null) as they are no longer needed here
         setLoading(false);
       });
   };
@@ -184,13 +166,6 @@ const Customers = () => {
   };
 
   const generatePdf = async (account) => {
-    // For generating PDF of a single account's details, you might need a dedicated
-    // printable component or a hidden div containing the details you want to print.
-    // For this example, I'm just using a generic placeholder.
-    // In a real application, you'd render the details you want to print into a div
-    // or use a specialized PDF generation library.
-
-    // A placeholder div for PDF content. You would populate this with customer details.
     const input = document.createElement('div');
     input.innerHTML = `
       <h1>${account.businessName} Details</h1>
@@ -215,7 +190,7 @@ const Customers = () => {
     `;
     input.style.width = '210mm'; // A4 width
     input.style.padding = '10mm';
-    document.body.appendChild(input); // Temporarily append to body to be rendered by html2canvas
+    document.body.appendChild(input);
 
     toast.loading('Generating PDF...', { id: 'pdf-toast' });
 
@@ -245,15 +220,12 @@ const Customers = () => {
       toast.error('Failed to generate PDF.', { id: 'pdf-toast' });
       console.error("PDF generation error:", error);
     } finally {
-      document.body.removeChild(input); // Remove the temporary div
+      document.body.removeChild(input);
     }
   };
 
   const filtered = customers.filter((account) => {
     const search = searchText.toLowerCase();
-    // Filter by 'Customer' status and search text
-    // The '/api/accounts/customers' endpoint should already return only 'Customer' accounts.
-    // If it doesn't, this filter ensures only 'Customer' status accounts are shown.
     return (
       account.status === 'Customer' &&
       (account.businessName?.toLowerCase().includes(search) ||
@@ -262,15 +234,8 @@ const Customers = () => {
     );
   });
 
-  // These 'active' and 'inactive' arrays within Customers.jsx are problematic
-  // if 'status' field is strictly 'Customer' for all items here.
-  // They might represent a sub-status or if a 'Customer' account is 'deactivated'
-  // by changing its status to 'Inactive' (and thus no longer being a customer in backend filter).
-  // For strict customer management, consider a separate 'customerLifecycleStatus' field.
-  const activeCustomers = filtered.filter((a) => a.status === 'Customer'); // All accounts fetched by /customers should have this status
-  const inactiveCustomers = []; // In this setup, if a customer's status changes from 'Customer', it will no longer appear here.
-                                // So this tab will likely be empty or unused unless we define an 'Inactive Customer' status in schema.
-
+  const activeCustomers = filtered.filter((a) => a.status === 'Customer');
+  const inactiveCustomers = [];
 
   const typeTag = (type) => {
     switch (type) {
@@ -285,9 +250,20 @@ const Customers = () => {
     }
   };
 
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role; // Get the user's role
+
   const columns = [
     { title: 'Sno.', render: (_, __, i) => i + 1, width: 60 },
-    { title: 'Business Name', dataIndex: 'businessName' },
+    {
+      title: 'Business Name',
+      dataIndex: 'businessName',
+      render: (text, record) => (
+        <a onClick={() => goToCustomerProfile(record)} style={{ cursor: 'pointer', color: '#1890ff' }}>
+          {text}
+        </a>
+      ),
+    },
     { title: 'Contact Name', dataIndex: 'contactName' },
     { title: 'Email Id', dataIndex: 'email' },
     { title: 'Type', dataIndex: 'type', render: typeTag },
@@ -315,7 +291,6 @@ const Customers = () => {
     {
       title: 'Status',
       render: (_, record) => (
-        // The status of customers will typically be 'Customer' as per backend logic
         <Tag color={record.status === 'Customer' ? 'blue' : 'gray'}>
           {record.status}
         </Tag>
@@ -330,20 +305,21 @@ const Customers = () => {
               <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => handleEdit(record)}>Edit Customer</Menu.Item>
               <Menu.Item key="notes" icon={<MessageOutlined />} onClick={() => handleOpenNotesDrawer(record)}>View/Add Notes</Menu.Item>
               <Menu.Item key="followups" icon={<CustomerServiceOutlined />} onClick={() => handleOpenFollowUpDrawer(record)}>View/Add Follow-ups</Menu.Item>
-              <Menu.Item key="view-profile" icon={<EyeOutlined />} onClick={() => goToCustomerProfile(record)}>View Profile</Menu.Item>
-              <Menu.Item key="generate-pdf" icon={<PrinterOutlined />} onClick={() => generatePdf(record)}>Generate PDF</Menu.Item>
-              {/* Option to change status from 'Customer' to 'Active' or 'Inactive' */}
-              {record.status === 'Customer' ? (
-                <>
-                  <Menu.Item key="change-to-active-lead" onClick={() => handleStatusChange('Active', record)}>Change to Active Lead</Menu.Item>
-                  <Menu.Item key="change-to-inactive-lead" onClick={() => handleStatusChange('Inactive', record)}>Change to Inactive Lead</Menu.Item>
-                </>
-              ) : (
-                // This else block might not be reached if the view strictly shows 'Customer' status
-                <Menu.Item key="change-to-customer" onClick={() => handleStatusChange('Customer', record)}>Change to Customer</Menu.Item>
-              )}
+              {/* <Menu.Item key="view-profile" icon={<EyeOutlined />} onClick={() => goToCustomerProfile(record)}>View Profile</Menu.Item> */}
 
-              <Menu.Item key="close-account" icon={<DeleteOutlined />} danger onClick={() => handleDelete(record)}>Close Account</Menu.Item>
+              {role === "Superadmin" && (
+                <Menu.Item key="close-account">
+                  <Popconfirm
+                    title="Are you sure you want to close this account? This will set its status to 'Closed'."
+                    onConfirm={() => handleDeleteAccount(record._id)}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <DeleteOutlined />
+                    Close Account
+                  </Popconfirm>
+                </Menu.Item>
+              )}
             </Menu>
           }
           trigger={['click']}
@@ -369,15 +345,8 @@ const Customers = () => {
         </div>
 
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          {/* Changed tab labels and counts to reflect filtering 'Customer' status accounts */}
-          {/* All customers fetched will have status 'Customer', so 'activeCustomers' will contain all of them */}
-          {/* 'inactiveCustomers' will be empty unless a new sub-status or explicit 'Inactive' status for customers is added */}
           <TabPane tab={`All Customers (${activeCustomers.length})`} key="active">
             <Table columns={columns} dataSource={activeCustomers} rowKey="_id" pagination={{ pageSize: 10 }} loading={loading} scroll={{ x: 'max-content' }} />
-          </TabPane>
-          {/* Consider if an 'Inactive' customer concept is needed, otherwise this tab might be redundant */}
-          <TabPane tab={`Inactive Customers (${inactiveCustomers.length})`} key="inactive">
-            <Table columns={columns} dataSource={inactiveCustomers} rowKey="_id" pagination={{ pageSize: 10 }} loading={loading} scroll={{ x: 'max-content' }} />
           </TabPane>
         </Tabs>
       </Card>
@@ -403,7 +372,8 @@ const Customers = () => {
         <p>Are you sure you want to change the status of <strong>{accountToUpdate?.businessName}</strong> to <strong>{newStatus}</strong>?</p>
       </Modal>
 
-      <Modal
+      {/* Removed the redundant delete confirmation Modal */}
+      {/* <Modal
         title="Confirm Account Closure"
         open={deleteModalVisible}
         onOk={confirmDelete}
@@ -414,7 +384,7 @@ const Customers = () => {
         confirmLoading={loading}
       >
         <p>Are you sure you want to change the status of <strong>{customerToDelete?.businessName}</strong> to 'Closed'?</p>
-      </Modal>
+      </Modal> */}
 
       {selectedAccount && (
         <FollowUpDrawer

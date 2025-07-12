@@ -23,7 +23,7 @@ function ErrorFallback({ error, resetErrorBoundary }) {
         onClick={resetErrorBoundary}
         style={{
           padding: '8px 16px',
-          background: '#1890ff',
+          background: '#ef7a1b',
           color: 'white',
           border: 'none',
           borderRadius: '4px',

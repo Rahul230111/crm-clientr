@@ -171,11 +171,12 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
           rules={[{ required: true, message: 'Please select an account status' }]}
         >
           <Select placeholder="Select Status">
-            <Option value="Active">Active</Option>
-            <Option value="Inactive">Inactive</Option>
-            <Option value="Pipeline">Pipeline</Option>
+            <Option value="Active">Enquiry</Option>
+            {/* <Option value="Inactive">Inactive</Option> */}
+            <Option value="Pipeline">Proposed</Option>
+                        <Option value="Customer">Customer</Option> {/* Added Customer option */}
+
             <Option value="Closed">Closed</Option>
-            <Option value="Customer">Customer</Option> {/* Added Customer option */}
           </Select>
         </Form.Item>
 

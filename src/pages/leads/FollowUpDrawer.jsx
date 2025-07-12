@@ -1,138 +1,182 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Drawer, Button, Input, DatePicker, Tabs, List, Typography, Divider, Modal
+  Drawer, Button, Input, DatePicker, List, Typography, Divider, Modal
 } from 'antd';
 import axios from '../../api/axios';
 import { toast } from 'react-hot-toast';
 import moment from 'moment';
+import { UserOutlined, ClockCircleOutlined, MessageOutlined } from '@ant-design/icons'; // Import icons
 
 const { TextArea } = Input;
-const { TabPane } = Tabs;
+const { Text } = Typography;
 
+/**
+ * FollowUpDrawer component for managing follow-ups related to an account.
+ * It allows viewing, adding, editing, and deleting follow-up notes.
+ *
+ * @param {object} props - The component props.
+ * @param {boolean} props.visible - Controls the visibility of the drawer.
+ * @param {function} props.onClose - Callback function to close the drawer.
+ * @param {object} props.account - The account object to which follow-ups are associated.
+ * @param {function} props.refreshAccounts - Callback to refresh the account list after changes.
+ */
 const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
   const [comment, setComment] = useState('');
   const [followupDate, setFollowupDate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [followUps, setFollowUps] = useState([]);
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingFollowUp, setEditingFollowUp] = useState(null);
 
   useEffect(() => {
-    if (visible && account?._id) fetchFollowUps();
+    if (visible && account?._id) {
+      fetchFollowUps();
+    } else {
+      setFollowUps([]);
+      setEditingFollowUp(null);
+      setComment('');
+      setFollowupDate(null);
+    }
   }, [visible, account]);
 
   const fetchFollowUps = async () => {
+    if (!account?._id) return;
+    setLoading(true);
     try {
       const res = await axios.get(`/api/accounts/${account._id}/followups`);
-      setFollowUps(res.data || []);
-    } catch {
+      setFollowUps(res.data.sort((a, b) => moment(b.createdAt).diff(moment(a.createdAt))) || []);
+    } catch (err) {
+      console.error("Error fetching follow-ups:", err);
       toast.error('Failed to fetch follow-ups');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAddOrUpdate = () => {
-    if (!comment || !followupDate) {
-      toast.error('Please fill in all fields');
+    if (!comment.trim() || !followupDate) {
+      toast.error('Please select a date and enter a note for the follow-up.');
       return;
     }
 
     const user = JSON.parse(localStorage.getItem('user'));
     const addedBy = user?._id;
     if (!addedBy) {
-      toast.error('User not found');
+      toast.error('User information not found. Please log in.');
       return;
     }
 
     setLoading(true);
 
     const payload = {
-      date: followupDate.format('YYYY-MM-DD'),
-      note: comment,
+      date: followupDate.toISOString(),
+      note: comment.trim(),
       addedBy
     };
 
-    const request = editingIndex === null
+    const request = editingFollowUp === null
       ? axios.post(`/api/accounts/${account._id}/followups`, payload)
-      : axios.put(`/api/accounts/${account._id}/followups/${editingIndex}`, payload);
+      : axios.put(`/api/accounts/${account._id}/followups/${editingFollowUp._id}`, payload);
 
     request
       .then(() => {
-        toast.success(editingIndex === null ? 'Follow-up added' : 'Follow-up updated');
+        toast.success(editingFollowUp === null ? 'Follow-up added successfully!' : 'Follow-up updated successfully!');
         setComment('');
         setFollowupDate(null);
-        setEditingIndex(null);
+        setEditingFollowUp(null);
         fetchFollowUps();
-        refreshAccounts();
+        if (typeof refreshAccounts === 'function') {
+          refreshAccounts();
+        }
       })
       .catch((err) => {
-        toast.error(err?.response?.data?.message || 'Failed to save follow-up');
+        console.error("Error saving follow-up:", err);
+        toast.error(err?.response?.data?.message || 'Failed to save follow-up.');
       })
       .finally(() => setLoading(false));
   };
 
-  const handleEdit = (index) => {
-    const f = followUps[index];
-    setComment(f.note);
-    setFollowupDate(moment(f.date));
-    setEditingIndex(index);
+  const handleEdit = (item) => {
+    setComment(item.note);
+    setFollowupDate(moment(item.date));
+    setEditingFollowUp(item);
   };
 
-  const handleDelete = (index) => {
+  const handleDelete = (followUpId) => {
     Modal.confirm({
       title: 'Delete Follow-up',
-      content: 'Are you sure you want to delete this follow-up?',
-      okText: 'Yes',
+      content: 'Are you sure you want to delete this follow-up? This action cannot be undone.',
+      okText: 'Yes, Delete',
       cancelText: 'No',
       okButtonProps: { danger: true },
       onOk: () => {
-        axios.delete(`/api/accounts/${account._id}/followups/${index}`)
+        setLoading(true);
+        axios.delete(`/api/accounts/${account._id}/followups/${followUpId}`)
           .then(() => {
-            toast.success('Follow-up deleted');
+            toast.success('Follow-up deleted successfully!');
             fetchFollowUps();
-            refreshAccounts();
+            if (typeof refreshAccounts === 'function') {
+              refreshAccounts();
+            }
           })
-          .catch(() => toast.error('Failed to delete follow-up'));
+          .catch((err) => {
+            console.error("Error deleting follow-up:", err);
+            toast.error(err?.response?.data?.message || 'Failed to delete follow-up.');
+          })
+          .finally(() => setLoading(false));
       }
     });
   };
 
-  const today = moment().format('YYYY-MM-DD');
-  const sorted = [...followUps].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  const todayFollowUps = sorted.filter(f =>
-    moment(f.date).format('YYYY-MM-DD') === today
-  );
-  const upcoming = sorted.filter(f =>
-    moment(f.date).isAfter(today, 'day')
-  );
-  const past = sorted.filter(f =>
-    moment(f.date).isBefore(today, 'day')
-  );
-
-  const renderFollowUpItem = (item, index) => (
+  /**
+   * Renders a single follow-up item for the Ant Design List component.
+   * This now includes styling to mimic the message bubble from your image.
+   * @param {object} item - The follow-up object to render.
+   * @returns {JSX.Element} The rendered List.Item.
+   */
+  const renderFollowUpItem = (item) => (
     <List.Item
-      actions={[
-        <a key="edit" onClick={() => handleEdit(index)}>Edit</a>,
-        <a key="delete" onClick={() => handleDelete(index)}>Delete</a>
-      ]}
+      // actions={[
+      //   <Button key="edit" type="link" onClick={() => handleEdit(item)}>Edit</Button>,
+      //   <Button key="delete" type="link" danger onClick={() => handleDelete(item._id)}>Delete</Button>
+      // ]}
+      // style={{
+      //   borderBottom: 'none', // Remove default list item border
+      //   paddingBottom: '0px',
+      //   marginBottom: '15px', // More space between bubbles
+      //   alignItems: 'flex-start', // Align actions to the top if the bubble is tall
+      // }}
     >
-      <div>
-        <Typography.Text strong>
-          {moment(item.date).format('DD-MM-YYYY')}
-        </Typography.Text><br />
-        {item.note}<br />
-        <Typography.Text type="secondary">
-          By {item.addedBy?.name || item.addedBy?.email || 'Unknown'}
-        </Typography.Text>
+      <div style={{
+        backgroundColor: '#f0f2f5', // Light grey background for the bubble
+        borderRadius: '12px', // Rounded corners
+        padding: '10px 15px', // Padding inside the bubble
+        maxWidth: 'calc(100% - 80px)', // Adjust max width to leave space for actions
+        flexGrow: 1, // Allow the bubble to grow
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+          <UserOutlined style={{ marginRight: '5px', color: '#888' }} />
+          <Text strong style={{ marginRight: '10px', color: '#333' }}>
+            {item.addedBy?.name || item.addedBy?.email || 'Unknown User'}
+          </Text>
+          <ClockCircleOutlined style={{ marginRight: '5px', color: '#888' }} />
+          <Text type="secondary" style={{ fontSize: '0.8em' }}>
+            {moment(item.createdAt).format('DD/MM/YYYY, h:mm:ss A')} {/* Match format from image */}
+          </Text>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+            <MessageOutlined style={{ marginRight: '8px', marginTop: '3px', color: '#555' }} />
+            <Text style={{ flexGrow: 1 }}>{item.note}</Text>
+        </div>
       </div>
     </List.Item>
   );
 
   return (
     <Drawer
-      title={`Follow-ups: ${account?.businessName}`}
+      title={`Follow-ups for Account: ${account?.businessName || 'N/A'}`}
       open={visible}
       onClose={() => {
-        setEditingIndex(null);
+        setEditingFollowUp(null);
         setComment('');
         setFollowupDate(null);
         onClose();
@@ -145,6 +189,7 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
           format="DD-MM-YYYY"
           value={followupDate}
           onChange={(date) => setFollowupDate(date)}
+          placeholder="Select follow-up date"
         />
         <TextArea
           rows={4}
@@ -154,39 +199,22 @@ const FollowUpDrawer = ({ visible, onClose, account, refreshAccounts }) => {
         />
         <Button
           type="primary"
-           style={{ marginTop: 10 , backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+          style={{ marginTop: 10, backgroundColor: '#ef7a1b', borderColor: '#ef7a1b', color: 'white' }}
           block
           onClick={handleAddOrUpdate}
           loading={loading}
         >
-          {editingIndex === null ? 'Add Follow-up' : 'Update Follow-up'}
+          {editingFollowUp === null ? 'Add Follow-up' : 'Update Follow-up'}
         </Button>
       </div>
 
-      <Divider />
-      <Tabs defaultActiveKey="today">
-        <TabPane tab={`Today's Follow-ups (${todayFollowUps.length})`} key="today">
-          <List
-            dataSource={todayFollowUps}
-            renderItem={(item, index) => renderFollowUpItem(item, followUps.indexOf(item))}
-            locale={{ emptyText: 'No follow-ups for today' }}
-          />
-        </TabPane>
-        <TabPane tab={`Upcoming Follow-ups (${upcoming.length})`} key="upcoming">
-          <List
-            dataSource={upcoming}
-            renderItem={(item, index) => renderFollowUpItem(item, followUps.indexOf(item))}
-            locale={{ emptyText: 'No upcoming follow-ups' }}
-          />
-        </TabPane>
-        <TabPane tab={`Past Follow-ups (${past.length})`} key="past">
-          <List
-            dataSource={past}
-            renderItem={(item, index) => renderFollowUpItem(item, followUps.indexOf(item))}
-            locale={{ emptyText: 'No past follow-ups' }}
-          />
-        </TabPane>
-      </Tabs>
+      <Divider>All Follow-ups ({followUps.length})</Divider>
+      <List
+        dataSource={followUps}
+        renderItem={renderFollowUpItem}
+        locale={{ emptyText: 'No follow-ups found for this account.' }}
+        style={{ marginTop: 16 }}
+      />
     </Drawer>
   );
 };

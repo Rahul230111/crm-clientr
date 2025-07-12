@@ -5,6 +5,8 @@ import {
   UserOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import logoExpanded from "../../assets/megacrane.png";
+import './TopNavbar.css';
 
 const TopNavbar = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
@@ -44,34 +46,24 @@ const TopNavbar = ({ collapsed, setCollapsed }) => {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      height: 64,
-      padding: '0 16px',
-      background: '#fff',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100
-    }}>
-      {/* Sidebar toggle - optional */}
-      <div style={{ display: 'flex', alignItems: 'center' }} onClick={() => setCollapsed(!collapsed)}>
-        {/* Add toggle icon if needed */}
+    <div className="top-navbar-container">
+      {/* Show logo only on mobile */}
+      <div className="mobile-logo-wrapper" onClick={() => setCollapsed(!collapsed)}>
+        <img src={logoExpanded} alt="logo" className="moblelogo" />
       </div>
 
-      {/* Avatar */}
+      {/* Avatar (always in the same right-hand position) */}
       <Space>
         <Dropdown overlay={menu} placement="bottomRight" arrow>
           <Avatar
             style={{
               backgroundColor: '#1677ff',
               color: '#fff',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             {getInitial()}
-          </Avatar >
+          </Avatar>
         </Dropdown>
       </Space>
     </div>

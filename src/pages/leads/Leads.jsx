@@ -63,6 +63,9 @@ const Leads = () => {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role; // Get the user's role
+
   const tableRef = useRef(null);
 
   useEffect(() => {
@@ -381,9 +384,9 @@ const Leads = () => {
           case "Active":
             color = "green";
             break;
-          case "Inactive":
-            color = "red";
-            break;
+          // case "Inactive":
+          //   color = "red";
+          //   break;
           case "Pipeline":
             color = "orange";
             break;
@@ -400,7 +403,7 @@ const Leads = () => {
       },
       filters: [
         { text: "Active", value: "Active" },
-        { text: "Inactive", value: "Inactive" },
+        // { text: "Inactive", value: "Inactive" },
         { text: "Pipeline", value: "Pipeline" },
         { text: "Closed", value: "Closed" },
         { text: "Customer", value: "Customer" }, // Added 'Customer' filter
@@ -462,15 +465,9 @@ const Leads = () => {
               >
                 View/Add Follow-ups
               </Menu.Item>
-              <Menu.Item
-                key="generate-pdf-single"
-                icon={<PrinterOutlined />}
-                onClick={() => generatePdfSingleAccount(record)}
-              >
-                Generate PDF (Single)
-              </Menu.Item>
+              
               {/* Conditional menu item for changing status to Customer or Active */}
-              {record.status === "Customer" ? (
+              {/* {record.status === "Customer" ? (
                 <Menu.Item
                   key="change-to-lead"
                   onClick={() => handleStatusChange("Active", record)} // Change to 'Active' lead
@@ -484,18 +481,21 @@ const Leads = () => {
                 >
                   Change to Customer
                 </Menu.Item>
+              )} */}
+              {/* Conditionally render Close Account based on role */}
+              {role === "Superadmin" && ( // Updated condition to show only for 'Superadmin'
+                <Menu.Item key="close-account">
+                  <Popconfirm
+                    title="Are you sure you want to close this account? This will set its status to 'Closed'."
+                    onConfirm={() => handleDeleteAccount(record._id)} // This now sets status to 'Closed'
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <DeleteOutlined />
+                    Close Account
+                  </Popconfirm>
+                </Menu.Item>
               )}
-              <Menu.Item>
-                <Popconfirm
-                  title="Are you sure you want to close this account? This will set its status to 'Closed'."
-                  onConfirm={() => handleDeleteAccount(record._id)} // This now sets status to 'Closed'
-                  okText="Yes"
-                  cancelText="No"
-                >
-                  <DeleteOutlined />
-                  Close Account
-                </Popconfirm>
-              </Menu.Item>
             </Menu>
           }
           trigger={["click"]}
@@ -596,7 +596,7 @@ const Leads = () => {
         <TabPane tab={`Enquiry (${activeLeadsCount})`} key="active" />
         <TabPane tab={`Propesed (${pipelineLeadsCount})`} key="Pipeline" /> {/* Corrected label */}
 
-        <TabPane tab={`Customers (${customersCount})`} key="customers" />
+        {/* <TabPane tab={`Customers (${customersCount})`} key="customers" /> */}
         <TabPane
           tab={`Closed Accounts (${closedAccountsCount})`}
           key="closed"

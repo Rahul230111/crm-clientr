@@ -102,7 +102,7 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
             </Form.Item>
           </Col>
         </Row>
-
+{/* 
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="inStock" label="In Stock">
@@ -114,14 +114,14 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
               <Input type="number" placeholder="Out Stock" />
             </Form.Item>
           </Col>
-        </Row>
+        </Row> */}
 
         <Row gutter={16}>
-          <Col span={12}>
+          {/* <Col span={12}>
             <Form.Item name="stockLoadDate" label="Stock Load Date">
               <DatePicker style={{ width: '100%' }} />
             </Form.Item>
-          </Col>
+          </Col> */}
           <Col span={12}>
             {/* You can add another field here if needed, or leave blank */}
           </Col>

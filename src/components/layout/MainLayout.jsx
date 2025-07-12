@@ -1,47 +1,65 @@
 import { Layout } from 'antd';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
-import { useState, useCallback } from 'react'; // Import useCallback for memoization
-import './layout.css'; // Keep CSS for now, but consider CSS-in-JS for larger projects
+import { useState, useCallback, useEffect } from 'react';
+import './layout.css';
+import MobileNavbar from './MobileNavbar';
 
 const { Sider, Content, Header } = Layout;
 
 const MainLayout = ({ children }) => {
-  // State for sidebar collapse, initialized to false (expanded)
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Memoize the onCollapse handler for performance
+  // Check screen size on mount and resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize); // Update on resize
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleCollapse = useCallback((isCollapsed) => {
     setCollapsed(isCollapsed);
   }, []);
 
   return (
-    <Layout className="main-layout">
-      <Sider
-        collapsible // Allows the sider to be collapsed
-        collapsed={collapsed} // Controls the collapsed state
-        onCollapse={handleCollapse} // Callback for collapse event
-        breakpoint="lg" // Ant Design's recommended breakpoint for responsive layouts
-        collapsedWidth="80" // A slightly larger collapsed width for better icon visibility
-        className="sidebar"
-        theme="light" // Explicitly set theme for a cleaner look if desired
-      >
-        {/* Pass the collapsed state to the Sidebar component */}
-        <Sidebar collapsed={collapsed} />
-      </Sider>
-      <Layout>
-        <Header className="top-navbar">
-          {/* TopNavbar might need to adjust its content based on collapsed state too */}
-          <TopNavbar collapsed={collapsed} setCollapsed={setCollapsed} />
-        </Header>
-        <Content className="main-content">
-          <div className="inner-content">
-            {children} {/* Renders the content of your page */}
-          </div>
-        </Content>
+    <>
+      <Layout className="main-layout">
+        {!isMobile && (
+          <Sider
+            collapsible
+            collapsed={collapsed}
+            onCollapse={handleCollapse}
+            breakpoint="lg"
+            collapsedWidth="80"
+            className="sidebar"
+            theme="light"
+          >
+            <Sidebar collapsed={collapsed} />
+          </Sider>
+        )}
+
+        <Layout>
+          {/* ✅ TopNavbar always visible */}
+          <Header className="top-navbar">
+            <TopNavbar collapsed={collapsed} setCollapsed={setCollapsed} />
+          </Header>
+
+          <Content className="main-content">
+            <div className="inner-content">{children}</div>
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
+
+      {/* ✅ Show MobileNavbar only on mobile */}
+      {isMobile && <MobileNavbar />}
+    </>
   );
 };
 
-export default MainLayout;  
+export default MainLayout;

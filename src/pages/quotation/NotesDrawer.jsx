@@ -16,6 +16,7 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
   const [notes, setNotes] = useState([]);
 
   useEffect(() => {
+    // Ensure notes are updated when quotation changes
     setNotes(quotation?.notes || []);
   }, [quotation]);
 
@@ -32,20 +33,31 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
     try {
       setLoading(true);
       const toastId = toast.loading('Adding note...');
+
       const newNote = {
         text: values.note,
         timestamp: new Date().toLocaleString(),
         author: getCurrentUser()
       };
+      // Create a new array with the new note appended
       const updatedNotes = [...notes, newNote];
+      
+      // Send only the updated notes array to the backend.
+      // The backend (quotationController.js) should be modified to handle this partial update.
       await axios.put(`/api/quotations/${quotation._id}`, {
         notes: updatedNotes
       });
-      setNotes(updatedNotes);
+      
+      setNotes(updatedNotes); // Update local state
       toast.success('Note added', { id: toastId });
-      form.resetFields();
-      refreshQuotations();
+      form.resetFields(); // Clear the input field
+
+      // Call refreshQuotations if it's a function to update the parent component's data
+      if (typeof refreshQuotations === 'function') {
+        refreshQuotations();
+      }
     } catch (error) {
+      console.error("Failed to add note:", error);
       toast.error('Failed to add note');
     } finally {
       setLoading(false);
@@ -83,10 +95,10 @@ const NotesDrawer = ({ visible, onClose, quotation, refreshQuotations }) => {
       open={visible}
       onClose={onClose}
       width={440}
-      destroyOnClose
+      destroyOnClose // Ensures form fields reset when closed
     >
       <Spin spinning={loading}>
-        <div style={{ maxHeight: 460, overflowY: 'auto', marginBottom: 16 }}>
+        <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', marginBottom: 16 }}>
           {renderNotes()}
         </div>
 

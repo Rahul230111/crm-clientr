@@ -1,0 +1,33 @@
+.top-navbar-container {
+  display: flex;
+    justify-content: flex-end;  align-items: center;
+  height: 64px;
+  padding: 0 16px;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Hide logo by default */
+.mobile-logo-wrapper {
+  display: none;
+}
+
+/* Show logo only on mobile screens */
+@media (max-width: 768px) {
+  .mobile-logo-wrapper {
+    display: flex;
+    align-items: center;
+  }
+.top-navbar-container {
+  display: flex;
+    justify-content: space-between; 
+ 
+}
+
+  .moblelogo {
+    display: block;
+    width: 150px;
+  }
+}

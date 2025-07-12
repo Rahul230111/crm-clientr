@@ -59,9 +59,15 @@ const QuotationForm = ({ onCancel, onSave, initialValues, isSaving }) => {
   const { token } = useToken(); // Ant Design token for theme variables (e.g., spacing, colors)
   const styles = generateQuotationFormStyles(token); // Custom styles generated using theme tokens
 
+  // State for pipeline and customer details
+  const [pipelineOptions, setPipelineOptions] = useState([]);
+  const [customerDetailsOptions, setCustomerDetailsOptions] = useState([]);
+
   // Refs to prevent duplicate API calls on re-renders
   const hasFetchedBusinessOptions = useRef(false);
   const hasFetchedProductOptions = useRef(false);
+  const hasFetchedPipelineOptions = useRef(false);
+  const hasFetchedCustomerDetailsOptions = useRef(false);
 
   /**
    * Formats business details into a multi-line string for display.
@@ -83,18 +89,18 @@ ${business.email || ""}`.trim();
   }, []);
 
   /**
-   * Fetches active business leads from the API to populate the business dropdown.
+   * Fetches all business accounts (leads + customers) from the API to populate the business dropdown.
+   * CHANGED: Now fetches from /api/accounts/ to get all businesses.
    */
   const fetchBusinessOptions = useCallback(async () => {
     if (hasFetchedBusinessOptions.current) return; // Prevent re-fetching
     hasFetchedBusinessOptions.current = true;
     const toastId = toast.loading("Loading business options...");
     try {
-      const res = await axios.get("/api/quotations/leads/active");
+      const res = await axios.get("/api/accounts/"); // ✅ CHANGED: Fetch from /api/accounts/
       setBusinessOptions(res.data);
       toast.success("Business options loaded", { id: toastId });
     } catch (error) {
-      // Added catch block
       toast.error("Failed to load businesses", { id: toastId });
       console.error("Error fetching business options:", error);
       hasFetchedBusinessOptions.current = false; // Allow re-fetching on error
@@ -130,12 +136,54 @@ ${business.email || ""}`.trim();
   }, []);
 
   /**
+   * Fetches pipeline data from the API.
+   * This now expects the backend route /api/quotations/pipeline
+   */
+  const fetchPipelineOptions = useCallback(async () => {
+    if (hasFetchedPipelineOptions.current) return; // Prevent re-fetching
+    hasFetchedPipelineOptions.current = true;
+    const toastId = toast.loading("Loading pipeline data...");
+    try {
+      const res = await axios.get("/api/quotations/pipeline"); 
+      setPipelineOptions(res.data);
+      toast.success("Pipeline data loaded", { id: toastId });
+    } catch (error) {
+      toast.error("Failed to load pipeline data", { id: toastId });
+      console.error("Error fetching pipeline options:", error);
+      hasFetchedPipelineOptions.current = false; // Allow re-fetching on error
+    }
+  }, []);
+
+  /**
+   * Fetches customer details from the API.
+   * This now expects the backend route /api/accounts/customers
+   */
+  const fetchCustomerDetailsOptions = useCallback(async () => {
+    if (hasFetchedCustomerDetailsOptions.current) return; // Prevent re-fetching
+    hasFetchedCustomerDetailsOptions.current = true;
+    const toastId = toast.loading("Loading customer details...");
+    try {
+      // Updated endpoint to match backend routing for business accounts
+      const res = await axios.get("/api/accounts/customers"); 
+      setCustomerDetailsOptions(res.data);
+      toast.success("Customer details loaded", { id: toastId });
+    } catch (error) {
+      toast.error("Failed to load customer details", { id: toastId });
+      console.error("Error fetching customer details:", error);
+      hasFetchedCustomerDetailsOptions.current = false; // Allow re-fetching on error
+    }
+  }, []);
+
+  /**
    * useEffect hook to fetch initial data and set form values when the component mounts
    * or when initialValues change.
    */
   useEffect(() => {
     fetchBusinessOptions();
     fetchProductOptions();
+    // Call the new fetch functions
+    fetchPipelineOptions();
+    fetchCustomerDetailsOptions();
 
     if (initialValues) {
       // Set form fields with initial values, converting date strings to Dayjs objects
@@ -198,6 +246,9 @@ ${business.email || ""}`.trim();
     initialValues,
     fetchBusinessOptions,
     fetchProductOptions,
+    // Add new fetch functions to dependencies
+    fetchPipelineOptions,
+    fetchCustomerDetailsOptions,
     form,
     formatBusinessInfo,
     businessOptions, // Dependency to re-run if businessOptions change after initial load
@@ -517,7 +568,7 @@ ${business.email || ""}`.trim();
 
   /**
    * Handles the selection of a business from the dropdown.
-   * Populates related form fields with the selected business's details.
+   * Populates related form fields with the selected business'ss details.
    * @param {string} id - The unique ID of the selected business.
    */
   const handleBusinessSelect = (id) => {
@@ -593,14 +644,7 @@ ${business.email || ""}`.trim();
               <Input />
             </Form.Item>
           </Col>
-          <Col xs={24} md={12}>
-            <Form.Item name="businessType" label="Type">
-              <Input readOnly style={styles.readOnlyFormField} />
-            </Form.Item>
-          </Col>
-        </Row>
 
-        <Row gutter={[16]}>
           <Col xs={24} md={12}>
             <Form.Item label="Business Info">
               <Card bordered style={styles.businessInfoCard}>
@@ -611,6 +655,15 @@ ${business.email || ""}`.trim();
               </Card>
             </Form.Item>
           </Col>
+          {/* <Col xs={24} md={12}>
+            <Form.Item name="businessType" label="Type">
+              <Input readOnly style={styles.readOnlyFormField} />
+            </Form.Item>
+          </Col> */}
+        </Row>
+
+        <Row gutter={[16]}>
+          
         </Row>
 
         {/* Quotation Details Section */}
@@ -754,10 +807,10 @@ ${business.email || ""}`.trim();
                 <Col xs={24} sm={8}>
                   <Form.Item label="Item Total">
                     <Input
+                      readOnly
                       value={`₹${(
                         (item.quantity || 0) * (item.rate || 0)
                       ).toFixed(2)}`}
-                      readOnly
                       style={styles.totalItemField}
                     />
                   </Form.Item>

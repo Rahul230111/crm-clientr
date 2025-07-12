@@ -102,16 +102,16 @@ const Product = () => {
       render: (val) => `₹${val?.toFixed(2)}`,
       width: 100,
     },
-    {
-      title: "In Stock",
-      dataIndex: "inStock",
-      width: 100,
-    },
-    {
-      title: "Out Stock",
-      dataIndex: "outStock",
-      width: 100,
-    },
+    // {
+    //   title: "In Stock",
+    //   dataIndex: "inStock",
+    //   width: 100,
+    // },
+    // {
+    //   title: "Out Stock",
+    //   dataIndex: "outStock",
+    //   width: 100,
+    // },
     {
       title: "Status",
       dataIndex: "isActive",
