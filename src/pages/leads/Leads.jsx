@@ -552,7 +552,7 @@ const Leads = () => {
   );
 
   return (
-    <Card title={<Title level={2}>Manage Leads & Customers</Title>}>
+    <Card title={<Title level={4}>Manage Leads & Customers</Title>}>
       <div
         style={{
           marginBottom: 16,
@@ -584,10 +584,9 @@ const Leads = () => {
           </Button>
 
           <Button icon={<FilePdfOutlined />} onClick={exportTableToPdf}>
-            Export to PDF
+            
           </Button>
           <Button icon={<FileExcelOutlined />} onClick={exportTableToExcel}>
-            Export to Excel
           </Button>
         </Space>
       </div>

@@ -346,10 +346,10 @@ const QuotationList = ({
           onChange={(e) => {
             onSearch(e.target.value);
           }}
-          style={{ width: 400 }}
+          style={{ width: 200 }}
           prefix={<SearchOutlined />}
           allowClear
-        />
+        /> 
         <Button
           type="primary"
            style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
@@ -360,7 +360,7 @@ const QuotationList = ({
             });
           }}
         >
-          + New Quotation
+          + Add
         </Button>
       </Space>
 

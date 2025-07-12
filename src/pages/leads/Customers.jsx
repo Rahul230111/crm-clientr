@@ -331,7 +331,7 @@ const Customers = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div >
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap' }}>
           <Title level={4}>Customers</Title>
