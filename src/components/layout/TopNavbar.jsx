@@ -30,9 +30,9 @@ const TopNavbar = ({ collapsed, setCollapsed }) => {
       <Menu.Item key="profile" icon={<UserOutlined />} onClick={handleProfile}>
         Profile
       </Menu.Item>
-      <Menu.Item key="settings" icon={<SettingOutlined />} onClick={handleSettings}>
+      {/* <Menu.Item key="settings" icon={<SettingOutlined />} onClick={handleSettings}>
         Settings
-      </Menu.Item>
+      </Menu.Item> */}
       <Menu.Divider />
       <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
         Logout

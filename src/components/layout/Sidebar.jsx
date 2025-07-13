@@ -12,6 +12,7 @@ import {
   UserSwitchOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
+import './sidebar.css';
 
 import logoCollapsed from "../../assets/megacranesmall.png";
 import logoExpanded from "../../assets/megacrane.png";

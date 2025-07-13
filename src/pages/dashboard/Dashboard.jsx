@@ -745,7 +745,6 @@
               textOverflow: 'ellipsis',
               marginRight: '8px'
             }}>
-              {note} {/* Display the truncated note here */}
             </span>
             {note && note.length > 0 && ( // Only show tooltip if there's a comment
               <Tooltip title={note}>

@@ -4,8 +4,9 @@ import TopNavbar from './TopNavbar';
 import { useState, useCallback, useEffect } from 'react';
 import './layout.css';
 import MobileNavbar from './MobileNavbar';
+import FooterComponent from './FooterComponent'; // 👈 Import the Footer
 
-const { Sider, Content, Header } = Layout;
+const { Sider, Content, Header, Footer } = Layout;
 
 const MainLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -29,7 +30,7 @@ const MainLayout = ({ children }) => {
 
   return (
     <>
-      <Layout className="main-layout">
+      <Layout className="main-layout" style={{ minHeight: '100vh' }}>
         {!isMobile && (
           <Sider
             collapsible
@@ -37,7 +38,6 @@ const MainLayout = ({ children }) => {
             onCollapse={handleCollapse}
             breakpoint="lg"
             collapsedWidth="80"
-      
             className="sidebar"
             theme="light"
           >
@@ -54,6 +54,12 @@ const MainLayout = ({ children }) => {
           <Content className="main-content">
             <div className="inner-content">{children}</div>
           </Content>
+
+          {/* ✅ Footer */}
+          <Footer>
+            © {new Date().getFullYear()} All rights are reserved by <strong>MegaCrane</strong> | 
+            Design and developed by <strong>Acculermeda</strong>
+          </Footer>
         </Layout>
       </Layout>
 

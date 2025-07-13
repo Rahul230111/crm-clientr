@@ -1,0 +1,72 @@
+
+/* Logo section */
+.sidebar-logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.sidebar-logo img {
+  padding: 10px;
+  height: auto;
+  transition: all 0.3s ease;
+  width: 170px;
+}
+
+.sidebar.collapsed .sidebar-logo img {
+  width: 59px;
+}
+
+/* Ant Design Menu overrides */
+.ant-menu {
+  border-right: none !important;
+  color: black;
+}
+
+.ant-menu-item {
+  font-size: 14px;
+  height: 44px;
+  line-height: 44px;
+}
+
+.ant-menu-submenu-title {
+  font-size: 14px;
+  height: 44px;
+  line-height: 44px;
+}
+
+.ant-menu-item-selected {
+  background-color: #ffffff !important;
+  font-weight: 500;
+  border-left: 4px solid #ef7a1b;
+}
+
+.ant-menu-item:hover,
+.ant-menu-submenu-title:hover {
+  background-color: #f5f5f5 !important;color: black !important;
+}
+
+/* Scrollbar styling for better look */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/* Responsive Sidebar Hide for Mobile */
+@media screen and (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+}

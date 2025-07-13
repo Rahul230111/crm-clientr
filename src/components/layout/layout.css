@@ -69,9 +69,7 @@
 /* ============================
    Content Styles
 ============================ */
-.main-content {
-  margin: 16px;
-}
+
 
 .inner-content {
   padding: 24px;
@@ -151,15 +149,10 @@
   background: #ffffff;
   min-height: calc(100vh - 64px - 48px);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
   transition: all 0.3s ease-in-out;
   overflow-x: hidden; 
 
   min-height: calc(100vh - 64px - 48px - 64px); /* Full height - (header + content margins) - fixed header height */
-}
-
-.inner-content {
-  /* You can add padding here if needed, or let individual pages define their padding */
 }
 
 /* Optional: Adjust for smaller collapsedWidth if needed */
@@ -181,3 +174,11 @@
     overflow: hidden; /* Allow scrolling if content exceeds height */
 }
 
+.ant-layout-footer {
+  text-align: center;
+  background-color: #f0f2f5;
+  color: #555;
+  padding: 16px 50px;
+  border-top: 1px solid #e8e8e8;
+  font-size: 14px;
+}
