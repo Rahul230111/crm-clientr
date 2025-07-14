@@ -11,7 +11,7 @@ export default defineConfig({
 
     proxy: {
       '/api': {
-        target: 'https://crmbackend-production-911d.up.railway.app',
+        target: 'https://megacrane-crm.onrender.com',
         changeOrigin: true,
         secure: false
       }
