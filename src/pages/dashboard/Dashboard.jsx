@@ -29,7 +29,6 @@
     EyeOutlined,
     EditOutlined,
     FacebookOutlined,
-    GoogleOutlined,
     ShopOutlined,
     QuestionCircleOutlined,
     FireOutlined, // Icon for Hot Lead
@@ -83,9 +82,8 @@
     // New state for Source data as requested by the user
     const [sourceData, setSourceData] = useState({
       Direct: 0,
-      Facebook: 0,
-      'Google Ads': 0, // UPDATED: Changed from 'GoogleAds' to 'Google Ads'
-      Website: 0,
+      socialmedia: 0,
+      online: 0,
       client: 0,
       tradefair: 0,
       Other: 0,
@@ -191,11 +189,9 @@
       switch (sourceType) {
         case 'Direct':
           return <ShopOutlined />; // Represents direct interaction or walk-in
-        case 'Facebook':
+        case 'socialmedia':
           return <FacebookOutlined />; // Represents Facebook as a source
-        case 'Google Ads': // UPDATED: Matched backend enum 'Google Ads'
-          return <GoogleOutlined />; // Represents Google Ads as a source
-        case 'Website':
+        case 'online':
           return <GlobalOutlined />; // Represents website traffic as a source
         case 'client':
           return <TeamOutlined />; // Represents referrals from existing clients/teams
@@ -328,9 +324,8 @@
         // Calculate Source Data for the new card - NOW FILTERED BY SELECTED MONTH
         const currentSourceCounts = {
           Direct: 0,
-          Facebook: 0,
-          'Google Ads': 0, // UPDATED: Key matches backend enum
-          Website: 0,
+          socialmedia: 0,
+          online: 0,
           client: 0,
           tradefair: 0,
           Other: 0,
@@ -345,14 +340,12 @@
               case 'Direct':
                 sourceKey = 'Direct';
                 break;
-              case 'Facebook':
-                sourceKey = 'Facebook';
+              case 'socialmedia':
+                sourceKey = 'socialmedia';
                 break;
-              case 'Google Ads': // UPDATED: Case matches backend enum
-                sourceKey = 'Google Ads';
-                break;
-              case 'Website':
-                sourceKey = 'Website';
+              
+              case 'online':
+                sourceKey = 'online';
                 break;
 
               case 'client': // Handle 'client' source type
@@ -809,7 +802,7 @@
 
     // New Pie Chart Data for Accounts Distribution
     const accountsPieData = [
-      { type: "Pipeline", value: activeLeadsPie },
+      { type: "Enquiry", value: activeLeadsPie },
       { type: "Proposed Leads", value: waitingLeadsPie },
       { type: "Converted Customers", value: customersPie },
       { type: "Closed Accounts", value: closedAccountsPie },

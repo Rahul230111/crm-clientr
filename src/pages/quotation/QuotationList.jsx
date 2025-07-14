@@ -131,9 +131,6 @@ const QuotationList = ({
     },
   ];
 
-  const user = JSON.parse(localStorage.getItem("user"));
-  const role = user?.role; // Get the user's role
-
   const columns = [
     {
       title: "Quotation #",
@@ -309,19 +306,17 @@ const QuotationList = ({
               >
                 Edit Quotation
               </Menu.Item>
-              {role === "Superadmin" && ( // Updated condition to show only for 'Superadmin'
-                <Menu.Item key="close-account">
-                  <Popconfirm
-                    title="Are you sure you want to close this account? This will set its status to 'Closed'."
-                    onConfirm={() => handleDeleteAccount(record._id)} // This now sets status to 'Closed'
-                    okText="Yes"
-                    cancelText="No"
-                  >
-                    <DeleteOutlined />
-                    Close Account
-                  </Popconfirm>
-                </Menu.Item>
-              )}
+              <Menu.Item>
+                <Popconfirm
+                  title="Are you sure you want to delete this account?"
+                  onConfirm={() => onDelete(record._id)} // Using onDelete prop
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  <DeleteOutlined />
+                  Delete Quotation
+                </Popconfirm>
+              </Menu.Item>
             </Menu>
           }
           trigger={["click"]}
@@ -346,13 +341,12 @@ const QuotationList = ({
           onChange={(e) => {
             onSearch(e.target.value);
           }}
-          style={{ width: 200 }}
+          style={{ width: 400 }}
           prefix={<SearchOutlined />}
           allowClear
-        /> 
+        />
         <Button
           type="primary"
-           style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
           onClick={() => {
             onAddNew();
             toast.success("Prepare to create a new quotation.", {
@@ -360,7 +354,7 @@ const QuotationList = ({
             });
           }}
         >
-          + Add
+          + New Quotation
         </Button>
       </Space>
 

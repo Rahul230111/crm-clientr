@@ -187,10 +187,10 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
         >
           <Select placeholder="How did you hear about us?">
             <Option value="Direct">Direct</Option>
-            <Option value="Facebook">Facebook</Option>
-            <Option value="Google Ads">Google Ads</Option>
-            <Option value="Website">Website</Option>
-            <Option value="Cold Call">Cold Call</Option>
+            <Option value="socialmedia">Social Media</Option>
+            
+            <Option value="online">Online</Option>
+            
             <Option value="Client">Client</Option> {/* Added Client */}
             <Option value="Tradefair">Tradefair</Option> {/* Added Tradefair */}
             <Option value="Other">Other</Option>
