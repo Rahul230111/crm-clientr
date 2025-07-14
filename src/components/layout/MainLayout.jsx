@@ -55,11 +55,7 @@ const MainLayout = ({ children }) => {
             <div className="inner-content">{children}</div>
           </Content>
 
-          {/* ✅ Footer */}
-          <Footer>
-            © {new Date().getFullYear()} All rights are reserved by <strong>MegaCrane</strong> | 
-            Design and developed by <strong>Acculermeda</strong>
-          </Footer>
+        <FooterComponent /> {/* 👈 Include the FooterComponent here */}
         </Layout>
       </Layout>
 

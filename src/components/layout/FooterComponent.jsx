@@ -20,7 +20,9 @@ const FooterComponent = () => {
       }}
     >
       © {new Date().getFullYear()} All rights are reserved by <strong>MegaCrane</strong> | 
-      Design and developed by <strong>Acculermeda</strong>
+      Design and developed by <strong><a href="https://acculermedia.com/" target="_blank" rel="noopener noreferrer"></a>Acculer Media Technologies
+
+</strong>
     </Footer>
   );
 };
