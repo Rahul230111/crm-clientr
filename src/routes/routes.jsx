@@ -23,7 +23,17 @@ const Leads = React.lazy(() => import('../pages/leads/Leads'));
 const Customers = React.lazy(() => import('../pages/leads/Customers'));
 const CustomerProfile = React.lazy(() => import('../components/CustomerProfile'));
 
+// UserManagement is still imported as it's used within CombinedManagement
 const UserManagement = React.lazy(() => import('../pages/user/UserManagement'));
+// Corrected: Import DepartmentManagement and TeamManagement from their respective new folders
+const DepartmentManagement = React.lazy(() => import('../pages/user/DepartmentManagement'));
+const TeamManagement = React.lazy(() => import('../pages/user/TeamManagement'));
+
+// Import the new CombinedManagement component
+const CombinedManagement = React.lazy(() => import('../pages/user/CombinedManagement'));
+
+// Import the new DailyReportSubmission component
+
 
 const Product = React.lazy(() => import('../pages/product/Product'));
 
@@ -32,7 +42,7 @@ export const appRoutes = [
   {
     path: '/dashboard',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee', 'Team Leader']}>
         <Dashboard />
       </RoleGuard>
     ),
@@ -40,7 +50,7 @@ export const appRoutes = [
   {
     path: '/invoicedashboard',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee', 'Team Leader']}>
         <InvoiceDashboard />
       </RoleGuard>
     ),
@@ -48,7 +58,7 @@ export const appRoutes = [
   {
     path: '/profile',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee', 'Team Leader']}>
         <Profile />
       </RoleGuard>
     ),
@@ -56,7 +66,7 @@ export const appRoutes = [
   {
     path: '/settings',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee', 'Team Leader']}>
         <Settings />
       </RoleGuard>
     ),
@@ -94,7 +104,7 @@ export const appRoutes = [
     ),
   },
   {
-    path: '/products',    
+    path: '/products',
     element: (
       <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
         <Product />
@@ -142,13 +152,15 @@ export const appRoutes = [
     ),
   },
   {
-    path: '/users',
+    // This path now points to the combined management page
+    path: '/management',
     element: (
-      <RoleGuard allowedRoles={['Superadmin']}>
-        <UserManagement />
+      <RoleGuard allowedRoles={['Superadmin', 'Admin', 'Team Leader']}>
+        <CombinedManagement />
       </RoleGuard>
     ),
   },
+  
 ];
 
 // Public login routes

@@ -4,7 +4,7 @@ import {
   Tabs, List, Typography, Spin, Card, Descriptions, Breadcrumb, Button,
   Empty, Table, Collapse, Tag, Statistic, Row, Col
 } from 'antd';
-import { ArrowLeftOutlined, FallOutlined, FormOutlined, DollarOutlined, SolutionOutlined, BookOutlined, DashboardOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, FallOutlined, FormOutlined, DollarOutlined, SolutionOutlined, BookOutlined, DashboardOutlined, HistoryOutlined } from '@ant-design/icons'; // Added HistoryOutlined for the new tab icon
 import axios from '../api/axios'; // Corrected: Importing axios directly
 
 const { TabPane } = Tabs;
@@ -52,7 +52,6 @@ const CustomerProfile = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-50">
-        
         <Spin size="large" tip="Loading Customer Profile..." />
       </div>
     );
@@ -78,14 +77,11 @@ const CustomerProfile = () => {
     );
   }
 
-  // Sort follow-ups and notes by date in descending order
-  const sortedFollowups = [...followups].sort(
-    (a, b) => new Date(b.followupDate || b.date) - new Date(a.followupDate || a.date)
-  );
-
-  const sortedNotes = [...(customer.notes || [])].sort(
-    (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-  );
+  // Combine follow-ups and notes into a single history array
+  const combinedHistory = [
+    ...(followups.map(item => ({ ...item, type: 'Follow-up', date: item.followupDate || item.date }))),
+    ...(customer.notes || []).map(item => ({ ...item, type: 'Note', date: item.timestamp }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // Helper function to format currency
   const formatCurrency = (amount) => {
@@ -117,25 +113,24 @@ const CustomerProfile = () => {
     if (addressObj.state) addressParts.push(addressObj.state);
     if (addressObj.pincode) addressParts.push(addressObj.pincode);
     if (addressObj.country) addressParts.push(addressObj.country);
-    
+
     return addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
   };
 
-  // Calculate dashboard statistics
+  // Calculate dashboard statistics (moved outside of the commented section if needed elsewhere)
   const totalInvoicesAmount = invoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
   const totalPaidAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
   const totalPendingAmount = totalInvoicesAmount - totalPaidAmount;
 
   return (
-    
     <div className="p-6 bg-gray-50 min-h-screen font-sans">
       <Button
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center space-x-2"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-        >
-          Back
-        </Button>
+        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center space-x-2"
+        icon={<ArrowLeftOutlined />}
+        onClick={() => navigate(-1)}
+      >
+        Back
+      </Button>
       {/* Breadcrumb navigation */}
       <Breadcrumb
         className="mb-4 text-gray-600 mt-5 font-medium"
@@ -147,7 +142,6 @@ const CustomerProfile = () => {
 
       {/* Header with back button and title */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-        
         <Title level={2} className="text-gray-800 font-extrabold mb-0 text-center sm:text-left">
           {customer.businessName} Profile
         </Title>
@@ -167,12 +161,12 @@ const CustomerProfile = () => {
           <Descriptions.Item label={<Text strong className="text-gray-600">Email</Text>}>{customer.email || 'N/A'}</Descriptions.Item>
           <Descriptions.Item label={<Text strong className="text-gray-600">Phone Number</Text>}>{customer.phoneNumber || 'N/A'}</Descriptions.Item>
           <Descriptions.Item label={<Text strong className="text-gray-600">Status</Text>}>
-            <Tag 
+            <Tag
               color={
-                customer.status === 'Active' ? 'green' : 
-                customer.status === 'Inactive' ? 'red' : 
-                'blue' // Default color for other statuses
-              } 
+                customer.status === 'Active' ? 'green' :
+                  customer.status === 'Inactive' ? 'red' :
+                    'blue' // Default color for other statuses
+              }
               className="rounded-full px-3 py-1 text-sm font-medium">
               {customer.status || 'N/A'}
             </Tag>
@@ -190,60 +184,9 @@ const CustomerProfile = () => {
         </Descriptions>
       </Card>
 
-      {/* Dashboard Section (now outside of Tabs) */}
-      {/* <Card
-        title={<Title level={4} className="text-gray-800 font-bold mb-0 flex items-center space-x-2"><DashboardOutlined /><span>Summary Dashboard</span></Title>}
-        className="shadow-xl rounded-xl mb-8 border-t-8 border-purple-600 transform hover:scale-100 transition duration-300 ease-in-out"
-      >
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <Row gutter={[24, 24]} justify="center">
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card className="shadow-lg rounded-xl border-l-8 border-blue-500 hover:shadow-xl transition-shadow duration-300 ease-in-out">
-                <Statistic 
-                  title={<Text strong className="text-gray-700">Total Quotations</Text>} 
-                  value={quotations.length} 
-                  valueStyle={{ color: '#ef7a1b', fontWeight: 'bold' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card className="shadow-lg rounded-xl border-l-8 border-green-500 hover:shadow-xl transition-shadow duration-300 ease-in-out">
-                <Statistic 
-                  title={<Text strong className="text-gray-700">Total Invoices</Text>} 
-                  value={invoices.length} 
-                  valueStyle={{ color: '#52c41a', fontWeight: 'bold' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card className="shadow-lg rounded-xl border-l-8 border-purple-500 hover:shadow-xl transition-shadow duration-300 ease-in-out">
-                <Statistic 
-                  title={<Text strong className="text-gray-700">Total Invoiced Amount</Text>} 
-                  value={totalInvoicesAmount} 
-                  precision={2} 
-                  prefix="₹" 
-                  valueStyle={{ color: '#722ed1', fontWeight: 'bold' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Card className="shadow-lg rounded-xl border-l-8 border-red-500 hover:shadow-xl transition-shadow duration-300 ease-in-out">
-                <Statistic 
-                  title={<Text strong className="text-gray-700">Total Pending Amount</Text>} 
-                  value={totalPendingAmount} 
-                  precision={2} 
-                  prefix="₹" 
-                  valueStyle={{ color: '#f5222d', fontWeight: 'bold' }}
-                />
-              </Card>
-            </Col>
-          </Row>
-        </div>
-      </Card> */}
-
-      {/* Tabs for related data (now starting with Quotations) */}
-      <Tabs 
-        defaultActiveKey="1" // Default to Quotations since Dashboard is now a separate section
+      {/* Tabs for related data */}
+      <Tabs
+        defaultActiveKey="1"
         className="bg-white p-4 rounded-xl shadow-xl"
         tabBarStyle={{ marginBottom: 24 }}
       >
@@ -260,8 +203,8 @@ const CustomerProfile = () => {
           {quotations.length === 0 ? (
             <Empty description="No quotations found for this customer." className="py-8" />
           ) : (
-            <Collapse 
-              accordion 
+            <Collapse
+              accordion
               className="shadow-md rounded-lg overflow-hidden"
               expandIconPosition="end"
             >
@@ -279,13 +222,13 @@ const CustomerProfile = () => {
                   <Descriptions bordered column={{ xs: 1, sm: 2, md: 2 }} size="small" className="mb-4 text-gray-700">
                     <Descriptions.Item label={<Text strong className="text-gray-600">Date</Text>}>{formatDate(q.date)}</Descriptions.Item>
                     <Descriptions.Item label={<Text strong className="text-gray-600">Status</Text>}>
-                      <Tag 
+                      <Tag
                         color={
-                          q.status === 'Approved' ? 'green' : 
-                          q.status === 'Pending' ? 'orange' : 
-                          q.status === 'Rejected' ? 'red' :
-                          'blue' // Default color for other statuses
-                        } 
+                          q.status === 'Approved' ? 'green' :
+                            q.status === 'Pending' ? 'orange' :
+                              q.status === 'Rejected' ? 'red' :
+                                'blue' 
+                        }
                         className="rounded-full px-3 py-1 text-sm font-medium">
                         {q.status || 'N/A'}
                       </Tag>
@@ -329,7 +272,7 @@ const CustomerProfile = () => {
           )}
         </TabPane>
 
-        {/* Invoices Tab */}
+        {/* Invoices Tab (unchanged) */}
         {/* <TabPane
           tab={
             <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
@@ -342,8 +285,8 @@ const CustomerProfile = () => {
           {invoices.length === 0 ? (
             <Empty description="No invoices found for this customer." className="py-8" />
           ) : (
-            <Collapse 
-              accordion 
+            <Collapse
+              accordion
               className="shadow-md rounded-lg overflow-hidden"
               expandIconPosition="end"
             >
@@ -362,13 +305,13 @@ const CustomerProfile = () => {
                     <Descriptions.Item label={<Text strong className="text-gray-600">Date</Text>}>{formatDate(inv.date)}</Descriptions.Item>
                     <Descriptions.Item label={<Text strong className="text-gray-600">Due Date</Text>}>{formatDate(inv.dueDate)}</Descriptions.Item>
                     <Descriptions.Item label={<Text strong className="text-gray-600">Status</Text>}>
-                      <Tag 
+                      <Tag
                         color={
-                          inv.paymentStatus === 'Paid' ? 'green' : 
-                          inv.paymentStatus === 'Pending' ? 'orange' : 
-                          inv.paymentStatus === 'Overdue' ? 'red' :
-                          'blue' // Default color for other paymentStatuses
-                        } 
+                          inv.paymentStatus === 'Paid' ? 'green' :
+                            inv.paymentStatus === 'Pending' ? 'orange' :
+                              inv.paymentStatus === 'Overdue' ? 'red' :
+                                'blue'
+                        }
                         className="rounded-full px-3 py-1 text-sm font-medium"
                       >
                         {inv.paymentStatus || 'N/A'}
@@ -411,56 +354,17 @@ const CustomerProfile = () => {
               ))}
             </Collapse>
           )}
-        </TabPane> */}
-
-        {/* Follow-ups Tab */}
-        <TabPane
-          tab={
-            <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
-              <FormOutlined className="text-xl" />
-              <span>Follow-ups ({sortedFollowups.length})</span>
-            </span>
-          }
-          key="3"
-        >
-          {sortedFollowups.length === 0 ? (
-            <Empty description="No follow-ups found for this customer." className="py-8" />
-          ) : (
-            <List
-              bordered
-              dataSource={sortedFollowups}
-              className="rounded-lg overflow-hidden shadow-md"
-              renderItem={(item) => (
-                <List.Item className="flex flex-col items-start bg-white p-5 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-200 last:border-b-0">
-                  <div className="w-full">
-                    <div className="font-semibold text-gray-800 text-base mb-2 flex items-center">
-                      <span className="mr-3 text-blue-500 text-xl"><BookOutlined /></span>
-                      <Text strong>Date:</Text> <span className="ml-2">{formatDate(item.followupDate || item.date)}</span>
-                    </div>
-                    <div className="text-gray-800 mb-2 leading-relaxed text-base">
-                      <Text strong>Note:</Text> {item.note || item.comment || 'No comment provided'}
-                    </div>
-                    {item.addedBy && (
-                      <div className="text-sm text-gray-500 mt-3 border-t border-gray-100 pt-2">
-                        Added by: <Text italic>{item.addedBy.name || item.addedBy.email || 'Unknown'}</Text>
-                      </div>
-                    )}
-                  </div>
-                </List.Item>
-              )}
-            />
-          )}
         </TabPane>
 
-        {/* Payments Tab */}
-        {/* <TabPane
+       
+        <TabPane
           tab={
             <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
               <DollarOutlined className="text-xl" />
               <span>Payments ({payments.length})</span>
             </span>
           }
-          key="4"
+          key="3"
         >
           {payments.length === 0 ? (
             <Empty description="No payments found for this customer." className="py-8" />
@@ -476,7 +380,7 @@ const CustomerProfile = () => {
                     <Text className="text-gray-700 text-base">via {item.method || 'N/A'}</Text>
                   </div>
                   <div className="text-sm text-gray-500 text-right">
-                    <span className="block">{formatDate(item.date)}</span> 
+                    <span className="block">{formatDate(item.date)}</span>
                     <span className="block">by {item.addedBy || 'Unknown'}</span>
                   </div>
                 </List.Item>
@@ -485,31 +389,34 @@ const CustomerProfile = () => {
           )}
         </TabPane> */}
 
-        {/* Notes Tab */}
+      
         <TabPane
           tab={
             <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
-              <BookOutlined className="text-xl" />
-              <span>Notes ({sortedNotes.length})</span>
+              <HistoryOutlined className="text-xl" />
+              <span>History ({combinedHistory.length})</span>
             </span>
           }
-          key="5"
+          key="4"
         >
-          {sortedNotes.length === 0 ? (
-            <Empty description="No notes available for this customer." className="py-8" />
+          {combinedHistory.length === 0 ? (
+            <Empty description="No follow-ups or notes found for this customer." className="py-8" />
           ) : (
             <List
               bordered
-              dataSource={sortedNotes}
+              dataSource={combinedHistory}
               className="rounded-lg overflow-hidden shadow-md"
               renderItem={(item) => (
                 <List.Item className="flex flex-col items-start bg-white p-5 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-200 last:border-b-0">
                   <div className="w-full">
-                    <div className="text-gray-800 text-base leading-relaxed mb-2">
-                      <Text strong>Note:</Text> {item.text || 'No text provided'}
+                    <div className="font-semibold text-gray-800 text-base mb-2 flex items-center">
+                      <span className="mr-3 text-blue-500 text-xl">
+                        {item.type === 'Follow-up' ? <FormOutlined /> : <BookOutlined />}
+                      </span>
+                      <Text strong>{item.type}:</Text> <span className="ml-2">{item.text || item.note || item.comment || 'N/A'}</span>
                     </div>
                     <div className="text-sm text-gray-500 mt-3 border-t border-gray-100 pt-2">
-                      Added by: <Text italic>{item.author || item.addedBy?.name || item.addedBy?.email || 'Unknown'}</Text> | {item.timestamp ? new Date(item.timestamp).toLocaleString() : 'N/A'}
+                      Added by: <Text italic>{item.addedBy?.name || item.addedBy?.email || item.author || 'Unknown'}</Text> | {formatDate(item.date)}
                     </div>
                   </div>
                 </List.Item>

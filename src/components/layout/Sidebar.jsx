@@ -10,6 +10,7 @@ import {
   AppstoreOutlined,
   SettingOutlined,
   UserSwitchOutlined,
+  TableOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import './sidebar.css';
@@ -53,6 +54,12 @@ const Sidebar = ({ collapsed }) => {
             { key: "/customers", icon: <UserOutlined />, label: "Customers", roles: ["Admin", "Superadmin"] },
             { key: "/quotation", icon: <FileTextOutlined />, label: "Quotations", roles: ["Admin", "Superadmin"] },
             // { key: "/invoice", icon: <ShoppingOutlined />, label: "Invoices", roles: ["Admin", "Superadmin"] },
+            // {
+            //   key: "/daily-reports",
+            //   icon: <TableOutlined />,
+            //   label: "Settings",
+            //   roles: ["Superadmin", "Admin", "Employee"],
+            // },
             { key: "/products", icon: <FileAddOutlined />, label: "Products", roles: ["Admin", "Superadmin"] },
           ],
         },
@@ -63,17 +70,12 @@ const Sidebar = ({ collapsed }) => {
           roles: ["Superadmin", "Admin", "Employee"],
           children: [
             { 
-              key: "/users",
+              key: "/management",
               icon: <UsergroupAddOutlined />,
               label: "User Management",
               roles: ["Superadmin"],
             },
-            // {
-            //   key: "/settings",
-            //   icon: <SettingOutlined />,
-            //   label: "Settings",
-            //   roles: ["Superadmin", "Admin", "Employee"],
-            // },
+            
             {
               key: "/profile",
               icon: <UserOutlined />,
