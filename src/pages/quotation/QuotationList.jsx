@@ -165,24 +165,24 @@ const QuotationList = ({
           b.businessId?.contactName || b.customerName || ""
         ),
     },
-    {
-      title: "Status", // New Status Column
-      dataIndex: "status",
-      render: (status) => {
-        let color = 'default';
-        if (status === 'Approved') {
-          color = 'green';
-        } else if (status === 'Pending') {
-          color = 'orange';
-        } else if (status === 'Rejected') {
-          color = 'red';
-        } else if (status === 'Draft') {
-          color = 'blue';
-        }
-        return <Tag color={color}>{status || 'N/A'}</Tag>;
-      },
-      sorter: (a, b) => (a.status || "").localeCompare(b.status || ""),
-    },
+    // {
+    //   title: "Status", // New Status Column
+    //   dataIndex: "status",
+    //   render: (status) => {
+    //     let color = 'default';
+    //     if (status === 'Approved') {
+    //       color = 'green';
+    //     } else if (status === 'Pending') {
+    //       color = 'orange';
+    //     } else if (status === 'Rejected') {
+    //       color = 'red';
+    //     } else if (status === 'Draft') {
+    //       color = 'blue';
+    //     }
+    //     return <Tag color={color}>{status || 'N/A'}</Tag>;
+    //   },
+    //   sorter: (a, b) => (a.status || "").localeCompare(b.status || ""),
+    // },
     {
       title: "Items Count",
       render: (_, record) => (

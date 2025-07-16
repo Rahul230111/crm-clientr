@@ -683,7 +683,7 @@ ${business.email || ""}`.trim();
               <DatePicker style={styles.formField} format="DD/MM/YYYY" />
             </Form.Item>
           </Col>
-          <Col xs={24} md={8}> {/* Added new column for Status */}
+          {/* <Col xs={24} md={8}>
             <Form.Item
               name="status"
               label="Status"
@@ -701,7 +701,7 @@ ${business.email || ""}`.trim();
                 <Option value="Rejected">Rejected</Option>
               </Select>
             </Form.Item>
-          </Col>
+          </Col> */}
         </Row>
 
         <Divider style={styles.divider}>Quotation Items</Divider>

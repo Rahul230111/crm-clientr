@@ -59,6 +59,7 @@ const Leads = () => {
   const [customersCount, setCustomersCount] = useState(0);
   const [pipelineLeadsCount, setPipelineLeadsCount] = useState(0); // Renamed from waitingLeadsCount
   const [closedAccountsCount, setClosedAccountsCount] = useState(0);
+  const [quotationsSentCount, setQuotationsSentCount] = useState(0); // NEW: State for Quotations Sent count
 
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -91,11 +92,15 @@ const Leads = () => {
       const closedAccountsData = allAccounts.filter(
         (account) => account.status === "Closed"
       );
+      const quotationsSentData = allAccounts.filter( // NEW: Filter for Quotations Sent
+        (account) => account.status === "Quotations"
+      );
 
       setActiveLeadsCount(activeLeadsData.length);
       setCustomersCount(customersData.length);
       setPipelineLeadsCount(pipelineLeadsData.length);
       setClosedAccountsCount(closedAccountsData.length);
+      setQuotationsSentCount(quotationsSentData.length); // NEW: Set Quotations Sent count
 
       if (activeTab === "active") {
         setAccounts(activeLeadsData);
@@ -105,7 +110,10 @@ const Leads = () => {
         setAccounts(pipelineLeadsData);
       } else if (activeTab === "closed") {
         setAccounts(closedAccountsData);
-      } else {
+      } else if (activeTab === "quotations") { // NEW: Handle 'quotations' tab
+        setAccounts(quotationsSentData);
+      }
+      else {
         setAccounts(allAccounts);
       }
     } catch (error) {
@@ -396,6 +404,9 @@ const Leads = () => {
           case "Customer": // New case for 'Customer' status
             color = "blue";
             break;
+          case "Quotations": // NEW: Color for Quotations status
+            color = "cyan";
+            break;
           default:
             color = "gray";
         }
@@ -407,6 +418,7 @@ const Leads = () => {
         { text: "Pipeline", value: "Pipeline" },
         { text: "Closed", value: "Closed" },
         { text: "Customer", value: "Customer" }, // Added 'Customer' filter
+        { text: "Quotations", value: "Quotations" }, // NEW: Added 'Quotations' filter
       ],
       onFilter: (value, record) => record.status.indexOf(value) === 0,
       responsive: ["sm", "md", "lg"],
@@ -593,7 +605,8 @@ const Leads = () => {
 
       <Tabs defaultActiveKey="active" onChange={setActiveTab}>
         <TabPane tab={`Enquiry (${activeLeadsCount})`} key="active" />
-        <TabPane tab={`Propesed (${pipelineLeadsCount})`} key="Pipeline" /> {/* Corrected label */}
+        <TabPane tab={`Proposed (${pipelineLeadsCount})`} key="Pipeline" /> {/* Corrected label */}
+        <TabPane tab={`Quotations Sent (${quotationsSentCount})`} key="quotations" /> {/* NEW: Tab for Quotations Sent */}
 
         {/* <TabPane tab={`Customers (${customersCount})`} key="customers" /> */}
         <TabPane

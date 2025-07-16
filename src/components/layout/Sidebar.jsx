@@ -49,7 +49,7 @@ const Sidebar = ({ collapsed }) => {
           label: collapsed ? null : "Application",
           roles: ["Admin", "Superadmin"],
           children: [
-            { key: "/leads", icon: <SolutionOutlined />, label: "Enquiry Leads", roles: ["Admin", "Superadmin"] },
+            { key: "/leads", icon: <SolutionOutlined />, label: "Leads", roles: ["Admin", "Superadmin"] },
             { key: "/customers", icon: <UserOutlined />, label: "Customers", roles: ["Admin", "Superadmin"] },
             { key: "/quotation", icon: <FileTextOutlined />, label: "Quotations", roles: ["Admin", "Superadmin"] },
             // { key: "/invoice", icon: <ShoppingOutlined />, label: "Invoices", roles: ["Admin", "Superadmin"] },

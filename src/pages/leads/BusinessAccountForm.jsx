@@ -172,10 +172,9 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
         >
           <Select placeholder="Select Status">
             <Option value="Active">Enquiry</Option>
-            {/* <Option value="Inactive">Inactive</Option> */}
             <Option value="Pipeline">Proposed</Option>
-                        <Option value="Customer">Customer</Option> {/* Added Customer option */}
-
+            <Option value="Quotations">Quotations Sent</Option>
+            <Option value="Customer">Customer</Option>
             <Option value="Closed">Closed</Option>
           </Select>
         </Form.Item>
@@ -188,11 +187,9 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
           <Select placeholder="How did you hear about us?">
             <Option value="Direct">Direct</Option>
             <Option value="socialmedia">Social Media</Option>
-            
             <Option value="online">Online</Option>
-            
-            <Option value="Client">Client</Option> {/* Added Client */}
-            <Option value="Tradefair">Tradefair</Option> {/* Added Tradefair */}
+            <Option value="Client">Client</Option>
+            <Option value="Tradefair">Tradefair</Option>
             <Option value="Other">Other</Option>
           </Select>
         </Form.Item>
@@ -207,9 +204,10 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
             loading={loadingUsers}
             showSearch
             optionFilterProp="children"
-            filterOption={(input, option) =>
-              option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-            }
+            filterOption={(input, option) => {
+              const childrenText = String(option.children || ''); // Convert to string and handle potential null/undefined
+              return childrenText.toLowerCase().includes(input.toLowerCase());
+            }}
           >
             {allUsers && allUsers.map(user => (
               <Option key={user._id} value={user._id}>
