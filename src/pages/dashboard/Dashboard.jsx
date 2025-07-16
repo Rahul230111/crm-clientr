@@ -58,12 +58,14 @@ const Dashboard = () => {
   const [allInvoiceFollowUps, setAllInvoiceFollowUps] = useState([]);
 
   const [filteredAccountFollowups, setFilteredAccountFollowups] = useState([]);
-  const [filteredQuotationFollowups, setFilteredQuotationFollowups] = useState(
-    []
-  );
-  const [filteredInvoiceFollowups, setFilteredInvoiceFollowups] = useState([]);
+  const [filteredQuotationFollowups, setFilteredQuotationFollowups] = useState([]);
+  const [filteredInvoiceFollowups, setFilteredInvoiceFollowups] = useState([]); // State for filtered invoice follow-ups
 
-  const [followUpFilter, setFollowUpFilter] = useState("today");
+  // Separate state variables for each table's follow-up filter
+  const [accountFollowUpFilter, setAccountFollowUpFilter] = useState("today");
+  const [quotationFollowUpFilter, setQuotationFollowUpFilter] = useState("today");
+  // const [invoiceFollowUpFilter, setInvoiceFollowUpFilter] = useState("today"); // Uncomment if you re-enable invoice follow-up table
+
   const [selectedMonth, setSelectedMonth] = useState(dayjs()); // Initialize with current month
 
   // States for the new Pie Chart data
@@ -547,18 +549,20 @@ const Dashboard = () => {
     setAllInvoiceFollowUps(monthlyInvoiceFUs);
 
     // Apply existing relative date filter ("today", "upcoming", "past") on the *monthly filtered* data
+    // Use the specific filter states for initial application
     applyFollowUpFilter(
-      followUpFilter,
+      accountFollowUpFilter, // Use account specific filter
       monthlyAccountFUs,
       setFilteredAccountFollowups
     );
     applyFollowUpFilter(
-      followUpFilter,
+      quotationFollowUpFilter, // Use quotation specific filter
       monthlyQuotationFUs,
       setFilteredQuotationFollowups
     );
     applyFollowUpFilter(
-      followUpFilter,
+      // invoiceFollowUpFilter, // Uncomment if you re-enable invoice follow-up table
+      "today", // Default or specific filter for invoices if re-enabled
       monthlyInvoiceFUs,
       setFilteredInvoiceFollowups
     );
@@ -639,25 +643,35 @@ const Dashboard = () => {
     setEditingFollowUp(null);
     editForm.resetFields();
   };
-  const handleFollowUpFilterChange = (value) => {
-    setFollowUpFilter(value);
-    // Re-apply the relative filter on the already month-filtered data
+
+  // Separate handlers for each table's filter change
+  const handleAccountFollowUpFilterChange = (value) => {
+    setAccountFollowUpFilter(value);
     applyFollowUpFilter(
       value,
       allAccountFollowUps,
       setFilteredAccountFollowups
     );
+  };
+
+  const handleQuotationFollowUpFilterChange = (value) => {
+    setQuotationFollowUpFilter(value);
     applyFollowUpFilter(
       value,
       allQuotationFollowUps,
       setFilteredQuotationFollowups
     );
-    applyFollowUpFilter(
-      value,
-      allInvoiceFollowUps,
-      setFilteredInvoiceFollowups
-    );
   };
+
+  // const handleInvoiceFollowUpFilterChange = (value) => { // Uncomment if you re-enable invoice follow-up table
+  //   setInvoiceFollowUpFilter(value);
+  //   applyFollowUpFilter(
+  //     value,
+  //     allInvoiceFollowUps,
+  //     setFilteredInvoiceFollowups
+  //   );
+  // };
+
   const handleEditModalOk = async () => {
     try {
       const values = await editForm.validateFields();
@@ -1093,11 +1107,11 @@ const Dashboard = () => {
       }}
     >
       <span style={{ fontSize: 14, fontWeight: 500 }}>
-        {followUpFilter.charAt(0).toUpperCase() + followUpFilter.slice(1)} Leads Follow-ups
+        {accountFollowUpFilter.charAt(0).toUpperCase() + accountFollowUpFilter.slice(1)} Leads Follow-ups
       </span>
       <Select
-        value={followUpFilter}
-        onChange={handleFollowUpFilterChange}
+        value={accountFollowUpFilter} // Use specific filter state
+        onChange={handleAccountFollowUpFilterChange} // Use specific handler
         style={{ width: 90 }}
         size="small"
       >
@@ -1138,11 +1152,11 @@ const Dashboard = () => {
       }}
     >
       <span style={{ fontSize: 14, fontWeight: 500, width: 180 }}>
-        {followUpFilter.charAt(0).toUpperCase() + followUpFilter.slice(1)} Quotation Follow-ups
+        {quotationFollowUpFilter.charAt(0).toUpperCase() + quotationFollowUpFilter.slice(1)} Quotation Follow-ups
       </span>
       <Select
-        value={followUpFilter}
-        onChange={handleFollowUpFilterChange}
+        value={quotationFollowUpFilter} // Use specific filter state
+        onChange={handleQuotationFollowUpFilterChange} // Use specific handler
         style={{ width: 90 }}
         size="small"
       >
@@ -1184,13 +1198,13 @@ const Dashboard = () => {
                 }}
               >
                 <span>
-                  {followUpFilter.charAt(0).toUpperCase() +
-                    followUpFilter.slice(1)}{" "}
+                  {invoiceFollowUpFilter.charAt(0).toUpperCase() + // Use specific filter state
+                    invoiceFollowUpFilter.slice(1)}{" "}
                   Invoice Follow-ups
                 </span>
                 <Select
-                  value={followUpFilter}
-                  onChange={handleFollowUpFilterChange}
+                  value={invoiceFollowUpFilter} // Use specific filter state
+                  onChange={handleInvoiceFollowUpFilterChange} // Use specific handler
                   style={{ width: 120 }}
                 >
                   <Option value="today">Today</Option>
