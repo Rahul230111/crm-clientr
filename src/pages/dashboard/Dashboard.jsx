@@ -874,7 +874,7 @@ const Dashboard = () => {
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={12} lg={5}>
           <DashboardMetricCard
-            title="Total Leads(This Month)"
+            title="Leads"
             value={totalLeads}
             valuePrefix=""
             percentageChange={15} // This is static, would need dynamic calculation for real trend
@@ -885,7 +885,7 @@ const Dashboard = () => {
         </Col>
         <Col xs={24} sm={12} md={12} lg={5}>
           <DashboardMetricCard
-            title="Total Proposed Leads (This Month)"
+            title="Proposed Leads "
             value={waitingLeadsPie}
             valuePrefix=""
             percentageChange={5} // Dummy percentage change
@@ -897,7 +897,7 @@ const Dashboard = () => {
         {/* NEW CARD: Quotations Sent */}
         <Col xs={24} sm={12} md={12} lg={5}>
           <DashboardMetricCard
-            title="Quotations Sent (This Month)"
+            title="Quotations Sent "
             value={quotationsSentPie}
             valuePrefix=""
             percentageChange={7} // Dummy percentage change
@@ -908,7 +908,7 @@ const Dashboard = () => {
         </Col>
         <Col xs={24} sm={12} md={12} lg={5}>
           <DashboardMetricCard
-            title="Converted Customers (This Month)"
+            title="Converted Customers "
             value={totalCustomers}
             valuePrefix=""
             percentageChange={20} // This is static, would need dynamic calculation for real trend
@@ -921,7 +921,7 @@ const Dashboard = () => {
         {/* Metric Card for Closed Accounts */}
         <Col xs={24} sm={12} md={12} lg={4}>
           <DashboardMetricCard
-            title="Closed Accounts (This Month)"
+            title="Closed Accounts "
             value={totalClosedAccounts}
             valuePrefix=""
             percentageChange={10} // Dummy percentage change, would need dynamic calculation for real trend

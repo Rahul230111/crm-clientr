@@ -74,7 +74,7 @@ export const appRoutes = [
   {
     path: '/leads',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader', 'Employee']}>
         <Leads />
       </RoleGuard>
     ),
@@ -82,7 +82,7 @@ export const appRoutes = [
   {
     path: '/customers',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader', 'Employee']}>
         <Customers />
       </RoleGuard>
     ),
@@ -90,7 +90,7 @@ export const appRoutes = [
   {
     path: '/customers/:id',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader', 'Employee']}>
         <CustomerProfile />
       </RoleGuard>
     ),
@@ -106,7 +106,7 @@ export const appRoutes = [
   {
     path: '/products',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader']}>
         <Product />
       </RoleGuard>
     ),
@@ -130,7 +130,7 @@ export const appRoutes = [
   {
     path: '/quotation',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader']}>
         <QuotationPage />
       </RoleGuard>
     ),
@@ -138,7 +138,7 @@ export const appRoutes = [
   {
     path: '/quotation/form',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader']}>
         <QuotationForm />
       </RoleGuard>
     ),
@@ -146,7 +146,7 @@ export const appRoutes = [
   {
     path: '/quotation/list',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader']}>
         <QuotationList />
       </RoleGuard>
     ),
@@ -155,7 +155,7 @@ export const appRoutes = [
     // This path now points to the combined management page
     path: '/management',
     element: (
-      <RoleGuard allowedRoles={['Superadmin', 'Admin', 'Team Leader']}>
+      <RoleGuard allowedRoles={['Superadmin', 'Admin']}>
         <CombinedManagement />
       </RoleGuard>
     ),

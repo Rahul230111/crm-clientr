@@ -1,7 +1,8 @@
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import toast from "react-hot-toast";
-import Logo from '../../assets/megacrane.png'; // Ensure this path is correct
+// IMPORTANT: Ensure this path points to your MEGA CRANES logo image
+import Logo from '../../assets/megacraneq.png'; // Update this path to your actual logo
 
 // Helper functions (keeping these as is, no changes needed for file size here)
 const formatCurrency = (amount) => {
@@ -34,6 +35,7 @@ const convertNumberToWords = (num) => {
   if (number === 0) {
     words.push("Zero");
   } else {
+    // Handle hundreds part of the last three digits
     let lastThree = number % 1000;
     if (lastThree > 0) {
       if (lastThree < 100) {
@@ -42,16 +44,17 @@ const convertNumberToWords = (num) => {
         words.push(units[Math.floor(lastThree / 100)] + " Hundred" + (lastThree % 100 !== 0 ? " " + numToWords(lastThree % 100) : ""));
       }
     }
-    number = Math.floor(number / 1000);
+    number = Math.floor(number / 1000); // Move to thousands
 
+    // Handle thousands, lakhs, crores
     while (number > 0) {
-      let chunk = number % 100;
+      let chunk = number % 100; // Process in chunks of 100 (for Lakhs, Crores)
       if (chunk > 0) {
         words.push(numToWords(chunk) + " " + scales[++i]);
       } else {
         i++;
       }
-      number = Math.floor(number / 100);
+      number = Math.floor(number / 100); // Move to next scale
     }
   }
 
@@ -67,295 +70,270 @@ const convertNumberToWords = (num) => {
 };
 
 const generateQuotationHtmlParts = (quotation) => {
+  // Calculate totals based on quotation items
   const subTotalAmount = quotation.items?.reduce(
-    (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),
+    (sum, item) => sum + (parseFloat(item.quantity || 0) * parseFloat(item.rate || 0)),
     0
   ) || 0;
 
-  const gstRate = 0.18;
+  const gstRate = 0.18; // Based on image: GST 18%
   const gstAmount = subTotalAmount * gstRate;
-  const billAmount = subTotalAmount + gstAmount;
+  const grandTotalAmount = subTotalAmount + gstAmount;
 
-  const companyLogoSrc = Logo;
+  const companyLogoSrc = Logo; // Path to your Mega Cranes logo
+  // Use the same logo for signature for now, or replace with actual signature image if available
   const signatureImageSrc = Logo;
 
-  const customerContactName = quotation.businessId?.contactName || quotation.contactName || "N/A";
-  const customerPhone = quotation.mobileNumber || quotation.businessId?.mobileNumber || quotation.businessId?.phone || "N/A";
-  const customerEmail = quotation.businessId?.email || quotation.email || "N/A";
-  const customerGSTIN = quotation.businessId?.gstin || quotation.gstin || "N/A";
-  const customerAddress = quotation.businessId?.address?.replace(/\n/g, '<br>') || quotation.businessInfo?.replace(/\n/g, '<br>') || "N/A";
+  // Dynamic data points from the quotation object, with fallbacks
+  const toCompany = quotation.businessName || "M/s. LMW Limited, Foundry Division UNIT - 31 (Unit 2), Arasur, Coimbatore – 641 407";
+  const attnContact = quotation.businessId?.contactName || quotation.contactName || "N/A";
+  const attnMobile = quotation.mobileNumber || quotation.businessId?.mobileNumber || quotation.businessId?.phone || "N/A";
+  const attnEmail = quotation.businessId?.email || quotation.email || "N/A";
+
+  // --- UPDATED SUBJECT LOGIC ---
+  let subject = quotation.subject; // Prioritize the subject from the form
+  if (!subject && quotation.items && quotation.items.length > 0) {
+    // If no specific subject is provided, try to create one from item descriptions
+    const itemDescriptions = quotation.items.map(item =>  item.productName).filter(Boolean);
+    if (itemDescriptions.length > 0) {
+      subject = `Offer for ${itemDescriptions.slice(0, 2).join(' & ')}`; // Take first 2 items
+      if (itemDescriptions.length > 2) {
+        subject += '...'; // Add ellipsis if more items
+      }
+    } else {
+      subject = "Offer for your requirement"; // Generic fallback if no items have descriptions
+    }
+  } else if (!subject) {
+    subject = "Offer for your requirement"; // Final fallback if no subject and no items
+  }
+  // --- END UPDATED SUBJECT LOGIC ---
+
+  const reference = quotation.reference || `Your telecom enquiry dated ${new Date().toLocaleDateString("en-IN")}`;
+  const quotationDate = quotation.date ? new Date(quotation.date).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN");
+  const quotationNumber = quotation.quotationNumber || "MCIPL/OFR/0/NXL";
+
+  // Use dynamic notes and customer scope from quotation object
+  const quotationNotes = quotation.quotationNotes || "If Installation or any other Service is required, additional charges of Rs.4,500/- will be Applicable extra on PER MAN DAY (i.e, Per Engineer Per Day) basis + GST 18% Extra. If required, you have to release a separate Work Order";
+  const customerScope = quotation.customerScope || `Transportation from our works to your site
+Unloading the materials @Site, Storage, Security, Inhouse Transportation
+Required Cables, SFU, Ladders, Scaffoldings, Platforms, Cranes, Chain Block other requirements for Installation.
+Installation with Required Base & Cables, Materials & Modifications
+Additional Materials, Spares, Modifications & Services (if required)`;
+
+  // --- HSN CODES LOGIC MODIFICATION ---
+  // Aggregate hsnSac from all items
+  const aggregatedHsnSacs = Array.from(new Set(
+    quotation.items
+      ?.map(item => item.hsnSac)
+      .filter(hsn => hsn && hsn.trim() !== '')
+  )).join(', ');
+
+  let hsnCodesValue = quotation.hsnCodes; // Prefer the top-level hsnCodes if available
+
+  if (!hsnCodesValue && aggregatedHsnSacs) {
+      hsnCodesValue = aggregatedHsnSacs; // Use aggregated hsnSac if top-level hsnCodes is empty
+  } else if (!hsnCodesValue) {
+      hsnCodesValue = "Spares - 84311090, Service - 998719"; // Fallback to default if both are empty
+  }
+  // --- END HSN CODES LOGIC MODIFICATION ---
 
 
+  // Dynamically generate Terms & Conditions table rows
+  const termsData = [
+    { label: "PRICES", value: quotation.pricesTerms || "EX WORKS COIMBATORE with open packing basis." },
+    { label: "OUR PAYMENT TERMS", value: quotation.ourPaymentTerms || "100% payment + 100% GST before dispatch from our works" },
+    { label: "DELIVERY", value: quotation.delivery || "4 - 6 weeks against receipt of your firm PO" },
+    { label: "PACKING & FORWARDING CHARGES", value: quotation.packingForwardingCharges || "NA" },
+    { label: "TRANSPORTATION CHARGES", value: quotation.transportationCharges || "Customer’s scope" },
+    { label: "TRANSPORTER NAME", value: quotation.transporterName || "Customer’s Vehicle" },
+    { label: "MODE & PLACE OF DELIVERY", value: quotation.modePlaceDelivery || "EX WORKS" },
+    { label: "OFFER VALIDITY", value: quotation.offerValidity || "30 days from the date of this offer." },
+    { label: "WARRANTY", value: quotation.warranty || "12 months from the date of dispatch or 1000 running hours whichever is earlier." },
+    // Use the determined hsnCodesValue
+    { label: "HSN CODES", value: hsnCodesValue }
+  ];
+
+  const termsRowsHtml = termsData.map(term => `
+    <tr>
+        <td style="border: 1px solid #000; padding: 6px; font-weight: bold; width: 35%;">${term.label}:</td>
+        <td style="border: 1px solid #000; padding: 6px; width: 65%;">${term.value || 'N/A'}</td>
+    </tr>
+  `).join('');
+
+  // Common Header for both pages
   const commonHeaderHtml = `
-    <div style="margin-bottom: 20px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <div style="display: flex; align-items: center;">
-         <img src="${companyLogoSrc}" alt="Company Logo" style="width: 200px; height: 70px; margin-right: 15px;">
-          <div>
-            <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #2c3e50; margin-bottom: 5px;">ACE AUTOMATION</h2>
-            <p style="margin: 2px 0; font-size: 10px; color: #555;">S.F. No. 91, 14B, Padiveedu Thottam,</p>
-            <p style="2px 0; font-size: 10px; color: #555;">Kalapatty road, Saravanampatti (PO),</p>
-            <p style="margin: 2px 0; font-size: 10px; color: #555;">Coimbatore - 641 035. TN, INDIA.</p>
-            <p style="margin: 2px 0; font-size: 10px; color: #555;">+91 98422 53389 | aceautomation.cbe@gmail.com</p>
-            <p style="2px 0; font-size: 10px; color: #555;">www.aceautomation.in | GST No. : 33AVDPD3093Q1ZD</p>
-          </div>
-        </div>
-
-        <div style="background: linear-gradient(135deg, #ff6600, #ff8c00); color: white; padding: 15px 25px; font-weight: 600; font-size: 20px; text-align: center; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          QUOTATION
-        </div>
+    <div style="margin: 0 auto;padding: 10px 20px;font-family: Cambria ;">
+  <div style="display: flex;align-items: center;border-bottom: 2px solid #d35400;padding-bottom: 10px;justify-content: space-around;">
+    <img src="${companyLogoSrc}" alt="Company Logo" style="width: 80px; height: auto; margin-right: 15px;">
+    <div style="text-align: left;">
+      <h2 style="margin: 0;font-size: 24px;font-weight: bold;color: #D35400;text-transform: uppercase;">
+        MEGA CRANES INDIA PRIVATE LIMITED
+      </h2>
+      <div style="font-size: 10px;color: #D35400;margin-top: 2px;text-align: center;">
+        (An ISO 9001 : 2015 Certified company)
       </div>
-      <div style="border-bottom: 2px solid #eee; margin-bottom: 15px;"></div>
     </div>
+  </div>
+
+  <div style="text-align: center; font-size: 11px; color: #333; margin-top: 8px; border-bottom: 2px solid #d35400;padding-bottom: 10px">
+    <p style="margin: 4px 0;">
+      S.F. No. 2/8, 2/9, 2/11, Thelungupalayam Road, Ellapalayam (P.O), Annur, Coimbatore - 641 697.
+      Mob : 99949 63033, 99949 93032.
+    </p>
+    <p style="margin: 4px 0;">
+      E-mail : <a href="mailto:info@megacranesindia.com" style="color: #000;">info@megacranesindia.com</a>,
+      <a href="mailto:marketing@megacranesindia.com" style="color: #000;">marketing@megacranesindia.com</a>
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      Website : <a href="http://www.megacranesindia.com" style="color: #D35400; font-weight: bold;">www.megacranesindia.com</a>
+    </p>
+    <p style="margin: 4px 0;">
+      GST No : 33AACCM6869G1Z8 &nbsp;&nbsp;&nbsp;&nbsp;
+      PAN No : AACCM6869G &nbsp;&nbsp;&nbsp;&nbsp;
+      Incorporation No : U29150TZ2009PTC015678
+    </p>
+  </div>
+</div>
   `;
 
+  // Page 1 HTML content
   const page1Html = `
-    <div style="padding: 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); background: white;">
+    <div style="padding: 25px; font-family: Cambria ; font-size: 11px; line-height: 1.4;">
       ${commonHeaderHtml}
 
-      <div style="margin-bottom: 20px; background: #f9fafb; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-          <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; width: 25%; background: #f0f2f5;">Company Name</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; width: 25%;">
-              ${quotation.businessName || "N/A"}
-            </td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; width: 25%; background: #f0f2f5;">Date</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; width: 25%;">
-              ${quotation.date ? new Date(quotation.date).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN")}
-            </td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; background: #f0f2f5;">Contact Person</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px;">
-              ${customerContactName}
-            </td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; background: #f0f2f5;">Quotation No</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px;">
-              ${quotation.quotationNumber || "N/A"}
-            </td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; background: #f0f2f5;">Contact Number</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px;">
-              ${customerPhone} </td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; background: #f0f2f5;">Customer GST No.</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px;">
-              ${customerGSTIN}
-            </td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; background: #f0f2f5;">Contact Email</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px;" colspan="3">
-              ${customerEmail}
-            </td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; background: #f0f2f5;">Address</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px;" colspan="3">
-              ${customerAddress}
-            </td>
-          </tr>
-        </table>
-      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <div style="width: 65%;">
+         <p style="margin: 2px 0;"><span style="font-weight: bold;">${quotationNumber}</span></p>
+<p style="margin: 8px 0 2px 0;">To,</p>
+<p style="margin: 7px 0;"><span style="font-weight: bold;">M/s</span> ${toCompany}</p>
+<p style="margin: 2px 0;"><span style="font-weight: bold;">KIND ATTN:</span> ${attnContact}</p>
+<p style="margin: 2px 0;"><span style="font-weight: bold;">Mobile:</span> ${attnMobile}</p>
+<p style="margin: 2px 0;"><span style="font-weight: bold;">E-mail:</span> ${attnEmail}</p>
+<p style="margin: 8px 0 2px 0;"><span style="font-weight: bold;">SUB:</span> ${subject}</p>
+<p style="margin: 2px 0;"><span style="font-weight: bold;">REF:</span> ${reference}</p>
 
-      ${
-        quotation.items?.length > 0
-          ? `
-          <div style="margin-top: 20px; overflow: hidden; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; table-layout: fixed; font-size: 12px;">
-              <colgroup>
-                <col style="width: 5%;"> <col style="width: 20%;"> <col style="width: 25%;"> <col style="width: 10%;"> <col style="width: 17.5%;"> <col style="width: 17.5%;"> </colgroup>
-              <thead>
-                <tr style="background: linear-gradient(135deg, #2c3e50, #34495e); color: white;">
-                  <th style="border: 1px solid #2c3e50; padding: 8px; text-align: center;">S.No</th>
-                  <th style="border: 1px solid #2c3e50; padding: 8px; text-align: left;">Product Name</th>
-                  <th style="border: 1px solid #2c3e50; padding: 8px; text-align: left;">Specification</th>
-                  <th style="border: 1px solid #2c3e50; padding: 8px; text-align: center;">Quantity</th>
-                  <th style="border: 1px solid #2c3e50; padding: 8px; text-align: right;">Unit Price (₹)</th>
-                  <th style="border: 1px solid #2c3e50; padding: 8px; text-align: right;">Total (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${quotation.items
-                  .map((item, idx) => {
-                      const productName = item?.productName || "N/A";
-
-                      let itemSpecification = item?.description || "";
-                      if (!itemSpecification && item.specifications?.length > 0) {
-                          itemSpecification = item.specifications.map(s => `${s.name}: ${s.value}`).join(", ");
-                      }
-                      itemSpecification = itemSpecification || "N/A";
-
-                      const quantity = parseFloat(item.quantity) || 0;
-                      const rate = parseFloat(item.rate) || 0;
-                      const total = (quantity * rate).toFixed(2);
-
-                      return `
-                      <tr style="${idx % 2 === 0 ? 'background: #fff;' : 'background: #f9fafb;'}">
-                        <td style="border: 1px solid #e0e0e0; padding: 8px; text-align: center; vertical-align: top;">${idx + 1}</td>
-                        <td style="border: 1px solid #e0e0e0; padding: 8px; text-align: left; vertical-align: top;">
-                          ${productName}
-                        </td>
-                        <td style="border: 1px solid #e0e0e0; padding: 8px; text-align: left; vertical-align: top;">
-                          ${itemSpecification}
-                        </td>
-                        <td style="border: 1px solid #e0e0e0; padding: 8px; text-align: center; vertical-align: top;">
-                          ${quantity}
-                        </td>
-                        <td style="border: 1px solid #e0e0e0; padding: 8px; text-align: right; vertical-align: top;">${formatCurrency(
-                          rate
-                        )}</td>
-                        <td style="border: 1px solid #e0e0e0; padding: 8px; text-align: right; font-weight: 600; vertical-align: top;">
-                          ${formatCurrency(parseFloat(total))}
-                        </td>
-                      </tr>
-                    `;
-                  })
-                  .join("")}
-              </tbody>
-            </table>
-          </div>
-
-          <div style="margin-top: 15px; background: #f9fafb; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-              <tr>
-                <td style="width: 70%;"></td>
-                <td style="border: 1px solid #e0e0e0; padding: 10px; text-align: right; font-weight: 600; width: 15%; background: #f0f2f5;">Sub Total</td>
-                <td style="border: 1px solid #e0e0e0; padding: 10px; text-align: right; font-weight: 600; width: 15%;">${formatCurrency(subTotalAmount)}</td>
-              </tr>
-              <tr>
-                <td style="width: 70%;"></td>
-                <td style="border: 1px solid #e0e0e0; padding: 10px; text-align: right; width: 15%; background: #f0f2f5;">GST (18%)</td>
-                <td style="border: 1px solid #e0e0e0; padding: 10px; text-align: right; width: 15%;">${formatCurrency(gstAmount)}</td>
-              </tr>
-              <tr style="background: #e8f5e9;">
-                <td style="width: 70%;"></td>
-                <td style="border: 1px solid #e0e0e0; padding: 10px; text-align: right; font-weight: 600; font-size: 13px; width: 15%;">Total Amount</td>
-                <td style="border: 1px solid #e0e0e0; padding: 10px; text-align: right; font-weight: 600; font-size: 13px; width: 15%;">${formatCurrency(billAmount)}</td>
-              </tr>
-            </table>
-          </div>
-
-          <div style="margin-top: 15px; background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-              <tr>
-                <td style="font-weight: 600; padding: 4px; width: 25%; color: #555;">Amount In Words</td>
-                <td style="padding: 4px; font-style: italic; width: 75%;">${convertNumberToWords(billAmount)}</td>
-              </tr>
-            </table>
-          </div>
-        `
-          : ""
-      }
-
-      <div style="margin-top: 20px; font-size: 12px; color: #555;">
-        <p style="margin: 5px 0; font-style: italic; color: #666;">"We appreciate your business inquiry and look forward to serving you with our quality products and services."</p>
-
-        <div style="margin: 15px 0;">
-          <p style="margin: 5px 0; font-weight: 600; color: #2c3e50;">With Best Regards</p>
-          <p style="5px 0; color: #555;">For Ace Automation</p>
+        </div>
+        <div style="width: 30%; text-align: right;">
+          <p style="2px 0; font-weight: bold;">DATE: ${quotationDate}</p>
         </div>
       </div>
 
-      <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-        <div style="text-align: right;">
-          <img src="${signatureImageSrc}" alt="Authorized Signature" style="height: 60px; display: block; margin-left: auto; margin-bottom: 5px;">
-          <p style="margin: 5px 0; font-size: 12px; font-weight: 600; color: #2c3e50;">Authorized Signatory</p>
-        </div>
+      <p style="10px 0; font-weight: bold;">Dear Customer,</p>
+      <p style="10px 0;">We thank you for enquiry, we are pleased to submit our Techno Commercial Offer, as under.</p>
+      <p style="10px 0;">We, “Mega Cranes” is a Promising & Reliable Original Equipment Manufacturer of Overhead Cranes and Electric Wire Rope Hoist in South India, situated at Coimbatore more than a decade.</p>
+      <p style="10px 0;">We are also an Authorized Crane Partner of “KITO” Japan for Electric Chain Hoist, Manual Hoist, Rope Hoist. KITO is the Worlds No.1 Chain Hoist manufacturer.</p>
+
+      <div style="margin-top: 30px; text-align: center; font-weight: bold; font-size: 12px;">
+        <p style="5px 0;">Annexure I - Price & Scope Details</p>
+        <p style="5px 0;">Annexure II - Terms & Conditions</p>
+      </div>
+
+      <p style="20px 0;">We hope you will find our offer most competitive, if you have clarifications, please feel free to contact us.</p>
+      <p style="10px 0;">Looking forward for your valued order at the earliest.</p>
+      <p style="10px 0;">Yours Faithfully</p>
+      <p style="5px 0; font-weight: bold;">For MEGA CRANES INDIA PVT LTD.,</p>
+
+      <div style="margin-top: 40px;">
+        <p style="2px 0; font-weight: bold;">Sivaraman.P.S</p>
+        <p style="2px 0;">Head – Business Development</p>
+        <p style="2px 0;">+91 9944039125</p>
       </div>
       <p style="text-align: center; font-size: 10px; color: #999; margin-top: 20px;">Page 1/2</p>
     </div>
   `;
 
-  const productSpecificationsSections = quotation.items
-    ?.filter(item => item.specifications && item.specifications.length > 0)
-    .map(item => {
-      const productTitle = item.productName || item.description || 'Product';
-      const productSpecTitleAppendix = `- ${productTitle}`;
+  // Generate item rows for the table on Page 2
+  const itemRowsHtml = quotation.items?.map((item) => {
+    const description = item.description || item.productName || 'N/A';
+    // If you need to display hsnSac per item, you would add it here
+    const unitPrice = parseFloat(item.rate || 0);
+    const quantity = parseFloat(item.quantity || 0);
+    const totalPrice = unitPrice * quantity;
+    return `
+      <tr>
+        <td style="border: 1px solid #000; padding: 6px; text-align: left;">${description}</td>
+        <td style="border: 1px solid #000; padding: 6px; text-align: right;">${formatCurrency(unitPrice)}</td>
+        <td style="border: 1px solid #000; padding: 6px; text-align: center;">${quantity}</td>
+        <td style="border: 1px solid #000; padding: 6px; text-align: right;">${formatCurrency(totalPrice)}</td>
+      </tr>
+    `;
+  }).join('') || '';
 
-      const productSpecificationsRows = item.specifications
-        .map(
-          (spec) => `
-          <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; width: 40%; background: #f9f9f9; vertical-align: top;">${spec.name || ''}</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; vertical-align: top;">${spec.value || ''}</td>
+  // Page 2 HTML content
+  const page2Html = `
+    <div style="padding: 25px; font-family: Cambria ; font-size: 11px; line-height: 1.4;">
+      <div style="margin: 0 auto;padding: 10px 20px;font-family: Cambria ;">
+  <div style="border-bottom: 2px solid #d35400;padding-bottom: 10px;justify-content: space-around;">
+    <img src="${companyLogoSrc}" alt="Company Logo" style="width: 80px; height: auto; margin-right: 15px;">
+    
+    </div>
+  </div>
+
+
+      <h3 style="text-align: center; margin-bottom: 15px; font-size: 14px;">ANNEXURE - I (PRICE & SCOPE)</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+          <tr style="background-color: #f2f2f2;">
+            <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 55%;">DESCRIPTION</th>
+            <th style="border: 1px solid #000; padding: 6px; text-align: right; width: 15%;">UNIT PRICE</th>
+            <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 10%;">QTY</th>
+            <th style="border: 1px solid #000; padding: 6px; text-align: right; width: 20%;">TOTAL PRICE</th>
           </tr>
-        `
-        )
-        .join("");
-
-      return `
-        <div style="margin-bottom: 20px; background: #f9fafb; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          <div style="background: linear-gradient(135deg, #2c3e50, #34495e); color: white; padding: 8px 12px; font-weight: 600; font-size: 13px;">
-            PRODUCT SPECIFICATIONS ${productSpecTitleAppendix}
-          </div>
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-            <tbody>
-              ${productSpecificationsRows}
-            </tbody>
-          </table>
-        </div>
-      `;
-    })
-    .join("");
-
-  const generalTermsHtml = `
-    <div style="margin-top: 20px; background: #f9fafb; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-      <div style="background: linear-gradient(135deg, #2c3e50, #34495e); color: white; padding: 8px 12px; font-weight: 600; font-size: 13px;">
-        GENERAL TERMS & CONDITIONS
-      </div>
-      <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+        </thead>
         <tbody>
+          ${itemRowsHtml}
           <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; width: 30%; background: #f0f2f5; vertical-align: top;">Payment Terms</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; vertical-align: top;">${quotation.Payment || "50% advance, 50% on delivery"}</td>
+            <td colspan="3" style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold;">SUB TOTAL</td>
+            <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold;">${formatCurrency(subTotalAmount)}</td>
           </tr>
           <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; width: 30%; background: #f0f2f5; vertical-align: top;">Delivery Period</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; vertical-align: top;">${quotation.Delivery ? `${quotation.Delivery} days` : "Within 15 working days after advance"}</td>
+            <td colspan="3" style="border: 1px solid #000; padding: 6px; text-align: right;">TAXES - GST 18%</td>
+            <td style="border: 1px solid #000; padding: 6px; text-align: right;">${formatCurrency(gstAmount)}</td>
           </tr>
           <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; width: 30%; background: #f0f2f5; vertical-align: top;">Warranty</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; vertical-align: top;">${quotation.Warranty ? `${quotation.Warranty} year(s)` : "1 year from the date of invoice"}</td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; width: 30%; background: #f0f2f5; vertical-align: top;">Freight</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; vertical-align: top;">${quotation.Freight || "Extra as per actual"}</td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; font-weight: 600; width: 30%; background: #f0f2f5; vertical-align: top;">Validity</td>
-            <td style="border: 1px solid #e0e0e0; padding: 8px; vertical-align: top;">${quotation.Validity || "30 days from the date of quotation"}</td>
+            <td colspan="3" style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold;">GRAND TOTAL</td>
+            <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold;">${formatCurrency(grandTotalAmount)}</td>
           </tr>
         </tbody>
       </table>
-    </div>
-  `;
 
-  const page2Html = `
-    <div style="padding: 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); background: white;">
-      ${commonHeaderHtml}
+     <div style="border: 1px solid #000; padding: 10px; margin-top: 20px; font-family: Cambria ; font-size: 12px;">
+  
+  <p style="margin: 0 0 8px 0; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px;">
+    Note:
+  </p>
+  <p style="margin: 0 0 12px 0; line-height: 1.5;">
+    ${quotationNotes.split('\n').join('<br/>')}
+  </p>
 
-      ${productSpecificationsSections}
+  <p style="margin: 0 0 8px 0; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px;">
+    CUSTOMER'S SCOPE:
+  </p>
+  <ul style="margin-left: 20px; padding-left: 15px; list-style-type: disc; line-height: 1.6;">
+    ${customerScope
+      .split('\n')
+      .filter(line => line.trim() !== '')
+      .map(line => `<li>${line}</li>`)
+      .join('')}
+  </ul>
 
-      ${generalTermsHtml}
+</div>
 
-      <div style="margin-top: 20px; font-size: 12px; color: #555;">
-        <p style="margin: 5px 0; font-style: italic; color: #666;">"Thank you for considering our proposal. We assure you of our best services and support at all times."</p>
 
-        <div style="margin: 15px 0;">
-          <p style="margin: 5px 0; font-weight: 600; color: #2c3e50;">With Best Regards</p>
-          <p style="5px 0; color: #555;">For Ace Automation</p>
-        </div>
-      </div>
+      <h3 style="text-align: center; margin-top: 30px; margin-bottom: 15px; font-size: 14px;">ANNEXURE - II - TERMS & CONDITIONS</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <tbody>
+          ${termsRowsHtml}
+        </tbody>
+      </table>
 
-      <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-        <div style="text-align: right;">
-          <img src="${signatureImageSrc}" alt="Authorized Signature" style="height: 60px; display: block; margin-left: auto; margin-bottom: 5px;">
-          <p style="margin: 5px 0; font-size: 12px; font-weight: 600; color: #2c3e50;">Authorized Signatory</p>
-        </div>
-      </div>
-      <p style="text-align: center; font-size: 10px; color: #999; margin-top: 20px;">Page 2/2</p>
+      <p style="5px 0; font-weight: bold;">For MEGA CRANES INDIA PVT LTD.,</p>
+
+      <div style="margin-top: 40px;">
+        <p style="2px 0; font-weight: bold;">Sivaraman.P.S</p>
+        <p style="2px 0;">Head – Business Development</p>
+        <p style="2px 0;">+91 9944039125</p> 
+
+      <p style="text-align: center; font-size: 10px; color: #999; margin-top: 50px;">Page 2/2</p>
     </div>
   `;
 
@@ -367,7 +345,7 @@ export const downloadQuotationPdf = async (record) => {
     position: "top-center",
   });
 
-  let tempDivPage1 = null;
+  let tempDivPage1 = null; 
   let tempDivPage2 = null;
 
   try {
@@ -382,40 +360,43 @@ export const downloadQuotationPdf = async (record) => {
 
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
-    const padding = 7;
+    const padding = 7; // Padding around the content on the PDF page
 
     // --- Render Page 1 ---
     tempDivPage1 = document.createElement("div");
     tempDivPage1.style.position = "fixed";
     tempDivPage1.style.top = "-9999px";
     tempDivPage1.style.left = "-9999px";
+    // Set width for html2canvas to render correctly within PDF dimensions
     tempDivPage1.style.width = `${pdfWidth - 2 * padding}mm`;
-    tempDivPage1.style.padding = '0';
+    tempDivPage1.style.padding = '0'; // No internal padding for the temporary div
     tempDivPage1.style.background = "white";
-    tempDivPage1.style.zIndex = "-1";
-    tempDivPage1.style.display = "block";
+    tempDivPage1.style.zIndex = "-1"; // Keep it hidden
+    tempDivPage1.style.display = "block"; // Ensure it takes up space for rendering
     tempDivPage1.innerHTML = page1Html;
     document.body.appendChild(tempDivPage1);
 
+    // Small delay to ensure DOM rendering is complete before html2canvas
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const canvasPage1 = await html2canvas(tempDivPage1, {
-      scale: 2, // Adjusted scale from 3 to 2 for smaller file size
-      useCORS: true,
+      scale: 3, // Increased scale for better quality
+      useCORS: true, // Important if your logo is from a different origin
       logging: false,
       allowTaint: true,
       letterRendering: true,
-      backgroundColor: "#ffffff"
+      backgroundColor: "#ffffff" // Ensure white background
     });
 
-    const imgDataPage1 = canvasPage1.toDataURL("image/jpeg", 0.8); // Changed to JPEG with 0.8 quality
+    const imgDataPage1 = canvasPage1.toDataURL("image/jpeg", 0.95); // Increased JPEG quality
     const imgPropsPage1 = pdf.getImageProperties(imgDataPage1);
+    // Calculate image height to maintain aspect ratio within PDF width
     const imgHeightPage1 = (imgPropsPage1.height * (pdfWidth - 2 * padding)) / imgPropsPage1.width;
 
-    pdf.addImage(imgDataPage1, "JPEG", padding, padding, pdfWidth - 2 * padding, imgHeightPage1); // Changed format to JPEG
+    pdf.addImage(imgDataPage1, "JPEG", padding, padding, pdfWidth - 2 * padding, imgHeightPage1);
 
     // --- Render Page 2 ---
-    pdf.addPage();
+    pdf.addPage(); // Add a new page for the second part of the quotation
 
     tempDivPage2 = document.createElement("div");
     tempDivPage2.style.position = "fixed";
@@ -432,7 +413,7 @@ export const downloadQuotationPdf = async (record) => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const canvasPage2 = await html2canvas(tempDivPage2, {
-      scale: 2, // Adjusted scale from 3 to 2
+      scale: 3, // Increased scale for better quality
       useCORS: true,
       logging: false,
       allowTaint: true,
@@ -440,18 +421,20 @@ export const downloadQuotationPdf = async (record) => {
       backgroundColor: "#ffffff"
     });
 
-    const imgDataPage2 = canvasPage2.toDataURL("image/jpeg", 0.8); // Changed to JPEG with 0.8 quality
+    const imgDataPage2 = canvasPage2.toDataURL("image/jpeg", 0.95); // Increased JPEG quality
     const imgPropsPage2 = pdf.getImageProperties(imgDataPage2);
     const imgHeightPage2 = (imgPropsPage2.height * (pdfWidth - 2 * padding)) / imgPropsPage2.width;
 
-    pdf.addImage(imgDataPage2, "JPEG", padding, padding, pdfWidth - 2 * padding, imgHeightPage2); // Changed format to JPEG
+    pdf.addImage(imgDataPage2, "JPEG", padding, padding, pdfWidth - 2 * padding, imgHeightPage2);
 
-    pdf.save(`${record.quotationNumber || "quotation"}_${new Date().toISOString().slice(0,10)}.pdf`);
+    // Save the PDF with a dynamic filename
+    pdf.save(`${record.quotationNumber || "quotation"}_${new Date().toISOString().slice(0, 10)}.pdf`);
     toast.success("PDF downloaded successfully!", { id: toastId });
   } catch (err) {
     console.error("Failed to generate PDF:", err);
     toast.error("Failed to generate PDF. Please try again.", { id: toastId });
   } finally {
+    // Clean up temporary divs from the DOM
     if (tempDivPage1 && document.body.contains(tempDivPage1)) {
       document.body.removeChild(tempDivPage1);
     }

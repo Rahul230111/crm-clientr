@@ -38,9 +38,9 @@ const Sidebar = ({ collapsed }) => {
           key: "/dashboard",
           icon: <DashboardOutlined />,
           label: collapsed ? null : "Dashboard",
-          roles: ["Admin", "Superadmin", "Employee"],
+          roles: ["Admin", "Superadmin", "Employee", "Team Leader"],
           children: [
-            { key: "/dashboard/deals", label: "Leads Dashboard", roles: ["Admin", "Superadmin"] },
+            { key: "/dashboard/deals", label: "Leads Dashboard", roles: ["Admin", "Superadmin","Team Leader"] },
             // { key: "/invoicedashboard", label: "Invoice Dashboard", roles: ["Admin", "Superadmin", "Employee"] },
           ],
         },
@@ -48,11 +48,11 @@ const Sidebar = ({ collapsed }) => {
           key: "/application",
           icon: <AppstoreOutlined />,
           label: collapsed ? null : "Application",
-          roles: ["Admin", "Superadmin"],
+          roles: ["Admin", "Superadmin", "Team Leader","Employee"] ,
           children: [
-            { key: "/leads", icon: <SolutionOutlined />, label: "Leads", roles: ["Admin", "Superadmin"] },
-            { key: "/customers", icon: <UserOutlined />, label: "Customers", roles: ["Admin", "Superadmin"] },
-            { key: "/quotation", icon: <FileTextOutlined />, label: "Quotations", roles: ["Admin", "Superadmin"] },
+            { key: "/leads", icon: <SolutionOutlined />, label: "Leads", roles: ["Admin","Employee", "Superadmin", "Team Leader"] },
+            { key: "/customers", icon: <UserOutlined />, label: "Customers", roles: ["Admin", "Employee", "Superadmin", "Team Leader"] },
+            { key: "/quotation", icon: <FileTextOutlined />, label: "Quotations", roles: ["Admin", "Superadmin", "Team Leader"] },
             // { key: "/invoice", icon: <ShoppingOutlined />, label: "Invoices", roles: ["Admin", "Superadmin"] },
             // {
             //   key: "/daily-reports",
@@ -60,14 +60,14 @@ const Sidebar = ({ collapsed }) => {
             //   label: "Settings",
             //   roles: ["Superadmin", "Admin", "Employee"],
             // },
-            { key: "/products", icon: <FileAddOutlined />, label: "Products", roles: ["Admin", "Superadmin"] },
+            { key: "/products", icon: <FileAddOutlined />, label: "Products", roles: ["Admin", "Superadmin" ,"Team Leader"] },
           ],
         },
         {
           key: "/super-admin",
           icon: <UserSwitchOutlined />,
           label: collapsed ? null : "User Manage",
-          roles: ["Superadmin", "Admin", "Employee"],
+          roles: ["Superadmin", "Admin", "Employee" , "Team Leader"],
           children: [
             { 
               key: "/management",
@@ -80,7 +80,7 @@ const Sidebar = ({ collapsed }) => {
               key: "/profile",
               icon: <UserOutlined />,
               label: "Profile",
-              roles: ["Superadmin", "Admin", "Employee"],
+              roles: ["Superadmin", "Admin", "Employee", "Team Leader"],
             },
           ],
         },

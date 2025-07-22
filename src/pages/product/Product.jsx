@@ -81,11 +81,11 @@
           render: (_, __, index) => index + 1,
           width: 60,
         },
-        {
-          title: "Product ID",
-          dataIndex: "product_id",
-          width: 120,
-        },
+        // {
+        //   title: "Product ID",
+        //   dataIndex: "product_id",
+        //   width: 120,
+        // },
         {
           title: "Name",
           dataIndex: "productName",

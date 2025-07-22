@@ -15,7 +15,7 @@ import {
   Space,
   Dropdown,
   Menu,
-  Spin
+  Spin,
 } from "antd";
 import {
   PlusOutlined,
@@ -45,11 +45,12 @@ const Leads = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [currentAccount, setCurrentAccount] = useState(null);
   const [searchText, setSearchText] = useState("");
-  const [activeTab, setActiveTab] = useState("active");
+  const [activeTab, setActiveTab] = useState("all"); // Default to 'all'
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [accountToUpdate, setAccountToUpdate] = useState(null);
-  const [newStatus, setNewStatus] = useState(null); // This will now hold string status 'Active' or 'Customer'
-  const [accounts, setAccounts] = useState([]);
+  const [newStatus, setNewStatus] = useState(null);
+  const [accounts, setAccounts] = useState([]); // This will hold accounts for the active tab
+  const [allAccountsData, setAllAccountsData] = useState([]); // NEW: To store all fetched accounts
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
   const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
@@ -57,42 +58,55 @@ const Leads = () => {
   // State variables for counts
   const [activeLeadsCount, setActiveLeadsCount] = useState(0);
   const [customersCount, setCustomersCount] = useState(0);
-  const [pipelineLeadsCount, setPipelineLeadsCount] = useState(0); // Renamed from waitingLeadsCount
+  const [pipelineLeadsCount, setPipelineLeadsCount] = useState(0);
   const [closedAccountsCount, setClosedAccountsCount] = useState(0);
-  const [quotationsSentCount, setQuotationsSentCount] = useState(0); // NEW: State for Quotations Sent count
+  const [quotationsSentCount, setQuotationsSentCount] = useState(0);
+  const [allLeadsCount, setAllLeadsCount] = useState(0);
 
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingAccounts, setLoadingAccounts] = useState(true); // NEW: Loading state for accounts
 
   const user = JSON.parse(localStorage.getItem("user"));
-  const role = user?.role; // Get the user's role
+  const role = user?.role;
 
   const tableRef = useRef(null);
 
+  // Effect to fetch all accounts initially and users
   useEffect(() => {
-    fetchAccounts();
+    const fetchInitialData = async () => {
+      setLoadingAccounts(true);
+      try {
+        const response = await axios.get(`${API_URL}`);
+        setAllAccountsData(response.data); // Store all accounts
+        setLoadingAccounts(false);
+      } catch (error) {
+        toast.error("Failed to fetch accounts.");
+        console.error("Fetch accounts error:", error);
+        setLoadingAccounts(false);
+      }
+    };
+
+    fetchInitialData();
     fetchUsers();
-  }, [activeTab]);
+  }, []); // Run only once on component mount
 
-  const fetchAccounts = async () => {
-    try {
-      const response = await axios.get(`${API_URL}`);
-      const allAccounts = response.data;
-
-      // Filter based on the 'status' field primarily
-      const activeLeadsData = allAccounts.filter(
+  // Effect to filter accounts and update counts when allAccountsData or activeTab changes
+  useEffect(() => {
+    if (allAccountsData.length > 0) {
+      const activeLeadsData = allAccountsData.filter(
         (account) => account.status === "Active"
       );
-      const customersData = allAccounts.filter(
+      const customersData = allAccountsData.filter(
         (account) => account.status === "Customer"
       );
-      const pipelineLeadsData = allAccounts.filter(
+      const pipelineLeadsData = allAccountsData.filter(
         (account) => account.status === "Pipeline"
       );
-      const closedAccountsData = allAccounts.filter(
+      const closedAccountsData = allAccountsData.filter(
         (account) => account.status === "Closed"
       );
-      const quotationsSentData = allAccounts.filter( // NEW: Filter for Quotations Sent
+      const quotationsSentData = allAccountsData.filter(
         (account) => account.status === "Quotations"
       );
 
@@ -100,36 +114,47 @@ const Leads = () => {
       setCustomersCount(customersData.length);
       setPipelineLeadsCount(pipelineLeadsData.length);
       setClosedAccountsCount(closedAccountsData.length);
-      setQuotationsSentCount(quotationsSentData.length); // NEW: Set Quotations Sent count
+      setQuotationsSentCount(quotationsSentData.length);
+      setAllLeadsCount(allAccountsData.length);
 
+      // Set the accounts for the currently active tab
       if (activeTab === "active") {
         setAccounts(activeLeadsData);
       } else if (activeTab === "customers") {
         setAccounts(customersData);
-      } else if (activeTab === "Pipeline") { // Corrected key to "Pipeline"
+      } else if (activeTab === "Pipeline") {
         setAccounts(pipelineLeadsData);
       } else if (activeTab === "closed") {
         setAccounts(closedAccountsData);
-      } else if (activeTab === "quotations") { // NEW: Handle 'quotations' tab
+      } else if (activeTab === "quotations") {
         setAccounts(quotationsSentData);
+      } else if (activeTab === "all") {
+        setAccounts(allAccountsData);
       }
-      else {
-        setAccounts(allAccounts);
-      }
+    }
+  }, [allAccountsData, activeTab]); // Re-run when allAccountsData or activeTab changes
+
+  const fetchAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const response = await axios.get(`${API_URL}`);
+      setAllAccountsData(response.data); // Update the main data source
+      setLoadingAccounts(false);
     } catch (error) {
       toast.error("Failed to fetch accounts.");
       console.error("Fetch accounts error:", error);
+      setLoadingAccounts(false);
     }
   };
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      const response = await axios.get('/api/users');
+      const response = await axios.get("/api/users");
       setUsers(response.data);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Failed to load users for assignment.');
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load users for assignment.");
     } finally {
       setLoadingUsers(false);
     }
@@ -137,11 +162,7 @@ const Leads = () => {
 
   const handleSaveAccount = async (values) => {
     try {
-      const dataToSend = {
-        ...values,
-        // The assignedTo logic is now handled in BusinessAccountForm.jsx via default or selected value
-        // The backend will also derive isCustomer from the status.
-      };
+      const dataToSend = { ...values };
 
       if (currentAccount) {
         await axios.put(`${API_URL}/${currentAccount._id}`, dataToSend);
@@ -151,7 +172,7 @@ const Leads = () => {
         toast.success("Account created successfully!");
       }
       setFormVisible(false);
-      fetchAccounts();
+      fetchAccounts(); // Re-fetch all accounts to update the state
     } catch (error) {
       toast.error("Failed to save account.");
       console.error(
@@ -169,8 +190,8 @@ const Leads = () => {
   const handleDeleteAccount = async (id) => {
     try {
       await axios.delete(`${API_URL}/${id}`);
-      toast.success("Account status set to Closed!"); // Changed message for soft delete
-      fetchAccounts();
+      toast.success("Account status set to Closed!");
+      fetchAccounts(); // Re-fetch all accounts to update the state
     } catch (error) {
       toast.error("Failed to set account status to Closed.");
       console.error(
@@ -190,22 +211,18 @@ const Leads = () => {
     setFollowUpDrawerVisible(true);
   };
 
-  // Modified handleStatusChange to set the 'status' string value
   const handleStatusChange = (statusValue, account) => {
     setAccountToUpdate(account);
-    setNewStatus(statusValue); // 'Customer' or 'Active' (or 'Pipeline')
+    setNewStatus(statusValue);
     setIsModalVisible(true);
   };
 
   const handleConfirmStatusChange = async () => {
     try {
-      // Send the new status (e.g., 'Customer' or 'Active') to the backend
       const updatedAccount = { ...accountToUpdate, status: newStatus };
       await axios.put(`${API_URL}/${accountToUpdate._id}`, updatedAccount);
-      toast.success(
-        `Account status changed to ${newStatus}!`
-      );
-      fetchAccounts();
+      toast.success(`Account status changed to ${newStatus}!`);
+      fetchAccounts(); // Re-fetch all accounts to update the state
     } catch (error) {
       toast.error("Failed to update account status.");
       console.error(
@@ -253,7 +270,6 @@ const Leads = () => {
         pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      // You don't have 'account' here, so use a generic name or pass it if exporting single
       pdf.save(`Leads_Customers_Details.pdf`);
       toast.success("PDF generated!", { id: "pdf-toast" });
     } catch (error) {
@@ -290,7 +306,7 @@ const Leads = () => {
         State: account.state,
         Country: account.country,
         Website: account.website,
-        "Is Customer": account.isCustomer ? "Yes" : "No", // Still show this if useful for historical data
+        "Is Customer": account.isCustomer ? "Yes" : "No",
         "Created At": new Date(account.createdAt).toLocaleString(),
       };
       return row;
@@ -335,7 +351,13 @@ const Leads = () => {
             onClick={() => confirm()}
             icon={<SearchOutlined />}
             size="small"
-            style={{  width: 90, marginRight: 8,backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+            style={{
+              width: 90,
+              marginRight: 8,
+              backgroundColor: "#ef7a1b",
+              borderColor: "#orange",
+              color: "white",
+            }}
           >
             Search
           </Button>
@@ -371,18 +393,6 @@ const Leads = () => {
       responsive: ["md", "lg"],
     },
     {
-      title: "Lead Type",
-      dataIndex: "type",
-      key: "type",
-      filters: [
-        { text: "Hot", value: "Hot" },
-        { text: "Warm", value: "Warm" },
-        { text: "Cold", value: "Cold" },
-      ],
-      onFilter: (value, record) => record.type.indexOf(value) === 0,
-      responsive: ["md", "lg"],
-    },
-    {
       title: "Status",
       dataIndex: "status",
       key: "status",
@@ -392,19 +402,16 @@ const Leads = () => {
           case "Active":
             color = "green";
             break;
-          // case "Inactive":
-          //   color = "red";
-          //   break;
           case "Pipeline":
             color = "orange";
             break;
           case "Closed":
             color = "purple";
             break;
-          case "Customer": // New case for 'Customer' status
+          case "Customer":
             color = "blue";
             break;
-          case "Quotations": // NEW: Color for Quotations status
+          case "Quotations":
             color = "cyan";
             break;
           default:
@@ -414,13 +421,13 @@ const Leads = () => {
       },
       filters: [
         { text: "Active", value: "Active" },
-        // { text: "Inactive", value: "Inactive" },
         { text: "Pipeline", value: "Pipeline" },
         { text: "Closed", value: "Closed" },
-        { text: "Customer", value: "Customer" }, // Added 'Customer' filter
-        { text: "Quotations", value: "Quotations" }, // NEW: Added 'Quotations' filter
+        { text: "Customer", value: "Customer" },
+        { text: "Quotations", value: "Quotations" },
       ],
       onFilter: (value, record) => record.status.indexOf(value) === 0,
+      filterMultiple: true,
       responsive: ["sm", "md", "lg"],
     },
     {
@@ -477,29 +484,27 @@ const Leads = () => {
               >
                 View/Add Follow-ups
               </Menu.Item>
-              
-              {/* Conditional menu item for changing status to Customer or Active */}
-              {/* {record.status === "Customer" ? (
+
+              {record.status === "Customer" ? (
                 <Menu.Item
                   key="change-to-lead"
-                  onClick={() => handleStatusChange("Active", record)} // Change to 'Active' lead
+                  onClick={() => handleStatusChange("Active", record)}
                 >
                   Change to Lead
                 </Menu.Item>
               ) : (
                 <Menu.Item
                   key="change-to-customer"
-                  onClick={() => handleStatusChange("Customer", record)} // Change to 'Customer'
+                  onClick={() => handleStatusChange("Customer", record)}
                 >
                   Change to Customer
                 </Menu.Item>
-              )} */}
-              {/* Conditionally render Close Account based on role */}
-              {role === "Superadmin" && ( // Updated condition to show only for 'Superadmin'
+              )}
+              {role === "Superadmin" && (
                 <Menu.Item key="close-account">
                   <Popconfirm
                     title="Are you sure you want to close this account? This will set its status to 'Closed'."
-                    onConfirm={() => handleDeleteAccount(record._id)} // This now sets status to 'Closed'
+                    onConfirm={() => handleDeleteAccount(record._id)}
                     okText="Yes"
                     cancelText="No"
                   >
@@ -519,9 +524,6 @@ const Leads = () => {
   ];
 
   const generatePdfSingleAccount = async (account) => {
-    // You might need to adjust how you get the content for a single account PDF
-    // If you render a separate component for a single account's details, use its ref
-    // For now, assuming you have a hidden div with id `lead-${account._id}`
     const input = document.getElementById(`lead-${account._id}`);
     if (!input) {
       toast.error("PDF content not found for this account.");
@@ -586,7 +588,7 @@ const Leads = () => {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+            style={{ backgroundColor: "#ef7a1b", borderColor: "#orange", color: "white" }}
             onClick={() => {
               setCurrentAccount(null);
               setFormVisible(true);
@@ -595,28 +597,24 @@ const Leads = () => {
             Add New Account
           </Button>
 
-          <Button icon={<FilePdfOutlined />} onClick={exportTableToPdf}>
-            
-          </Button>
-          <Button icon={<FileExcelOutlined />} onClick={exportTableToExcel}>
-          </Button>
+          <Button icon={<FilePdfOutlined />} onClick={exportTableToPdf} />
+          <Button icon={<FileExcelOutlined />} onClick={exportTableToExcel} />
         </Space>
       </div>
 
-      <Tabs defaultActiveKey="active" onChange={setActiveTab}>
+      <Tabs defaultActiveKey="all" onChange={setActiveTab}>
+        <TabPane tab={`All Leads (${allLeadsCount})`} key="all" />
         <TabPane tab={`Enquiry (${activeLeadsCount})`} key="active" />
-        <TabPane tab={`Proposed (${pipelineLeadsCount})`} key="Pipeline" /> {/* Corrected label */}
-        <TabPane tab={`Quotations Sent (${quotationsSentCount})`} key="quotations" /> {/* NEW: Tab for Quotations Sent */}
-
-        {/* <TabPane tab={`Customers (${customersCount})`} key="customers" /> */}
-        <TabPane
-          tab={`Closed Accounts (${closedAccountsCount})`}
-          key="closed"
-        />
+        <TabPane tab={`Proposed (${pipelineLeadsCount})`} key="Pipeline" />
+        <TabPane tab={`Quotations Sent (${quotationsSentCount})`} key="quotations" />
+        <TabPane tab={`Customers (${customersCount})`} key="customers" />
+        <TabPane tab={`Closed Accounts (${closedAccountsCount})`} key="closed" />
       </Tabs>
 
       <div ref={tableRef}>
-        {filteredAccounts.length > 0 ? (
+        {loadingAccounts ? (
+          <Spin size="large" style={{ display: 'block', margin: '50px auto' }} />
+        ) : filteredAccounts.length > 0 ? (
           <Table
             columns={columns}
             dataSource={filteredAccounts}
@@ -664,7 +662,7 @@ const Leads = () => {
       >
         <p>
           Are you sure you want to change this account's status to{" "}
-          {newStatus}?
+          **{newStatus}**?
         </p>
       </Modal>
     </Card>

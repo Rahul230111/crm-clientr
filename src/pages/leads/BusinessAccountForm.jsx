@@ -1,4 +1,3 @@
-// BusinessAccountForm.jsx
 import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Drawer, Row, Col, InputNumber, Select, Spin } from 'antd';
 import { toast } from 'react-hot-toast';
@@ -6,55 +5,80 @@ import { toast } from 'react-hot-toast';
 const { TextArea } = Input;
 const { Option } = Select;
 
+/**
+ * BusinessAccountForm Component
+ *
+ * This component provides a form for creating and editing business accounts.
+ * It uses Ant Design components for UI and includes validation, state management,
+ * and integration with a toast notification system.
+ *
+ * Props:
+ * @param {boolean} visible - Controls the visibility of the drawer.
+ * @param {function} onClose - Callback function to close the drawer.
+ * @param {function} onSave - Callback function to save the form data.
+ * @param {object} initialValues - Initial data to populate the form (for editing).
+ * @param {Array<object>} allUsers - List of all users to populate the "Assigned To" select field.
+ * @param {boolean} loadingUsers - Indicates if the users data is currently being loaded.
+ */
 const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers, loadingUsers }) => {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const sourceType = Form.useWatch('sourceType', form);
+  const [form] = Form.useForm(); // Initialize Ant Design form instance
+  const [loading, setLoading] = useState(false); // State for form submission loading indicator
+  const sourceType = Form.useWatch('sourceType', form); // Watch for changes in sourceType field
 
+  // Effect to reset and set form fields when initialValues or form instance changes
   useEffect(() => {
-    form.resetFields();
+    form.resetFields(); // Clear all fields
     if (initialValues) {
+      // If initialValues are provided (editing an existing account)
       form.setFieldsValue({
         ...initialValues,
+        // Ensure assignedTo is just the ID for the Select component
         assignedTo: initialValues.assignedTo?._id || null
       });
     } else {
+      // If no initialValues (creating a new account), set default values
       form.setFieldsValue({
         sourceType: 'Direct',
-        status: 'Active',
-        assignedTo: null
+        status: 'Active', // Default status for new accounts
+        assignedTo: null // Default to no one assigned
       });
     }
-  }, [initialValues, form]);
+  }, [initialValues, form]); // Re-run effect if initialValues or form instance changes
 
+  /**
+   * Handles the form submission.
+   * Validates fields, processes data, calls onSave, and shows toast notifications.
+   */
   const handleSubmit = () => {
-    form.validateFields()
+    form.validateFields() // Validate all form fields
       .then(values => {
-        setLoading(true);
-        const timestamp = new Date().toLocaleString();
+        setLoading(true); // Start loading indicator
+        const timestamp = new Date().toLocaleString(); // Get current timestamp for notes
         const newNote = values.noteInput
-          ? { text: values.noteInput, timestamp }
+          ? { text: values.noteInput, timestamp } // Create new note object if noteInput exists
           : null;
 
-        const existingNotes = initialValues?.notes || [];
-        const updatedNotes = newNote ? [...existingNotes, newNote] : existingNotes;
+        const existingNotes = initialValues?.notes || []; // Get existing notes or an empty array
+        const updatedNotes = newNote ? [...existingNotes, newNote] : existingNotes; // Add new note to existing ones
 
+        // Prepare data to be saved
         const dataToSave = {
           ...values,
           notes: updatedNotes,
+          // Ensure assignedTo is null if not selected, otherwise use the selected ID
           assignedTo: values.assignedTo === null ? null : values.assignedTo,
         };
 
-        delete dataToSave.noteInput;
+        delete dataToSave.noteInput; // Remove temporary noteInput field from data to save
 
-        onSave(dataToSave);
-        toast.success(`Account ${initialValues ? 'updated' : 'created'} successfully!`);
-        setLoading(false);
-        onClose();
+        onSave(dataToSave); // Call the onSave callback with the prepared data
+        toast.success(`Account ${initialValues ? 'updated' : 'created'} successfully!`); // Show success toast
+        setLoading(false); // Stop loading indicator
+        onClose(); // Close the drawer
       })
       .catch(info => {
-        console.log('Validate Failed:', info);
-        toast.error('Please fill in all required fields correctly.');
+        console.log('Validate Failed:', info); // Log validation errors
+        toast.error('Please fill in all required fields correctly.'); // Show error toast
       });
   };
 
@@ -68,30 +92,34 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
       footer={
         <div style={{ textAlign: 'right' }}>
           <Button onClick={onClose} style={{ marginRight: 8 }}>Cancel</Button>
-          <Button onClick={handleSubmit} type="primary" loading={loading}
-           style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}>
+          <Button
+            onClick={handleSubmit}
+            type="primary"
+            loading={loading}
+            style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+          >
             {initialValues ? 'Update Account' : 'Create Account'}
           </Button>
         </div>
       }
     >
       <Form
-        form={form}
-        layout="vertical"
+        form={form} // Bind the form instance to the Ant Design Form
+        layout="vertical" // Use vertical layout for form items
       >
-        <Row gutter={16}>
+        <Row gutter={16}> {/* Row for Business Name and GST Number */}
           <Col span={12}>
             <Form.Item name="businessName" label="Business Name" rules={[{ required: true, message: 'Please enter business name' }]}>
               <Input placeholder="Business Name" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="gstNumber" label="GST Number" rules={[{ required: true, message: 'Please enter GST Number' }]}>
+            <Form.Item name="gstNumber" label="GST Number" rules={[{ required: false, message: 'Please enter GST Number' }]}>
               <Input placeholder="GST Number" />
             </Form.Item>
           </Col>
         </Row>
-        <Row gutter={16}>
+        <Row gutter={16}> {/* Row for Customer Name and Email */}
           <Col span={12}>
             <Form.Item name="contactName" label="Customer Name" rules={[{ required: true, message: 'Please enter contact person name' }]}>
               <Input placeholder="Contact Person Name" />
@@ -103,7 +131,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
             </Form.Item>
           </Col>
         </Row>
-        <Row gutter={16}>
+        <Row gutter={16}> {/* Row for Phone Number and Mobile Number */}
           <Col span={12}>
             <Form.Item name="phoneNumber" label="Phone Number">
               <Input placeholder="Phone Number (Optional)" />
@@ -115,25 +143,21 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="addressLine1" label="Address Line 1" rules={[{ required: true, message: 'Please enter address line 1' }]}>
-          <Input placeholder="Address Line 1" />
-        </Form.Item>
-        <Row gutter={16}>
+
+        <Row gutter={16}> {/* Row for Address Line 1 and Address Line 2 */}
+          <Col span={12}>
+            <Form.Item name="addressLine1" label="Address Line 1" rules={[{ required: true, message: 'Please enter address line 1' }]}>
+              <Input placeholder="Address Line 1" />
+            </Form.Item>
+          </Col>
           <Col span={12}>
             <Form.Item name="addressLine2" label="Address Line 2">
               <Input placeholder="Address Line 2 (Optional)" />
             </Form.Item>
           </Col>
-          <Col span={12}>
-            <Form.Item name="addressLine3" label="Address Line 3">
-              <Input placeholder="Address Line 3 (Optional)" />
-            </Form.Item>
-          </Col>
         </Row>
-        <Form.Item name="landmark" label="Landmark">
-          <Input placeholder="Landmark (Optional)" />
-        </Form.Item>
-        <Row gutter={16}>
+
+        <Row gutter={16}> {/* Row for City, Pincode, and State */}
           <Col span={8}>
             <Form.Item name="city" label="City" rules={[{ required: true, message: 'Please enter city' }]}>
               <Input placeholder="City" />
@@ -171,9 +195,8 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
           rules={[{ required: true, message: 'Please select an account status' }]}
         >
           <Select placeholder="Select Status">
-            <Option value="Active">Enquiry</Option>
-            <Option value="Pipeline">Proposed</Option>
-            <Option value="Quotations">Quotations Sent</Option>
+            <Option value="Enquiry">Enquiry</Option> {/* Changed 'Active' to 'Enquiry' for clarity */}
+            <Option value="Proposed">Proposed</Option>
             <Option value="Customer">Customer</Option>
             <Option value="Closed">Closed</Option>
           </Select>
@@ -200,18 +223,19 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
         >
           <Select
             placeholder="Select a user to assign to (optional)"
-            allowClear
-            loading={loadingUsers}
-            showSearch
-            optionFilterProp="children"
+            allowClear // Allows clearing the selection
+            loading={loadingUsers} // Show loading spinner if users are being fetched
+            showSearch // Enable search functionality
+            optionFilterProp="children" // Filter options based on their children (text content)
             filterOption={(input, option) => {
-              const childrenText = String(option.children || ''); // Convert to string and handle potential null/undefined
+              // Custom filter function for search
+              const childrenText = String(option.children || ''); // Ensure children is a string
               return childrenText.toLowerCase().includes(input.toLowerCase());
             }}
           >
             {allUsers && allUsers.map(user => (
               <Option key={user._id} value={user._id}>
-                {user.name} ({user.role})
+                {user.name} ({user.role}) {/* Display user name and role */}
               </Option>
             ))}
           </Select>
@@ -221,6 +245,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
           <TextArea rows={3} placeholder="Add a note (it will be timestamped)" />
         </Form.Item>
 
+        {/* Display previous notes if available */}
         {initialValues?.notes?.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <label><strong>Previous Notes</strong></label>

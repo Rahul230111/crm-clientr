@@ -51,9 +51,10 @@ const QuotationForm = ({ onCancel, onSave, initialValues, isSaving }) => {
   const [notes, setNotes] = useState([]); // State for quotation notes
   const [gstType, setGstType] = useState(null); // State for selected GST type (intrastate/interstate)
   // For frontend display only, backend will calculate based on percentages
-  const [manualGstAmount, setManualGstAmount] = useState(null); 
-  const [manualSgstPercentage, setManualSgstPercentage] = useState(null); 
-  const [manualCgstPercentage, setManualCgstPercentage] = useState(null); 
+  const [manualGstAmount, setManualGstAmount] = useState(null);
+  const [manualSgstPercentage, setManualSgstPercentage] = useState(null);
+  const [manualCgstPercentage, setManualCgstPercentage] = useState(null);
+  const [manualIgstPercentage, setManualIgstPercentage] = useState(null); // Add this line
   const [selectedBusinessDetails, setSelectedBusinessDetails] = useState(null); // Details of the selected business
   const [status, setStatus] = useState('Draft'); // State for quotation status, default to 'Draft'
   const { token } = useToken(); // Ant Design token for theme variables (e.g., spacing, colors)
@@ -79,9 +80,8 @@ const QuotationForm = ({ onCancel, onSave, initialValues, isSaving }) => {
     return `
 ${business.businessName?.toUpperCase()}
 ${business.contactName ? `Mr. ${business.contactName?.toUpperCase()}` : ""}
-${business.addressLine1 || ""}${
-      business.addressLine2 ? ", " + business.addressLine2 : ""
-    }
+${business.addressLine1 || ""}${business.addressLine2 ? ", " + business.addressLine2 : ""
+      }
 ${business.city || ""}${business.pincode ? " - " + business.pincode : ""}
 ${business.state || ""}, ${business.country || ""}
 ${business.gstNumber || ""}
@@ -144,7 +144,7 @@ ${business.email || ""}`.trim();
     hasFetchedPipelineOptions.current = true;
     const toastId = toast.loading("Loading pipeline data...");
     try {
-      const res = await axios.get("/api/quotations/pipeline"); 
+      const res = await axios.get("/api/quotations/pipeline");
       setPipelineOptions(res.data);
       toast.success("Pipeline data loaded", { id: toastId });
     } catch (error) {
@@ -164,7 +164,7 @@ ${business.email || ""}`.trim();
     const toastId = toast.loading("Loading customer details...");
     try {
       // Updated endpoint to match backend routing for business accounts
-      const res = await axios.get("/api/accounts/customers"); 
+      const res = await axios.get("/api/accounts/customers");
       setCustomerDetailsOptions(res.data);
       toast.success("Customer details loaded", { id: toastId });
     } catch (error) {
@@ -217,9 +217,10 @@ ${business.email || ""}`.trim();
       setNotes(initialValues.notes || []); // Set existing notes
       setGstType(initialValues.gstType || null); // Set initial GST type
       // Set manual GST values for display purposes only
-      setManualGstAmount(initialValues.gstDetails?.manualGstAmount || null); 
+      setManualGstAmount(initialValues.gstDetails?.manualGstAmount || null);
       setManualSgstPercentage(initialValues.gstDetails?.manualSgstPercentage || null);
       setManualCgstPercentage(initialValues.gstDetails?.manualCgstPercentage || null);
+      setManualIgstPercentage(initialValues.gstDetails?.manualIgstPercentage || null); // Add this line
       setStatus(initialValues.status || 'Draft'); // Set status state
 
       // If a business was pre-selected, find its details and update related form fields
@@ -273,7 +274,7 @@ ${business.email || ""}`.trim();
     for (const item of items) {
       if (item.specifications && item.specifications.length > 0) {
         for (const spec of item.specifications) {
-          if (!spec.name.trim() || !spec.value.trim()) {
+          if (spec.name.trim() || spec.value.trim()) {
             toast.error(
               "All specification name and value fields must be filled for all items."
             );
@@ -298,9 +299,10 @@ ${business.email || ""}`.trim();
       gstType: gstType,
       status: status, // Include the status
       // Send manual GST percentages to backend for calculation
-      manualGstAmount: manualGstAmount, 
-      manualSgstPercentage: manualSgstPercentage, 
-      manualCgstPercentage: manualCgstPercentage, 
+      manualGstAmount: manualGstAmount,
+      manualSgstPercentage: manualSgstPercentage,
+      manualCgstPercentage: manualCgstPercentage,
+      manualIgstPercentage: manualIgstPercentage, // Add this line
       // Include selected business details directly in the quotation object
       businessName: selectedBusinessDetails?.businessName,
       businessType: selectedBusinessDetails?.type,
@@ -337,7 +339,7 @@ ${business.email || ""}`.trim();
         quantity: 1,
         rate: 0,
         quantityType: "",
-        gstPercentage: 18, // Default GST for new items
+        // gstPercentage: 18, // Default GST for new items (REMOVED)
         specifications: [{ key: uuidv4(), name: "", value: "" }], // Start with one blank specification
       },
     ]);
@@ -404,10 +406,10 @@ ${business.email || ""}`.trim();
                 rate: selectedProduct.price || 0, // Set rate from product
                 quantityType: selectedProduct.quantityType || "",
                 // Set GST percentage from product if available, otherwise keep current or default
-                gstPercentage:
+                gstPercentage: // RE-ENABLED
                   selectedProduct.gstPercentage !== undefined
                     ? selectedProduct.gstPercentage
-                    : item.gstPercentage,
+                    : 0, // Changed default to 0 if product has no specific GST%
                 specifications: newSpecifications, // Use the determined specifications
               };
             } else {
@@ -420,7 +422,7 @@ ${business.email || ""}`.trim();
                 hsnSac: "",
                 rate: 0, // Reset rate to 0
                 quantityType: "",
-                gstPercentage: 18, // Reset GST to default on deselection
+                gstPercentage: 0, // Reset GST to 0 on deselection
                 specifications: [{ key: uuidv4(), name: "", value: "" }], // Reset to a single blank spec
               };
             }
@@ -442,12 +444,12 @@ ${business.email || ""}`.trim();
       prevItems.map((item) =>
         item.id === itemId
           ? {
-              ...item,
-              specifications: [
-                ...(item.specifications || []), // Ensure specifications array exists
-                { key: uuidv4(), name: "", value: "" }, // New blank spec with unique key
-              ],
-            }
+            ...item,
+            specifications: [
+              ...(item.specifications || []), // Ensure specifications array exists
+              { key: uuidv4(), name: "", value: "" }, // New blank spec with unique key
+            ],
+          }
           : item
       )
     );
@@ -463,11 +465,11 @@ ${business.email || ""}`.trim();
       prevItems.map((item) =>
         item.id === itemId
           ? {
-              ...item,
-              specifications: (item.specifications || []).filter(
-                (spec) => spec.key !== specKey
-              ),
-            }
+            ...item,
+            specifications: (item.specifications || []).filter(
+              (spec) => spec.key !== specKey
+            ),
+          }
           : item
       )
     );
@@ -485,13 +487,13 @@ ${business.email || ""}`.trim();
       prevItems.map((item) =>
         item.id === itemId // Ensure we are updating the correct item
           ? {
-              ...item,
-              specifications: (item.specifications || []).map(
-                (
-                  spec // Map over the specifications of that item
-                ) => (spec.key === specKey ? { ...spec, [field]: value } : spec)
-              ),
-            }
+            ...item,
+            specifications: (item.specifications || []).map(
+              (
+                spec // Map over the specifications of that item
+              ) => (spec.key === specKey ? { ...spec, [field]: value } : spec)
+            ),
+          }
           : item
       )
     );
@@ -513,6 +515,10 @@ ${business.email || ""}`.trim();
   const calculateTotalGst = () => {
     let totalCalculatedGst = items.reduce((sum, i) => {
       const itemTotal = (i.quantity || 0) * (i.rate || 0);
+      // Assuming individual item GST % is no longer used for calculation if manual override is present.
+      // If there's no manual override, or it's interstate and no manual IGST, then this would be 0
+      // unless you re-introduce a global default GST percentage.
+      // For now, it will effectively be 0 for calculated GST if no per-item GST%.
       const gstRate = (i.gstPercentage || 0) / 100; // Convert percentage to decimal
       return sum + itemTotal * gstRate;
     }, 0);
@@ -541,26 +547,30 @@ ${business.email || ""}`.trim();
    * Applies manual GST overrides in precedence:
    * 1. manualGstAmount (overall total override)
    * 2. manualSgstPercentage + manualCgstPercentage (intrastate percentage override)
-   * 3. Calculated total GST from items
+   * 3. manualIgstPercentage (interstate percentage override)
+   * 4. Calculated total GST from items (which will be 0 if no per-item GST%)
    * @returns {number} The calculated grand total.
    */
   const calculateTotal = () => {
     const subTotal = calculateSubTotal();
     const gstBreakdown = calculateTotalGst(); // Calculated from items
 
-    let taxToUse = 0;
+    let taxToUse = 0; // Corrected variable name
 
     if (manualGstAmount !== null) {
-        // If overall manual total GST (absolute amount) is set, use it directly (highest precedence)
-        taxToUse = manualGstAmount;
+      // If overall manual total GST (absolute amount) is set, use it directly (highest precedence)
+      taxToUse = manualGstAmount;
     } else if (gstType === "intrastate" && (manualSgstPercentage !== null || manualCgstPercentage !== null)) {
-        // If intrastate and manual SGST/CGST percentages are set, calculate their absolute values
-        const manualSgstValue = manualSgstPercentage !== null ? (subTotal * (manualSgstPercentage / 100)) : gstBreakdown.sgst;
-        const manualCgstValue = manualCgstPercentage !== null ? (subTotal * (manualCgstPercentage / 100)) : gstBreakdown.cgst;
-        taxToUse = manualSgstValue + manualCgstValue;
+      // If intrastate and manual SGST/CGST percentages are set, calculate their absolute values
+      const manualSgstValue = manualSgstPercentage !== null ? (subTotal * (manualSgstPercentage / 100)) : gstBreakdown.sgst;
+      const manualCgstValue = manualCgstPercentage !== null ? (subTotal * (manualCgstPercentage / 100)) : gstBreakdown.cgst;
+      taxToUse = manualSgstValue + manualCgstValue;
+    } else if (gstType === "interstate" && manualIgstPercentage !== null) { // Add this block
+      // If interstate and manual IGST percentage is set
+      taxToUse = subTotal * (manualIgstPercentage / 100);
     } else {
-        // Otherwise, use the automatically calculated total GST
-        taxToUse = gstBreakdown.totalGst;
+      // Otherwise, use the automatically calculated total GST
+      taxToUse = gstBreakdown.totalGst; // Corrected variable name
     }
 
     return subTotal + taxToUse;
@@ -663,7 +673,7 @@ ${business.email || ""}`.trim();
         </Row>
 
         <Row gutter={[16]}>
-          
+
         </Row>
 
         {/* Quotation Details Section */}
@@ -817,8 +827,8 @@ ${business.email || ""}`.trim();
                 </Col>
               </Row>
 
-              {/* Individual Item GST % */}
-              <Row gutter={[16, 16]} style={{ marginTop: token.marginS }}>
+              {/* Individual Item GST % - REMOVED FROM HERE */}
+              {/* <Row gutter={[16, 16]} style={{ marginTop: token.marginS }}>
                 <Col xs={24} sm={8}>
                   <Form.Item label="GST %">
                     <InputNumber
@@ -839,7 +849,7 @@ ${business.email || ""}`.trim();
                     />
                   </Form.Item>
                 </Col>
-              </Row>
+              </Row> */}
 
               {/* Specifications Section */}
               {item.specifications && item.specifications.length > 0 && (
@@ -927,15 +937,15 @@ ${business.email || ""}`.trim();
                 (item.specifications.length > 0 &&
                   item.specifications[item.specifications.length - 1].name &&
                   item.specifications[item.specifications.length - 1].value)) && (
-                <Button
-                  onClick={() => addSpecification(item.id)}
-                  block
-                  type="dashed"
-                  style={styles.addSpecButton}
-                >
-                  + Add Specification
-                </Button>
-              )}
+                  <Button
+                    onClick={() => addSpecification(item.id)}
+                    block
+                    type="dashed"
+                    style={styles.addSpecButton}
+                  >
+                    + Add Specification
+                  </Button>
+                )}
             </Card>
           );
         })}
@@ -964,7 +974,8 @@ ${business.email || ""}`.trim();
                   setManualGstAmount(null); // Clear manual total GST when changing type
                   setManualSgstPercentage(null); // Clear manual SGST percentage
                   setManualCgstPercentage(null); // Clear manual CGST percentage
-                  form.setFieldsValue({ manualGst: null, manualSgst: null, manualCgst: null }); // Clear form fields
+                  setManualIgstPercentage(null); // Clear manual IGST percentage (ADDED)
+                  form.setFieldsValue({ manualGst: null, manualSgst: null, manualCgst: null, manualIgst: null }); // Clear form fields (UPDATED)
                 }}
                 value={gstType}
                 style={styles.formField}
@@ -1018,48 +1029,48 @@ ${business.email || ""}`.trim();
               </Col>
             </Row>
             <Row gutter={[16, 16]}>
-                <Col xs={24} sm={8}>
-                    <Form.Item label="Manual SGST %"> {/* Label changed to reflect percentage */}
-                        <InputNumber
-                            value={manualSgstPercentage}
-                            onChange={(val) => setManualSgstPercentage(val)}
-                            style={{
-                                ...styles.formField,
-                                backgroundColor: token.colorFillAlter,
-                                
-                                borderWidth: '2px',
-                                fontWeight: 'bold',
-                            }}
-                            min={0}
-                            max={100} // Max value for percentage
-                            precision={2} // Allow decimal percentages
-                            formatter={(value) => `${value}%`} // Format as percentage
-                            parser={(value) => value.replace("%", "")} // Parse as number
-                            placeholder="Override SGST %"
-                        />
-                    </Form.Item>
-                </Col>
-                <Col xs={24} sm={8}>
-                    <Form.Item label="Manual CGST %"> {/* Label changed to reflect percentage */}
-                        <InputNumber
-                            value={manualCgstPercentage}
-                            onChange={(val) => setManualCgstPercentage(val)}
-                            style={{
-                                ...styles.formField,
-                                backgroundColor: token.colorFillAlter,
-                             
-                                borderWidth: '2px',
-                                fontWeight: 'bold',
-                            }}
-                            min={0}
-                            max={100} // Max value for percentage
-                            precision={2} // Allow decimal percentages
-                            formatter={(value) => `${value}%`} // Format as percentage
-                            parser={(value) => value.replace("%", "")} // Parse as number
-                            placeholder="Override CGST %"
-                        />
-                    </Form.Item>
-                </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item label="Manual SGST %"> {/* Label changed to reflect percentage */}
+                  <InputNumber
+                    value={manualSgstPercentage}
+                    onChange={(val) => setManualSgstPercentage(val)}
+                    style={{
+                      ...styles.formField,
+                      backgroundColor: token.colorFillAlter,
+
+                      borderWidth: '2px',
+                      fontWeight: 'bold',
+                    }}
+                    min={0}
+                    max={100} // Max value for percentage
+                    precision={2} // Allow decimal percentages
+                    formatter={(value) => `${value}%`} // Format as percentage
+                    parser={(value) => value.replace("%", "")} // Parse as number
+                    placeholder="Override SGST %"
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item label="Manual CGST %"> {/* Label changed to reflect percentage */}
+                  <InputNumber
+                    value={manualCgstPercentage}
+                    onChange={(val) => setManualCgstPercentage(val)}
+                    style={{
+                      ...styles.formField,
+                      backgroundColor: token.colorFillAlter,
+
+                      borderWidth: '2px',
+                      fontWeight: 'bold',
+                    }}
+                    min={0}
+                    max={100} // Max value for percentage
+                    precision={2} // Allow decimal percentages
+                    formatter={(value) => `${value}%`} // Format as percentage
+                    parser={(value) => value.replace("%", "")} // Parse as number
+                    placeholder="Override CGST %"
+                  />
+                </Form.Item>
+              </Col>
             </Row>
           </>
         )}
@@ -1085,32 +1096,53 @@ ${business.email || ""}`.trim();
                 />
               </Form.Item>
             </Col>
+            {/* New Manual IGST % field */}
+            <Col xs={24} sm={12}>
+              <Form.Item label="Manual IGST %">
+                <InputNumber
+                  value={manualIgstPercentage}
+                  onChange={(val) => setManualIgstPercentage(val)}
+                  style={{
+                    ...styles.formField,
+                    backgroundColor: token.colorFillAlter,
+                    borderWidth: '2px',
+                    fontWeight: 'bold',
+                  }}
+                  min={0}
+                  max={100}
+                  precision={2}
+                  formatter={(value) => `${value}%`}
+                  parser={(value) => value.replace("%", "")}
+                  placeholder="Override IGST %"
+                />
+              </Form.Item>
+            </Col>
           </Row>
         )}
 
         {/* Manual Total GST Override Field (always visible) */}
         <Row gutter={[16, 16]} style={{ marginTop: token.margin }}>
-            
-            <Col xs={24} md={12}>
-              <Form.Item label="Grand Total">
-                <Input
-                  readOnly
-                  value={`₹${calculateTotal().toFixed(2)}`}
-                  style={styles.grandTotalField}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-                 <Form.Item name="noteText" label="Add New Note">
-          <TextArea
-            rows={3}
-            style={styles.textAreaField}
-            placeholder="Add any additional notes, terms, or conditions for this quotation..."
-          />
-        </Form.Item>
-            </Col>
-            
-    
+
+          <Col xs={24} md={12}>
+            <Form.Item label="Grand Total">
+              <Input
+                readOnly
+                value={`₹${calculateTotal().toFixed(2)}`}
+                style={styles.grandTotalField}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="noteText" label="Add New Note">
+              <TextArea
+                rows={3}
+                style={styles.textAreaField}
+                placeholder="Add any additional notes, terms, or conditions for this quotation..."
+              />
+            </Form.Item>
+          </Col>
+
+
         </Row>
 
 
@@ -1125,6 +1157,70 @@ ${business.email || ""}`.trim();
             </Card>
           </Form.Item>
         )}
+        {/* Terms and Conditions Section */}
+        <Divider style={styles.divider}>Terms and Conditions</Divider>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={12}>
+            <Form.Item name="delivery" label="Delivery Terms">
+              <Input placeholder="e.g., Within 7 days from PO" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="warranty" label="Warranty">
+              <Input placeholder="e.g., 1 year from date of delivery" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="paymentTerms" label="Payment Terms">
+              <Input placeholder="e.g., 50% advance, balance on delivery" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="pricesTerms" label="Price Terms">
+              <Input placeholder="e.g., Inclusive of all taxes" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="ourPaymentTerms" label="Our Payment Terms">
+              <Input placeholder="e.g., Net 30 days from invoice" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="packingForwardingCharges" label="Packing & Forwarding Charges">
+              <Input placeholder="e.g., ₹500 fixed" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="transportationCharges" label="Transportation Charges">
+              <Input placeholder="e.g., As per actuals" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="transporterName" label="Transporter Name">
+              <Input placeholder="e.g., ABC Logistics" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="modePlaceDelivery" label="Mode & Place of Delivery">
+              <Input placeholder="e.g., Road - Chennai" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item name="offerValidity" label="Offer Validity">
+              <Input placeholder="e.g., 30 days from quotation date" />
+            </Form.Item>
+          </Col>
+          <Col xs={24}>
+            <Form.Item name="customerScope" label="Customer's Scope">
+              <TextArea rows={3} placeholder="e.g., Civil work, Power supply, Internet setup..." />
+            </Form.Item>
+          </Col>
+          <Col xs={24}>
+            <Form.Item name="quotationNotes" label="Quotation Notes">
+              <TextArea rows={3} placeholder="e.g., Civil work, Power supply, Internet setup..." />
+            </Form.Item>
+          </Col>
+        </Row>
 
 
         <Form.Item style={styles.buttonGroup}>
@@ -1135,7 +1231,7 @@ ${business.email || ""}`.trim();
             <Button
               htmlType="submit"
               type="primary"
-               style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+              style={{ backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
               icon={<SaveOutlined />}
               loading={isSaving}
               size="large"
