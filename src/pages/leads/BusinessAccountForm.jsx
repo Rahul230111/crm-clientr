@@ -1,9 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Drawer, Row, Col, InputNumber, Select, Spin } from 'antd';
 import { toast } from 'react-hot-toast';
+import axios from "../../api/axios"; // Assuming your axios instance is here
 
 const { TextArea } = Input;
 const { Option } = Select;
+
+// Placeholder for your product API service
+// You would typically have a dedicated service file (e.g., src/api/productService.js)
+// For this example, we'll define a simple function here.
+const API_URL = "/api/product"; // Adjust this to your backend's base URL
+
+const getAllProducts = async () => {
+  try {
+    const response = await axios.get(`${API_URL}`); // Matches productRoutes.js
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching all products:', error);
+    throw error;
+  }
+};
+
 
 /**
  * BusinessAccountForm Component
@@ -21,64 +38,81 @@ const { Option } = Select;
  * @param {boolean} loadingUsers - Indicates if the users data is currently being loaded.
  */
 const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers, loadingUsers }) => {
-  const [form] = Form.useForm(); // Initialize Ant Design form instance
-  const [loading, setLoading] = useState(false); // State for form submission loading indicator
-  const sourceType = Form.useWatch('sourceType', form); // Watch for changes in sourceType field
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]); // State for storing product list
+  const [loadingProducts, setLoadingProducts] = useState(false); // State for product loading
+  const sourceType = Form.useWatch('sourceType', form);
 
-  // Effect to reset and set form fields when initialValues or form instance changes
   useEffect(() => {
-    form.resetFields(); // Clear all fields
+    form.resetFields();
     if (initialValues) {
-      // If initialValues are provided (editing an existing account)
       form.setFieldsValue({
         ...initialValues,
-        // Ensure assignedTo is just the ID for the Select component
-        assignedTo: initialValues.assignedTo?._id || null
+        assignedTo: initialValues.assignedTo?._id || null,
+        // Set the selected product value for editing
+        selectedProduct: initialValues.selectedProduct?._id || null,
       });
     } else {
-      // If no initialValues (creating a new account), set default values
       form.setFieldsValue({
         sourceType: 'Direct',
-        status: 'Active', // Default status for new accounts
-        assignedTo: null // Default to no one assigned
+        status: 'Active', // Changed from 'Lead' to 'Active' based on BusinessAccount.js enum
+        assignedTo: null,
+        selectedProduct: null, // Default to no product selected
       });
     }
-  }, [initialValues, form]); // Re-run effect if initialValues or form instance changes
+  }, [initialValues, form]);
 
-  /**
-   * Handles the form submission.
-   * Validates fields, processes data, calls onSave, and shows toast notifications.
-   */
+  // Effect to fetch products when the component mounts or drawer becomes visible
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoadingProducts(true);
+      try {
+        const productData = await getAllProducts(); // Fetch products from your API
+        setProducts(productData); // Assuming the API returns an array of products
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast.error('Failed to load products.');
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    if (visible) {
+      fetchProducts();
+    }
+  }, [visible]);
+
+
   const handleSubmit = () => {
-    form.validateFields() // Validate all form fields
+    form.validateFields()
       .then(values => {
-        setLoading(true); // Start loading indicator
-        const timestamp = new Date().toLocaleString(); // Get current timestamp for notes
+        setLoading(true);
+        const timestamp = new Date().toLocaleString();
         const newNote = values.noteInput
-          ? { text: values.noteInput, timestamp } // Create new note object if noteInput exists
+          ? { text: values.noteInput, timestamp, author: 'User' } // Assuming a default author or get from context
           : null;
 
-        const existingNotes = initialValues?.notes || []; // Get existing notes or an empty array
-        const updatedNotes = newNote ? [...existingNotes, newNote] : existingNotes; // Add new note to existing ones
+        const existingNotes = initialValues?.notes || [];
+        const updatedNotes = newNote ? [...existingNotes, newNote] : existingNotes;
 
-        // Prepare data to be saved
         const dataToSave = {
           ...values,
           notes: updatedNotes,
-          // Ensure assignedTo is null if not selected, otherwise use the selected ID
-          assignedTo: values.assignedTo === null ? null : values.assignedTo,
+          assignedTo: values.assignedTo === undefined ? null : values.assignedTo, // Handle undefined for initial render
+          selectedProduct: values.selectedProduct === undefined ? null : values.selectedProduct, // Send selected product ID
         };
 
-        delete dataToSave.noteInput; // Remove temporary noteInput field from data to save
+        delete dataToSave.noteInput;
 
-        onSave(dataToSave); // Call the onSave callback with the prepared data
-        toast.success(`Account ${initialValues ? 'updated' : 'created'} successfully!`); // Show success toast
-        setLoading(false); // Stop loading indicator
-        onClose(); // Close the drawer
+        onSave(dataToSave);
+        toast.success(`Account ${initialValues ? 'updated' : 'created'} successfully!`);
+        setLoading(false);
+        onClose();
       })
       .catch(info => {
-        console.log('Validate Failed:', info); // Log validation errors
-        toast.error('Please fill in all required fields correctly.'); // Show error toast
+        console.log('Validate Failed:', info);
+        toast.error('Please fill in all required fields correctly.');
       });
   };
 
@@ -87,7 +121,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
       title={initialValues ? 'Edit Business Account' : 'Create New Business Account'}
       width={720}
       onClose={onClose}
-      visible={visible}
+      open={visible} // Changed 'visible' to 'open' for Ant Design Drawer v5
       bodyStyle={{ paddingBottom: 80 }}
       footer={
         <div style={{ textAlign: 'right' }}>
@@ -104,10 +138,10 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
       }
     >
       <Form
-        form={form} // Bind the form instance to the Ant Design Form
-        layout="vertical" // Use vertical layout for form items
+        form={form}
+        layout="vertical"
       >
-        <Row gutter={16}> {/* Row for Business Name and GST Number */}
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="businessName" label="Business Name" rules={[{ required: true, message: 'Please enter business name' }]}>
               <Input placeholder="Business Name" />
@@ -119,7 +153,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
             </Form.Item>
           </Col>
         </Row>
-        <Row gutter={16}> {/* Row for Customer Name and Email */}
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="contactName" label="Customer Name" rules={[{ required: true, message: 'Please enter contact person name' }]}>
               <Input placeholder="Contact Person Name" />
@@ -131,7 +165,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
             </Form.Item>
           </Col>
         </Row>
-        <Row gutter={16}> {/* Row for Phone Number and Mobile Number */}
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="phoneNumber" label="Phone Number">
               <Input placeholder="Phone Number (Optional)" />
@@ -144,7 +178,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
           </Col>
         </Row>
 
-        <Row gutter={16}> {/* Row for Address Line 1 and Address Line 2 */}
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="addressLine1" label="Address Line 1" rules={[{ required: true, message: 'Please enter address line 1' }]}>
               <Input placeholder="Address Line 1" />
@@ -157,7 +191,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
           </Col>
         </Row>
 
-        <Row gutter={16}> {/* Row for City, Pincode, and State */}
+        <Row gutter={16}>
           <Col span={8}>
             <Form.Item name="city" label="City" rules={[{ required: true, message: 'Please enter city' }]}>
               <Input placeholder="City" />
@@ -195,9 +229,13 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
           rules={[{ required: true, message: 'Please select an account status' }]}
         >
           <Select placeholder="Select Status">
-            <Option value="Enquiry">Enquiry</Option> {/* Changed 'Active' to 'Enquiry' for clarity */}
-            <Option value="Proposed">Proposed</Option>
-            <Option value="Customer">Customer</Option>
+            {/* Updated status options based on BusinessAccount.js enum */}
+            <Option value="Active">Lead</Option>
+         
+            <Option value="Pipeline">Enquiry</Option>
+                        <Option value="Quotations">Quotations</Option>
+            <Option value="Customer">Converted</Option>
+
             <Option value="Closed">Closed</Option>
           </Select>
         </Form.Item>
@@ -208,11 +246,12 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
           rules={[{ required: true, message: 'Please select a source type' }]}
         >
           <Select placeholder="How did you hear about us?">
+            {/* Updated sourceType options based on BusinessAccount.js enum */}
             <Option value="Direct">Direct</Option>
             <Option value="socialmedia">Social Media</Option>
             <Option value="online">Online</Option>
-            <Option value="Client">Client</Option>
-            <Option value="Tradefair">Tradefair</Option>
+            <Option value="client">Client</Option>
+            <Option value="tradefair">Tradefair</Option>
             <Option value="Other">Other</Option>
           </Select>
         </Form.Item>
@@ -223,19 +262,43 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
         >
           <Select
             placeholder="Select a user to assign to (optional)"
-            allowClear // Allows clearing the selection
-            loading={loadingUsers} // Show loading spinner if users are being fetched
-            showSearch // Enable search functionality
-            optionFilterProp="children" // Filter options based on their children (text content)
+            allowClear
+            loading={loadingUsers}
+            showSearch
+            optionFilterProp="children"
             filterOption={(input, option) => {
-              // Custom filter function for search
-              const childrenText = String(option.children || ''); // Ensure children is a string
+              const childrenText = String(option.children || '');
               return childrenText.toLowerCase().includes(input.toLowerCase());
             }}
           >
             {allUsers && allUsers.map(user => (
               <Option key={user._id} value={user._id}>
-                {user.name} ({user.role}) {/* Display user name and role */}
+                {user.name} ({user.role})
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+
+        {/* NEW PRODUCT SELECTION FIELD */}
+        <Form.Item
+          name="selectedProduct"
+          label="Select Product"
+          rules={[{ required: false, message: 'Please select a product' }]}
+        >
+          <Select
+            placeholder="Select a product (optional)"
+            allowClear
+            loading={loadingProducts}
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) => {
+              const childrenText = String(option.children || '');
+              return childrenText.toLowerCase().includes(input.toLowerCase());
+            }}
+          >
+            {products.map(product => (
+              <Option key={product._id} value={product._id}>
+                {product.productName}
               </Option>
             ))}
           </Select>
@@ -246,7 +309,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
         </Form.Item>
 
         {/* Display previous notes if available */}
-        {initialValues?.notes?.length > 0 && (
+        {/* {initialValues?.notes?.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <label><strong>Previous Notes</strong></label>
             <ul style={{ paddingLeft: 20 }}>
@@ -255,7 +318,7 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
               ))}
             </ul>
           </div>
-        )}
+        )} */}
       </Form>
     </Drawer>
   );

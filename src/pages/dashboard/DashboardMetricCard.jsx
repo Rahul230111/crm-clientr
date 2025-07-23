@@ -195,13 +195,7 @@ const DashboardMetricCard = ({
         <Title level={4} className="card-title">
           {title}
         </Title>
-        {/* The percentage change and label are now always derived from trendData */}
-        <div className="card-percentage">
-          
-          <Text className="trend-description">
-            {trendDescription}
-          </Text>
-        </div>
+       
       </div>
 
       <div className="card-body">

@@ -41,6 +41,7 @@ const QuotationList = ({
   onViewNotes,
   loading,
   refreshQuotations,
+  pagination, // <--- Accept pagination prop from parent
 }) => {
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState(null);
@@ -50,7 +51,7 @@ const QuotationList = ({
     setSelectedQuotation(record);
     setViewModalVisible(true);
     toast.success("Quotation details loaded.", {
-      duration: 1500,
+      duration: 15500,
       position: "top-right",
     });
   };
@@ -76,13 +77,12 @@ const QuotationList = ({
       render: (_, __, index) => index + 1,
     },
     {
-      title: "Product Name", // New column for Product Name
+      title: "Product Name",
       dataIndex: "productName",
       ellipsis: true,
       render: (text, record) => {
-        // Log the item to inspect its properties
         console.log("Item in QuotationList:", record);
-        return text || record.name || "N/A"; // Use productName or fallback to name
+        return text || record.name || "N/A";
       },
     },
     {
@@ -139,20 +139,19 @@ const QuotationList = ({
       sorter: (a, b) =>
         (a.quotationNumber || "").localeCompare(b.quotationNumber || ""),
     },
-    {
-      title: "Business",
-      dataIndex: "businessName",
-      sorter: (a, b) =>
-        (a.businessName || "").localeCompare(b.businessName || ""),
-    },
+     {
+    title: "Business",
+    dataIndex: "businessName", // This dataIndex is primarily for internal Ant Design features like filtering, but the render function controls display
+    render: (_, record) => record.businessId?.businessName || "N/A", // This line ensures the correct business name is displayed
+    sorter: (a, b) =>
+      (a.businessId?.businessName || "").localeCompare(b.businessId?.businessName || ""),
+  },
     {
       title: "Customer",
-      dataIndex: "customerName", // Keep dataIndex for sorting/filtering consistency
+      dataIndex: "customerName",
       render: (text, record) => (
         <div>
-          {/* Display contactName from populated businessId, fallback to customerName */}
           <div>{record.businessId?.contactName || text || "N/A"}</div>
-          {/* Display email from populated businessId, fallback to customerEmail */}
           {(record.businessId?.email || record.customerEmail) && (
             <div style={{ fontSize: 12, color: "#666" }}>
               {record.businessId?.email || record.customerEmail}
@@ -165,24 +164,6 @@ const QuotationList = ({
           b.businessId?.contactName || b.customerName || ""
         ),
     },
-    // {
-    //   title: "Status", // New Status Column
-    //   dataIndex: "status",
-    //   render: (status) => {
-    //     let color = 'default';
-    //     if (status === 'Approved') {
-    //       color = 'green';
-    //     } else if (status === 'Pending') {
-    //       color = 'orange';
-    //     } else if (status === 'Rejected') {
-    //       color = 'red';
-    //     } else if (status === 'Draft') {
-    //       color = 'blue';
-    //     }
-    //     return <Tag color={color}>{status || 'N/A'}</Tag>;
-    //   },
-    //   sorter: (a, b) => (a.status || "").localeCompare(b.status || ""),
-    // },
     {
       title: "Items Count",
       render: (_, record) => (
@@ -272,7 +253,6 @@ const QuotationList = ({
               <Menu.Item
                 key="download"
                 icon={<PrinterOutlined />}
-                // Directly call the named export function
                 onClick={() => downloadQuotationPdf(record)}
               >
                 Download PDF
@@ -309,7 +289,7 @@ const QuotationList = ({
               <Menu.Item>
                 <Popconfirm
                   title="Are you sure you want to delete this account?"
-                  onConfirm={() => onDelete(record._id)} // Using onDelete prop
+                  onConfirm={() => onDelete(record._id)}
                   okText="Yes"
                   cancelText="No"
                 >
@@ -341,7 +321,7 @@ const QuotationList = ({
           onChange={(e) => {
             onSearch(e.target.value);
           }}
-          style={{ width: 400 }}
+          style={{ width: 150 }}
           prefix={<SearchOutlined />}
           allowClear
         />
@@ -353,8 +333,10 @@ const QuotationList = ({
               duration: 1500,
             });
           }}
+                            style={{ width: 100 , marginBottom: 16 , backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
+
         >
-          + New Quotation
+          +  Quotation
         </Button>
       </Space>
 
@@ -363,13 +345,7 @@ const QuotationList = ({
         dataSource={quotations}
         rowKey="_id"
         loading={loading}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) =>
-            `${range[0]}-${range[1]} of ${total} quotations`,
-        }}
+        pagination={pagination} // <--- Use the pagination prop
         scroll={{ x: 1200 }}
       />
 
@@ -387,7 +363,6 @@ const QuotationList = ({
         open={viewModalVisible}
         onCancel={() => setViewModalVisible(false)}
         footer={[
-          // Use a regular button to call the named export function
           <Button
             key="download"
             icon={<PrinterOutlined />}
@@ -414,14 +389,14 @@ const QuotationList = ({
                   ? new Date(selectedQuotation.date).toLocaleDateString("en-IN")
                   : "N/A"}
               </Descriptions.Item>
-              <Descriptions.Item label="Status"> {/* Added Status to Modal */}
-                <Tag 
+              <Descriptions.Item label="Status">
+                <Tag
                   color={
-                    selectedQuotation.status === 'Approved' ? 'green' : 
-                    selectedQuotation.status === 'Pending' ? 'orange' : 
+                    selectedQuotation.status === 'Approved' ? 'green' :
+                    selectedQuotation.status === 'Pending' ? 'orange' :
                     selectedQuotation.status === 'Rejected' ? 'red' :
-                    'blue' // Default color for other statuses
-                  } 
+                    'blue'
+                  }
                   className="rounded-full px-3 py-1 text-sm font-medium">
                   {selectedQuotation.status || 'N/A'}
                 </Tag>
@@ -430,18 +405,15 @@ const QuotationList = ({
                 {selectedQuotation.businessName || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Contact Person">
-                {/* Updated to use contactName from populated businessId */}
                 {selectedQuotation.businessId?.contactName || selectedQuotation.customerName || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Customer Email">
-                {/* Updated to use email from populated businessId */}
                 {selectedQuotation.businessId?.email || selectedQuotation.customerEmail || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Mobile Number">
-                {/* Prioritize mobileNumber from quotation, then businessId's mobileNumber, then businessId's phone */}
                 {selectedQuotation.mobileNumber || selectedQuotation.businessId?.mobileNumber || selectedQuotation.businessId?.phone || "N/A"}
               </Descriptions.Item>
-              
+
               <Descriptions.Item label="GSTIN">
                 <Text code>{selectedQuotation.gstin || "N/A"}</Text>
               </Descriptions.Item>
@@ -557,8 +529,6 @@ const QuotationList = ({
           </div>
         )}
       </Modal>
-
-      {/* Hidden elements for PDF generation are no longer needed here as content is generated dynamically in quotationpdf.js */}
 
       {selectedQuotation && (
         <QuotationFollowUpDrawer

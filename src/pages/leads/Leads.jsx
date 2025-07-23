@@ -6,7 +6,6 @@ import {
   Button,
   Table,
   Tabs,
-  Switch,
   Typography,
   Empty,
   Modal,
@@ -22,7 +21,6 @@ import {
   EditOutlined,
   SearchOutlined,
   MessageOutlined,
-  PrinterOutlined,
   CustomerServiceOutlined,
   DeleteOutlined,
   MoreOutlined,
@@ -39,113 +37,117 @@ import FollowUpDrawer from "./FollowUpDrawer";
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
+
+// Change API_URL to point to your backend base URL, assuming '/api/accounts' is correct
 const API_URL = "/api/accounts";
 
 const Leads = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [currentAccount, setCurrentAccount] = useState(null);
   const [searchText, setSearchText] = useState("");
-  const [activeTab, setActiveTab] = useState("all"); // Default to 'all'
+  const [activeTab, setActiveTab] = useState("all");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [accountToUpdate, setAccountToUpdate] = useState(null);
   const [newStatus, setNewStatus] = useState(null);
-  const [accounts, setAccounts] = useState([]); // This will hold accounts for the active tab
-  const [allAccountsData, setAllAccountsData] = useState([]); // NEW: To store all fetched accounts
+  const [accounts, setAccounts] = useState([]); // This will hold the paginated data
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
   const [followUpDrawerVisible, setFollowUpDrawerVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
 
-  // State variables for counts
-  const [activeLeadsCount, setActiveLeadsCount] = useState(0);
-  const [customersCount, setCustomersCount] = useState(0);
-  const [pipelineLeadsCount, setPipelineLeadsCount] = useState(0);
-  const [closedAccountsCount, setClosedAccountsCount] = useState(0);
-  const [quotationsSentCount, setQuotationsSentCount] = useState(0);
-  const [allLeadsCount, setAllLeadsCount] = useState(0);
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1, // Current page number
+    pageSize: 10, // Items per page
+    total: 0, // Total items from server
+  });
+
+  // State for counts - these will be dynamically updated based on the current activeTab's total
+  const [counts, setCounts] = useState({
+    all: 0,
+    active: 0,
+    customers: 0,
+    Pipeline: 0,
+    closed: 0,
+    quotations: 0,
+  });
 
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [loadingAccounts, setLoadingAccounts] = useState(true); // NEW: Loading state for accounts
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
 
+  // Get user role and ID from localStorage
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role;
+  const currentUserId = user?._id;
 
   const tableRef = useRef(null);
 
-  // Effect to fetch all accounts initially and users
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      setLoadingAccounts(true);
-      try {
-        const response = await axios.get(`${API_URL}`);
-        setAllAccountsData(response.data); // Store all accounts
-        setLoadingAccounts(false);
-      } catch (error) {
-        toast.error("Failed to fetch accounts.");
-        console.error("Fetch accounts error:", error);
-        setLoadingAccounts(false);
-      }
-    };
-
-    fetchInitialData();
-    fetchUsers();
-  }, []); // Run only once on component mount
-
-  // Effect to filter accounts and update counts when allAccountsData or activeTab changes
-  useEffect(() => {
-    if (allAccountsData.length > 0) {
-      const activeLeadsData = allAccountsData.filter(
-        (account) => account.status === "Active"
-      );
-      const customersData = allAccountsData.filter(
-        (account) => account.status === "Customer"
-      );
-      const pipelineLeadsData = allAccountsData.filter(
-        (account) => account.status === "Pipeline"
-      );
-      const closedAccountsData = allAccountsData.filter(
-        (account) => account.status === "Closed"
-      );
-      const quotationsSentData = allAccountsData.filter(
-        (account) => account.status === "Quotations"
-      );
-
-      setActiveLeadsCount(activeLeadsData.length);
-      setCustomersCount(customersData.length);
-      setPipelineLeadsCount(pipelineLeadsData.length);
-      setClosedAccountsCount(closedAccountsData.length);
-      setQuotationsSentCount(quotationsSentData.length);
-      setAllLeadsCount(allAccountsData.length);
-
-      // Set the accounts for the currently active tab
-      if (activeTab === "active") {
-        setAccounts(activeLeadsData);
-      } else if (activeTab === "customers") {
-        setAccounts(customersData);
-      } else if (activeTab === "Pipeline") {
-        setAccounts(pipelineLeadsData);
-      } else if (activeTab === "closed") {
-        setAccounts(closedAccountsData);
-      } else if (activeTab === "quotations") {
-        setAccounts(quotationsSentData);
-      } else if (activeTab === "all") {
-        setAccounts(allAccountsData);
-      }
-    }
-  }, [allAccountsData, activeTab]); // Re-run when allAccountsData or activeTab changes
-
-  const fetchAccounts = async () => {
+  // Function to fetch accounts from the backend with pagination and filters
+  const fetchAccounts = async (params = {}) => {
     setLoadingAccounts(true);
     try {
-      const response = await axios.get(`${API_URL}`);
-      setAllAccountsData(response.data); // Update the main data source
-      setLoadingAccounts(false);
+      const {
+        current = pagination.current,
+        pageSize = pagination.pageSize,
+        searchText = '',
+        activeTab = 'all',
+        sortBy = 'createdAt', // Default sort by creation date
+        sortOrder = 'desc',   // Default sort order descending
+      } = params;
+
+      const statusParam = activeTab === 'all' ? '' : activeTab; // Map 'all' to empty for backend
+      const searchParam = searchText;
+
+      let apiUrl = `${API_URL}/paginated?page=${current}&pageSize=${pageSize}&search=${searchParam}`;
+
+      if (statusParam) {
+        apiUrl += `&status=${statusParam}`;
+      }
+      if (sortBy) {
+        apiUrl += `&sortBy=${sortBy}`;
+      }
+      if (sortOrder) {
+        apiUrl += `&sortOrder=${sortOrder}`;
+      }
+
+      // Add user ID and role for employee-specific filtering on the backend
+      if (role === "Employee" && currentUserId) {
+        apiUrl += `&userId=${currentUserId}&role=${role}`;
+      }
+
+      const response = await axios.get(apiUrl);
+      setAccounts(response.data.data); // Set the accounts for the current page
+      setPagination({
+        ...pagination,
+        current: response.data.page,
+        pageSize: response.data.pageSize,
+        total: response.data.total,
+      });
+
+      // Update the count for the currently active tab
+      setCounts(prevCounts => ({
+        ...prevCounts,
+        [activeTab]: response.data.total,
+      }));
+
     } catch (error) {
       toast.error("Failed to fetch accounts.");
       console.error("Fetch accounts error:", error);
+    } finally {
       setLoadingAccounts(false);
     }
   };
+
+  // Initial fetch and fetch on filter/tab/pagination changes
+  useEffect(() => {
+    fetchAccounts({
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+      searchText: searchText,
+      activeTab: activeTab,
+    });
+    fetchUsers(); // Users are fetched once on initial load
+  }, [pagination.current, pagination.pageSize, searchText, activeTab, role, currentUserId]); // Dependencies for re-fetching
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
@@ -172,7 +174,13 @@ const Leads = () => {
         toast.success("Account created successfully!");
       }
       setFormVisible(false);
-      fetchAccounts(); // Re-fetch all accounts to update the state
+      // Re-fetch accounts for the current view after saving
+      fetchAccounts({
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        searchText: searchText,
+        activeTab: activeTab,
+      });
     } catch (error) {
       toast.error("Failed to save account.");
       console.error(
@@ -189,9 +197,16 @@ const Leads = () => {
 
   const handleDeleteAccount = async (id) => {
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      // Assuming this sets status to 'Closed' via a PUT request
+      await axios.put(`${API_URL}/${id}`, { status: 'Closed' });
       toast.success("Account status set to Closed!");
-      fetchAccounts(); // Re-fetch all accounts to update the state
+      // Re-fetch accounts for the current view after status change
+      fetchAccounts({
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        searchText: searchText,
+        activeTab: activeTab,
+      });
     } catch (error) {
       toast.error("Failed to set account status to Closed.");
       console.error(
@@ -222,7 +237,13 @@ const Leads = () => {
       const updatedAccount = { ...accountToUpdate, status: newStatus };
       await axios.put(`${API_URL}/${accountToUpdate._id}`, updatedAccount);
       toast.success(`Account status changed to ${newStatus}!`);
-      fetchAccounts(); // Re-fetch all accounts to update the state
+      // Re-fetch accounts for the current view after status change
+      fetchAccounts({
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        searchText: searchText,
+        activeTab: activeTab,
+      });
     } catch (error) {
       toast.error("Failed to update account status.");
       console.error(
@@ -279,14 +300,17 @@ const Leads = () => {
   };
 
   const exportTableToExcel = () => {
-    if (filteredAccounts.length === 0) {
+    // For Excel export, you might want to fetch ALL data (non-paginated) if it's not too large
+    // Or, export only the current page's data, which is 'accounts' state.
+    // For this example, it will export the currently displayed 'accounts' (paginated data)
+    if (accounts.length === 0) {
       toast.error("No data to export to Excel.");
       return;
     }
 
-    const dataForExcel = filteredAccounts.map((account, index) => {
+    const dataForExcel = accounts.map((account, index) => {
       const row = {
-        "S.No": index + 1,
+        "S.No": index + 1 + (pagination.current - 1) * pagination.pageSize, // Adjust S.No for current page
         "Business Name": account.businessName,
         "Contact Name": account.contactName,
         Email: account.email,
@@ -323,7 +347,7 @@ const Leads = () => {
     {
       title: "S.No",
       key: "sno",
-      render: (text, record, index) => index + 1,
+      render: (text, record, index) => index + 1 + (pagination.current - 1) * pagination.pageSize,
       width: 60,
     },
     {
@@ -370,6 +394,8 @@ const Leads = () => {
           </Button>
         </div>
       ),
+      // Note: onFilter here will only work for client-side filtering if you remove backend filtering for this column
+      // With server-side, you'd integrate this into the fetchAccounts 'params'
       onFilter: (value, record) =>
         record.businessName.toLowerCase().includes(value.toLowerCase()),
       responsive: ["xs", "sm", "md", "lg"],
@@ -385,6 +411,13 @@ const Leads = () => {
       dataIndex: "email",
       key: "email",
       responsive: ["lg"],
+    },
+    {
+      title: "Product",
+      dataIndex: "selectedProduct",
+      key: "selectedProduct",
+      render: (selectedProduct) => (selectedProduct ? selectedProduct.productName : "N/A"),
+      responsive: ["md", "lg"],
     },
     {
       title: "Mobile Number",
@@ -419,6 +452,7 @@ const Leads = () => {
         }
         return <Tag color={color}>{status}</Tag>;
       },
+      // These filters will now be handled by the activeTab state, not directly by Table's internal filters
       filters: [
         { text: "Active", value: "Active" },
         { text: "Pipeline", value: "Pipeline" },
@@ -426,7 +460,8 @@ const Leads = () => {
         { text: "Customer", value: "Customer" },
         { text: "Quotations", value: "Quotations" },
       ],
-      onFilter: (value, record) => record.status.indexOf(value) === 0,
+      // onFilter needs to trigger fetchAccounts with new status parameter
+      onFilter: (value, record) => record.status.indexOf(value) === 0, // This is client-side, replace if using server-side filtering
       filterMultiple: true,
       responsive: ["sm", "md", "lg"],
     },
@@ -454,7 +489,6 @@ const Leads = () => {
       onFilter: (value, record) => record.sourceType?.indexOf(value) === 0,
       responsive: ["lg"],
     },
-
     {
       title: "Action",
       key: "action",
@@ -523,47 +557,27 @@ const Leads = () => {
     },
   ];
 
-  const generatePdfSingleAccount = async (account) => {
-    const input = document.getElementById(`lead-${account._id}`);
-    if (!input) {
-      toast.error("PDF content not found for this account.");
-      return;
-    }
+  // Handler for Ant Design Table pagination, sorting, and filtering changes
+  const handleTableChange = (newPagination, filters, sorter) => {
+    // Update pagination state
+    setPagination(newPagination);
 
-    toast.loading("Generating PDF...", { id: "pdf-toast" });
+    // Prepare sort parameters if sorting is applied
+    const sortBy = sorter.field;
+    const sortOrder = sorter.order === 'ascend' ? 'asc' : (sorter.order === 'descend' ? 'desc' : undefined);
 
-    try {
-      const canvas = await html2canvas(input, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      pdf.save(`${account.businessName}-details.pdf`);
-      toast.success("PDF generated!", { id: "pdf-toast" });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Failed to generate PDF.", { id: "pdf-toast" });
-    }
+    // Re-fetch accounts with updated parameters
+    fetchAccounts({
+      current: newPagination.current,
+      pageSize: newPagination.pageSize,
+      searchText: searchText,
+      activeTab: activeTab,
+      sortBy,
+      sortOrder,
+      // You can also pass column filters here if you want to handle them server-side
+      // For example: status: filters.status?.[0]
+    });
   };
-
-  const filteredAccounts = accounts.filter(
-    (account) =>
-      account.businessName.toLowerCase().includes(searchText.toLowerCase()) ||
-      account.contactName.toLowerCase().includes(searchText.toLowerCase())
-  );
 
   return (
     <Card title={<Title level={4}>Manage Leads & Customers</Title>}>
@@ -582,7 +596,10 @@ const Leads = () => {
           prefix={<SearchOutlined />}
           style={{ width: "100%", maxWidth: 300 }}
           value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
+          onChange={(e) => {
+            setSearchText(e.target.value);
+            setPagination({ ...pagination, current: 1 }); // Reset to first page on search
+          }}
         />
         <Space>
           <Button
@@ -602,24 +619,32 @@ const Leads = () => {
         </Space>
       </div>
 
-      <Tabs defaultActiveKey="all" onChange={setActiveTab}>
-        <TabPane tab={`All Leads (${allLeadsCount})`} key="all" />
-        <TabPane tab={`Enquiry (${activeLeadsCount})`} key="active" />
-        <TabPane tab={`Proposed (${pipelineLeadsCount})`} key="Pipeline" />
-        <TabPane tab={`Quotations Sent (${quotationsSentCount})`} key="quotations" />
-        <TabPane tab={`Customers (${customersCount})`} key="customers" />
-        <TabPane tab={`Closed Accounts (${closedAccountsCount})`} key="closed" />
+      <Tabs
+        defaultActiveKey="all"
+        onChange={(key) => {
+          setActiveTab(key);
+          setPagination({ ...pagination, current: 1 }); // Reset to first page on tab change
+        }}
+      >
+        <TabPane tab={`All Leads (${counts.all})`} key="all" />
+        <TabPane tab={`Lead (${counts.active})`} key="active" />
+        <TabPane tab={`Enquiry (${counts.Pipeline})`} key="Pipeline" />
+        <TabPane tab={`Quotations (${counts.quotations})`} key="quotations" />
+        <TabPane tab={`Converted (${counts.customers})`} key="customers" />
+        <TabPane tab={`Closed (${counts.closed})`} key="closed" />
       </Tabs>
 
       <div ref={tableRef}>
         {loadingAccounts ? (
           <Spin size="large" style={{ display: 'block', margin: '50px auto' }} />
-        ) : filteredAccounts.length > 0 ? (
+        ) : accounts.length > 0 ? (
           <Table
             columns={columns}
-            dataSource={filteredAccounts}
+            dataSource={accounts} // Now directly use the paginated 'accounts' state
             rowKey="_id"
             scroll={{ x: "max-content" }}
+            pagination={pagination} // Pass the pagination state
+            onChange={handleTableChange} // Handle pagination/sort/filter changes
           />
         ) : (
           <Empty description="No accounts found." />
@@ -641,13 +666,13 @@ const Leads = () => {
             visible={notesDrawerVisible}
             onClose={() => setNotesDrawerVisible(false)}
             account={selectedAccount}
-            refreshAccounts={fetchAccounts}
+            refreshAccounts={() => fetchAccounts({ current: pagination.current, pageSize: pagination.pageSize, searchText: searchText, activeTab: activeTab })}
           />
           <FollowUpDrawer
             visible={followUpDrawerVisible}
             onClose={() => setFollowUpDrawerVisible(false)}
             account={selectedAccount}
-            refreshAccounts={fetchAccounts}
+            refreshAccounts={() => fetchAccounts({ current: pagination.current, pageSize: pagination.pageSize, searchText: searchText, activeTab: activeTab })}
           />
         </>
       )}

@@ -347,7 +347,6 @@ const UserManagement = () => {
             </Select>
           </Form.Item>
 
-          {/* Department Selection - Only visible and editable by Superadmin/Admin */}
           {(isSuperadmin || isAdmin) && (
             <Form.Item name="department" label="Department">
               <Select placeholder="Select department" allowClear>
@@ -358,7 +357,7 @@ const UserManagement = () => {
             </Form.Item>
           )}
 
-          {/* Team Selection - Only visible and editable by Superadmin/Admin */}
+     
           {(isSuperadmin || isAdmin) && (
             <Form.Item name="team" label="Team">
               <Select placeholder="Select team" allowClear>

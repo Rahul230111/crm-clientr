@@ -654,7 +654,15 @@ ${business.email || ""}`.trim();
               <Input />
             </Form.Item>
           </Col>
-
+          <Col xs={24} md={12}> {/* Adjusted column size */}
+            <Form.Item
+              name="date"
+              label="Date"
+              rules={[{ required: true, message: "Please select a date!" }]}
+            >
+              <DatePicker style={styles.formField} format="DD/MM/YYYY" />
+            </Form.Item>
+          </Col>
           <Col xs={24} md={12}>
             <Form.Item label="Business Info">
               <Card bordered style={styles.businessInfoCard}>
@@ -665,6 +673,7 @@ ${business.email || ""}`.trim();
               </Card>
             </Form.Item>
           </Col>
+
           {/* <Col xs={24} md={12}>
             <Form.Item name="businessType" label="Type">
               <Input readOnly style={styles.readOnlyFormField} />
@@ -672,47 +681,9 @@ ${business.email || ""}`.trim();
           </Col> */}
         </Row>
 
-        <Row gutter={[16]}>
 
-        </Row>
 
-        {/* Quotation Details Section */}
-        <Divider style={styles.divider}>Quotation Details</Divider> {/* Changed divider title */}
-        <Row gutter={[16, 24]}>
-          <Col xs={24} md={8}> {/* Adjusted column size */}
-            <Form.Item
-              name="date"
-              label="Date"
-              rules={[{ required: true, message: "Please select a date!" }]}
-            >
-              <DatePicker style={styles.formField} format="DD/MM/YYYY" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}> {/* Adjusted column size */}
-            <Form.Item name="validUntil" label="Valid Until">
-              <DatePicker style={styles.formField} format="DD/MM/YYYY" />
-            </Form.Item>
-          </Col>
-          {/* <Col xs={24} md={8}>
-            <Form.Item
-              name="status"
-              label="Status"
-              rules={[{ required: true, message: "Please select a status!" }]}
-            >
-              <Select
-                placeholder="Select status"
-                onChange={(value) => setStatus(value)}
-                value={status}
-                style={styles.formField}
-              >
-                <Option value="Draft">Draft</Option>
-                <Option value="Pending">Pending</Option>
-                <Option value="Approved">Approved</Option>
-                <Option value="Rejected">Rejected</Option>
-              </Select>
-            </Form.Item>
-          </Col> */}
-        </Row>
+
 
         <Divider style={styles.divider}>Quotation Items</Divider>
         {items.map((item) => {
@@ -1161,13 +1132,13 @@ ${business.email || ""}`.trim();
         <Divider style={styles.divider}>Terms and Conditions</Divider>
         <Row gutter={[16, 16]}>
           <Col xs={24} md={12}>
-            <Form.Item name="delivery" label="Delivery Terms">
-              <Input placeholder="e.g., Within 7 days from PO" />
+            <Form.Item name="pricesTerms" label="Price">
+              <Input placeholder="e.g., Inclusive of all taxes" />
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
-            <Form.Item name="warranty" label="Warranty">
-              <Input placeholder="e.g., 1 year from date of delivery" />
+            <Form.Item name="warranty" label="TAXES">
+              <Input placeholder="e.g.,GST@18% shall be extra." />
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
@@ -1176,15 +1147,11 @@ ${business.email || ""}`.trim();
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
-            <Form.Item name="pricesTerms" label="Price Terms">
-              <Input placeholder="e.g., Inclusive of all taxes" />
+            <Form.Item name="delivery" label="Delivery">
+              <Input placeholder="e.g., Within 7 days from PO" />
             </Form.Item>
           </Col>
-          <Col xs={24} md={12}>
-            <Form.Item name="ourPaymentTerms" label="Our Payment Terms">
-              <Input placeholder="e.g., Net 30 days from invoice" />
-            </Form.Item>
-          </Col>
+
           <Col xs={24} md={12}>
             <Form.Item name="packingForwardingCharges" label="Packing & Forwarding Charges">
               <Input placeholder="e.g., ₹500 fixed" />
@@ -1206,7 +1173,7 @@ ${business.email || ""}`.trim();
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
-            <Form.Item name="offerValidity" label="Offer Validity">
+            <Form.Item name="offerValidity" label=" Validity">
               <Input placeholder="e.g., 30 days from quotation date" />
             </Form.Item>
           </Col>

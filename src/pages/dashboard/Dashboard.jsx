@@ -256,28 +256,36 @@ const Dashboard = () => {
         axios.get("/api/invoices"),
       ]);
 
-      setLatestQuotations(quotRes.data.slice(0, 5));
-      setLatestAccounts(accRes.data.slice(0, 5)); // Still display latest overall accounts
+      // --- FIX START ---
+      // Ensure quotRes.data is an array before slicing
+      const quotationsData = Array.isArray(quotRes.data) ? quotRes.data : [];
+      setLatestQuotations(quotationsData.slice(0, 5));
 
-      // Filter invoices by selected month for the "Latest Invoices" table (if you want this table to be month-filtered)
-      // Otherwise, remove this filtering for the table if it should always show latest overall invoices.
-      const filteredInvoices = invRes.data.filter((invoice) => {
+      // Ensure accRes.data is an array before slicing and filtering
+      const accountsData = Array.isArray(accRes.data) ? accRes.data : [];
+      setLatestAccounts(accountsData.slice(0, 5)); // Still display latest overall accounts
+
+      // Ensure invRes.data is an array before filtering
+      const invoicesData = Array.isArray(invRes.data) ? invRes.data : [];
+      const filteredInvoices = invoicesData.filter((invoice) => {
         if (!invoice.date) return false;
         const invoiceDate = dayjs(invoice.date);
         return invoiceDate.month() + 1 === month && invoiceDate.year() === year;
       });
       setInvoiceDetails(filteredInvoices);
 
-      setAllAccounts(accRes.data); // Keep all accounts in state for broader analysis
+      setAllAccounts(accountsData); // Keep all accounts in state for broader analysis
 
       // Filter accounts for the selected month for metric cards AND new pie chart
       // IMPORTANT: Added condition to exclude soft-deleted accounts (assuming a 'isDeleted' field)
-      const accountsInSelectedMonth = accRes.data.filter((account) => {
+      const accountsInSelectedMonth = accountsData.filter((account) => { // Use accountsData here
         if (!account.createdAt) return false;
         const accountDate = dayjs(account.createdAt);
         // Exclude accounts where isDeleted is true. If your soft-delete field is different (e.g., 'deletedAt'), adjust this line.
         return accountDate.isBetween(monthStart, monthEnd, null, "[]") && !account.isDeleted;
       });
+      // --- FIX END ---
+
 
       // Metric Card Calculations
       // Updated: This now counts all accounts in the selected month regardless of customer status
@@ -423,9 +431,9 @@ const Dashboard = () => {
 
       // Fetch all follow-ups and filter them by month
       const { allAccountFUs, allQuotationFUs, allInvoiceFUs } = await fetchAllFollowUps(
-        quotRes.data,
-        accRes.data,
-        invRes.data,
+        quotationsData, // Pass the ensured array
+        accountsData,   // Pass the ensured array
+        invoicesData,   // Pass the ensured array
         monthMoment
       );
 
@@ -834,11 +842,11 @@ const Dashboard = () => {
 
   // Updated Pie Chart Data for Accounts Distribution
   const accountsPieData = [
-    { type: "Enquiry", value: activeLeadsPie },
-    { type: "Proposed Leads", value: waitingLeadsPie },
-    { type: "Quotations Sent", value: quotationsSentPie }, // Added "Quotations Sent"
-    { type: "Converted Customers", value: customersPie },
-    { type: "Closed Accounts", value: closedAccountsPie },
+    { type: "Lead", value: activeLeadsPie },
+    { type: "Enquiry ", value: waitingLeadsPie },
+    { type: "Quotations ", value: quotationsSentPie }, // Added "Quotations Sent"
+    { type: "Converted ", value: customersPie },
+    { type: "Closed ", value: closedAccountsPie },
   ].filter((item) => item.value > 0); // Only show categories with a value > 0
 
   const accountsPieConfig = {
@@ -885,7 +893,7 @@ const Dashboard = () => {
         </Col>
         <Col xs={24} sm={12} md={12} lg={5}>
           <DashboardMetricCard
-            title="Proposed Leads "
+            title="Enquiry  "
             value={waitingLeadsPie}
             valuePrefix=""
             percentageChange={5} // Dummy percentage change
@@ -897,7 +905,7 @@ const Dashboard = () => {
         {/* NEW CARD: Quotations Sent */}
         <Col xs={24} sm={12} md={12} lg={5}>
           <DashboardMetricCard
-            title="Quotations Sent "
+            title="Quotations "
             value={quotationsSentPie}
             valuePrefix=""
             percentageChange={7} // Dummy percentage change
@@ -908,7 +916,7 @@ const Dashboard = () => {
         </Col>
         <Col xs={24} sm={12} md={12} lg={5}>
           <DashboardMetricCard
-            title="Converted Customers "
+            title="Converted  "
             value={totalCustomers}
             valuePrefix=""
             percentageChange={20} // This is static, would need dynamic calculation for real trend
@@ -921,7 +929,7 @@ const Dashboard = () => {
         {/* Metric Card for Closed Accounts */}
         <Col xs={24} sm={12} md={12} lg={4}>
           <DashboardMetricCard
-            title="Closed Accounts "
+            title="Closed  "
             value={totalClosedAccounts}
             valuePrefix=""
             percentageChange={10} // Dummy percentage change, would need dynamic calculation for real trend

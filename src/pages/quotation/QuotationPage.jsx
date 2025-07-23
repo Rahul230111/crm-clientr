@@ -14,19 +14,26 @@ const QuotationPage = () => {
   const [filtered, setFiltered] = useState([]);
   const [notesDrawerVisible, setNotesDrawerVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // Saving state for preventing duplicate submissions
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   const fetchQuotations = async () => {
     setLoading(true);
     const toastId = toast.loading("Loading quotations...");
     try {
-      const res = await axios.get("/api/quotations");
-      setQuotations(res.data);
-      setFiltered(res.data);
+      // Pass page and limit as query parameters
+      const res = await axios.get(`/api/quotations?page=${currentPage}&limit=${pageSize}`);
+      setQuotations(res.data.quotations); // Update to get quotations from res.data.quotations
+      setFiltered(res.data.quotations); // Update filtered as well
+      setTotalItems(res.data.totalItems); // Set total items for pagination component
       toast.success("Quotations loaded successfully", { id: toastId });
     } catch (err) {
       toast.error("Failed to load quotations", { id: toastId });
-      console.error("Error fetching quotations:", err); // Log error for debugging
+      console.error("Error fetching quotations:", err);
     } finally {
       setLoading(false);
     }
@@ -34,15 +41,19 @@ const QuotationPage = () => {
 
   useEffect(() => {
     fetchQuotations();
-  }, []);
+  }, [currentPage, pageSize]); // Re-fetch when currentPage or pageSize changes
+
+  const handlePageChange = (page, limit) => {
+    setCurrentPage(page);
+    setPageSize(limit);
+  };
 
   const handleSave = async (data) => {
     if (isSaving) {
-      // Prevent duplicate saves if already in progress
       toast("Quotation save in progress. Please wait...", { icon: "⏳" });
       return;
     }
-    setIsSaving(true); // Set saving state to true
+    setIsSaving(true);
 
     const toastId = toast.loading("Saving quotation...");
     try {
@@ -56,7 +67,6 @@ const QuotationPage = () => {
       setDrawerVisible(false); // Close the drawer
       setCurrentQuotation(null); // Reset current quotation
     } catch (err) {
-      // Improved error message for the user, logging full error for developer
       console.error("Error saving quotation:", err.response?.data || err);
       toast.error(
         `Failed to save quotation: ${
@@ -65,7 +75,7 @@ const QuotationPage = () => {
         { id: toastId }
       );
     } finally {
-      setIsSaving(false); // Reset saving state to false
+      setIsSaving(false);
     }
   };
 
@@ -79,12 +89,15 @@ const QuotationPage = () => {
       toast.error(`Failed to delete quotation: ${err.message}`, {
         id: toastId,
       });
-      console.error("Error deleting quotation:", err); // Log error for debugging
+      console.error("Error deleting quotation:", err);
     }
   };
 
+  // Modify handleSearch to filter *all* quotations, not just the current page
   const handleSearch = (value) => {
     const val = value.toLowerCase();
+    // This will still filter the `quotations` state which currently only holds one page of data.
+    // For proper server-side search with pagination, you'd send the search term to the backend.
     const result = quotations.filter(
       (q) =>
         q.businessName?.toLowerCase().includes(val) ||
@@ -95,15 +108,12 @@ const QuotationPage = () => {
     setFiltered(result);
   };
 
+
   return (
     <>
-    <h2>Quotation </h2>      <QuotationList
-        quotations={
-          filtered.length > 0 ||
-          (filtered.length === 0 && quotations.length === 0 && !loading)
-            ? filtered
-            : quotations
-        }
+      <h2>Quotation </h2>
+      <QuotationList
+        quotations={filtered} // Always pass filtered results
         onAddNew={() => {
           setCurrentQuotation(null);
           setDrawerVisible(true);
@@ -119,6 +129,16 @@ const QuotationPage = () => {
           setNotesDrawerVisible(true);
         }}
         loading={loading}
+        // Pass pagination props to QuotationList
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalItems,
+          onChange: handlePageChange,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} quotations`,
+        }}
       />
 
       <Drawer
@@ -129,7 +149,7 @@ const QuotationPage = () => {
           setCurrentQuotation(null);
         }}
         width={window.innerWidth > 768 ? "80vw" : "95vw"}
-        destroyOnClose // Ensures form state is reset when drawer closes
+        destroyOnClose
       >
         <QuotationForm
           initialValues={currentQuotation}
@@ -138,7 +158,7 @@ const QuotationPage = () => {
             setDrawerVisible(false);
             setCurrentQuotation(null);
           }}
-          isSaving={isSaving} // Pass the isSaving state to disable form buttons
+          isSaving={isSaving}
         />
       </Drawer>
 

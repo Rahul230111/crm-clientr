@@ -170,7 +170,7 @@
           </Header>
           <Content style={{ padding: 20 }}>
             <Tabs defaultActiveKey="1">
-              <TabPane tab="Active Products" key="1">
+              <TabPane tab=" Products" key="1">
                 <Button
 
                   type="primary"
@@ -192,7 +192,7 @@
                 />
               </TabPane>
 
-              <TabPane tab="Inactive Products" key="2">
+              {/* <TabPane tab="Inactive Products" key="2">
                 <Table
                   columns={getColumns()}
                   dataSource={inactiveProducts}
@@ -200,7 +200,7 @@
                   scroll={{ x: 1000 }}
                   pagination={{ pageSize: 10 }}
                 />
-              </TabPane>
+              </TabPane> */}
             </Tabs>
 
             {/* Product Form Drawer */}
@@ -236,7 +236,7 @@
                     <Descriptions.Item label="Qty">
                       {viewingProduct.quantity}
                     </Descriptions.Item>
-                    <Descriptions.Item label="In Stock">
+                    {/* <Descriptions.Item label="In Stock">
                       {viewingProduct.inStock}
                     </Descriptions.Item>
                     <Descriptions.Item label="Out Stock">
@@ -245,7 +245,7 @@
                     <Descriptions.Item label="Stock Load Date">
                       {viewingProduct.stockLoadDate &&
                         new Date(viewingProduct.stockLoadDate).toLocaleDateString()}
-                    </Descriptions.Item>
+                    </Descriptions.Item> */}
                     <Descriptions.Item label="Description">
                       {viewingProduct.description || "N/A"}
                     </Descriptions.Item>
