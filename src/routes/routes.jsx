@@ -42,7 +42,7 @@ export const appRoutes = [
   {
     path: '/dashboard',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee', 'Team Leader']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin',  'Team Leader']}>
         <Dashboard />
       </RoleGuard>
     ),
@@ -50,7 +50,7 @@ export const appRoutes = [
   {
     path: '/invoicedashboard',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee', 'Team Leader']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin',  'Team Leader']}>
         <InvoiceDashboard />
       </RoleGuard>
     ),
