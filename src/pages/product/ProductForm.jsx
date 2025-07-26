@@ -34,7 +34,7 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
       inStock: Number(rest.inStock) || 0,
       outStock: Number(rest.outStock) || 0,
       stockLoadDate: rest.stockLoadDate ? rest.stockLoadDate.toISOString() : null,
-      isActive: rest.isActive || false,
+      isActive: rest.isActive || true,
       options: (rest.options || []).filter(opt => opt?.type?.trim() && opt?.description?.trim())
       // hsnSac is automatically included in 'rest' now
     };
@@ -103,7 +103,7 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
             </Form.Item>
           </Col>
         </Row>
-{/*
+{/* 
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="inStock" label="In Stock">

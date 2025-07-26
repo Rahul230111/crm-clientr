@@ -1048,7 +1048,7 @@ ${business.email || ""}`.trim();
 
         {gstType === "interstate" && (
           <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12}>
+            {/* <Col xs={24} sm={12}>
               <Form.Item label="Calculated IGST">
                 <Input
                   readOnly
@@ -1056,9 +1056,9 @@ ${business.email || ""}`.trim();
                   style={styles.totalField}
                 />
               </Form.Item>
-            </Col>
+            </Col> */}
 
-            <Col xs={24} sm={12}>
+            {/* <Col xs={24} sm={12}>
               <Form.Item label="Calculated Total GST">
                 <Input
                   readOnly
@@ -1066,7 +1066,7 @@ ${business.email || ""}`.trim();
                   style={styles.totalField}
                 />
               </Form.Item>
-            </Col>
+            </Col> */}
             {/* New Manual IGST % field */}
             <Col xs={24} sm={12}>
               <Form.Item label="Manual IGST %">

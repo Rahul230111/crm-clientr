@@ -161,34 +161,54 @@ const Leads = () => {
       setLoadingUsers(false);
     }
   };
-
-  const handleSaveAccount = async (values) => {
+const handleSaveAccount = async (values) => {
     try {
-      const dataToSend = { ...values };
+        const dataToSend = { ...values };
 
-      if (currentAccount) {
-        await axios.put(`${API_URL}/${currentAccount._id}`, dataToSend);
-        toast.success("Account updated successfully!");
-      } else {
-        await axios.post(API_URL, dataToSend);
-        toast.success("Account created successfully!");
-      }
-      setFormVisible(false);
-      // Re-fetch accounts for the current view after saving
-      fetchAccounts({
-        current: pagination.current,
-        pageSize: pagination.pageSize,
-        searchText: searchText,
-        activeTab: activeTab,
-      });
+        if (currentAccount) {
+            // For updates, the business name uniqueness check is more complex
+            // if the business name itself is changed to an existing one.
+            // However, the backend is primarily set up to check on creation.
+            // For simplicity, we'll let the backend handle any uniqueness errors.
+            await axios.put(`${API_URL}/${currentAccount._id}`, dataToSend);
+            toast.success("Account updated successfully!");
+        } else {
+            // For new accounts, post data and expect a specific error if name duplicates
+            await axios.post(API_URL, dataToSend);
+            toast.success("Account created successfully!");
+        }
+        setFormVisible(false);
+        // Re-fetch accounts for the current view after saving
+        fetchAccounts({
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            searchText: searchText,
+            activeTab: activeTab,
+        });
     } catch (error) {
-      toast.error("Failed to save account.");
-      console.error(
-        "Save account error:",
-        error.response?.data || error.message
-      );
+        // Check if it's an Axios error and if the status is 409 (Conflict)
+        if (error.response && error.response.status === 409) {
+            // Re-throw the error so the BusinessAccountForm's handleSubmit
+            // catch block can pick it up and display the specific message.
+            throw error;
+        } else {
+            // For any other type of error (network, server 500, validation, etc.),
+            // display a generic message here or re-throw it if you want
+            // the BusinessAccountForm to handle ALL error messages.
+            // For now, let's display a generic toast here for non-409 errors
+            // and log the detailed error.
+            toast.error("Failed to save account.");
+            console.error(
+                "Save account error:",
+                error.response?.data || error.message
+            );
+            // Re-throw the error for the BusinessAccountForm to also catch,
+            // even if we show a generic toast here. This maintains consistency
+            // with the pattern in BusinessAccountForm.
+            throw error;
+        }
     }
-  };
+};
 
   const showEditForm = (account) => {
     setCurrentAccount(account);

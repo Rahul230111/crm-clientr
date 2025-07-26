@@ -192,7 +192,7 @@
                 />
               </TabPane>
 
-              {/* <TabPane tab="Inactive Products" key="2">
+              <TabPane tab="Inactive Products" key="2">
                 <Table
                   columns={getColumns()}
                   dataSource={inactiveProducts}
@@ -200,7 +200,7 @@
                   scroll={{ x: 1000 }}
                   pagination={{ pageSize: 10 }}
                 />
-              </TabPane> */}
+              </TabPane>
             </Tabs>
 
             {/* Product Form Drawer */}
