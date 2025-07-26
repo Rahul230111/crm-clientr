@@ -970,7 +970,7 @@ ${business.email || ""}`.trim();
         {/* Display GST breakdown based on gstType */}
         {gstType === "intrastate" && (
           <>
-            <Row gutter={[16, 16]}>
+            {/* <Row gutter={[16, 16]}>
               <Col xs={24} sm={8}>
                 <Form.Item label="Calculated SGST">
                   <Input
@@ -998,7 +998,7 @@ ${business.email || ""}`.trim();
                   />
                 </Form.Item>
               </Col>
-            </Row>
+            </Row> */}
             <Row gutter={[16, 16]}>
               <Col xs={24} sm={8}>
                 <Form.Item label="Manual SGST %"> {/* Label changed to reflect percentage */}
