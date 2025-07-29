@@ -19,8 +19,8 @@ const FooterComponent = () => {
         color: '#555',
       }}
     >
-      © {new Date().getFullYear()} All rights are reserved by <strong>MegaCrane</strong> | 
-      Design and developed by <strong><a href="https://acculermedia.com/" target="_blank" rel="noopener noreferrer"></a>Acculer Media Technologies
+      © {new Date().getFullYear()} All rights are reserved by <strong> <a href="https://megacranesindia.com/" target="_blank" rel="noopener noreferrer">MegaCrane</a></strong> | 
+      Design and developed by <strong><a href="https://acculermedia.com/" target="_blank" rel="noopener noreferrer">Acculermedia</a>
 
 </strong>
     </Footer>

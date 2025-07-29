@@ -93,7 +93,7 @@ ${business.email || ""}`.trim();
    * CHANGED: Now fetches from /api/accounts/ to get all businesses.
    */
   const fetchBusinessOptions = useCallback(async () => {
-    if (hasFetchedBusinessOptions.current) return; // Prevent re-fetching
+    if (hasFetchedBusinessOptions.current) return; // Prevent re-fetching 
     hasFetchedBusinessOptions.current = true;
     const toastId = toast.loading("Loading business options...");
     try {
@@ -270,20 +270,19 @@ ${business.email || ""}`.trim();
       return;
     }
 
-    // Validate specifications: ensure all name and value fields are filled
-    for (const item of items) {
-      if (item.specifications && item.specifications.length > 0) {
-        for (const spec of item.specifications) {
-          if (spec.name.trim() || spec.value.trim()) {
-            toast.error(
-              "All specification name and value fields must be filled for all items."
-            );
-            return;
-          }
-        }
+ for (const item of items) {
+  if (item.specifications && item.specifications.length > 0) {
+    for (const spec of item.specifications) {
+      // Corrected logic: Check if EITHER name IS EMPTY OR value IS EMPTY
+      if (!spec.name.trim() || !spec.value.trim()) {
+        toast.error(
+          "All specification name and value fields must be filled for all items."
+        );
+        return;
       }
     }
-
+  }
+}
     const timestamp = new Date().toLocaleString();
     const newNote = values.noteText
       ? { text: values.noteText, timestamp }

@@ -11,6 +11,7 @@ import {
   SettingOutlined,
   UserSwitchOutlined,
   TableOutlined,
+  FileWordOutlined, // <-- Added for PDF to Word
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import './sidebar.css';
@@ -40,42 +41,63 @@ const Sidebar = ({ collapsed }) => {
           label: collapsed ? null : "Dashboard",
           roles: ["Admin", "Superadmin", "Employee", "Team Leader"],
           children: [
-            { key: "/dashboard/deals", label: "Leads Dashboard", roles: ["Admin", "Superadmin","Team Leader"] },
-            // { key: "/invoicedashboard", label: "Invoice Dashboard", roles: ["Admin", "Superadmin", "Employee"] },
+            {
+              key: "/dashboard/deals",
+              label: "Leads Dashboard",
+              roles: ["Admin", "Superadmin", "Team Leader", "Employee"],
+            },
           ],
         },
         {
           key: "/application",
           icon: <AppstoreOutlined />,
           label: collapsed ? null : "Application",
-          roles: ["Admin", "Superadmin", "Team Leader","Employee"] ,
+          roles: ["Admin", "Superadmin", "Team Leader", "Employee"],
           children: [
-            { key: "/leads", icon: <SolutionOutlined />, label: "Leads", roles: ["Admin","Employee", "Superadmin", "Team Leader"] },
-            { key: "/customers", icon: <UserOutlined />, label: "Customers", roles: ["Admin", "Employee", "Superadmin", "Team Leader"] },
-            { key: "/quotation", icon: <FileTextOutlined />, label: "Quotations", roles: ["Admin", "Superadmin", "Team Leader"] },
-            // { key: "/invoice", icon: <ShoppingOutlined />, label: "Invoices", roles: ["Admin", "Superadmin"] },
-            // {
-            //   key: "/daily-reports",
-            //   icon: <TableOutlined />,
-            //   label: "Settings",
-            //   roles: ["Superadmin", "Admin", "Employee"],
-            // },
-            { key: "/products", icon: <FileAddOutlined />, label: "Products", roles: ["Admin", "Superadmin" ,"Team Leader"] },
+            {
+              key: "/leads",
+              icon: <SolutionOutlined />,
+              label: "Leads",
+              roles: ["Admin", "Employee", "Superadmin", "Team Leader"],
+            },
+            {
+              key: "/customers",
+              icon: <UserOutlined />,
+              label: "Customers",
+              roles: ["Admin", "Employee", "Superadmin", "Team Leader"],
+            },
+            {
+              key: "/quotation",
+              icon: <FileTextOutlined />,
+              label: "Quotations",
+              roles: ["Admin", "Superadmin", "Team Leader"],
+            },
+            {
+              key: "/products",
+              icon: <FileAddOutlined />,
+              label: "Products",
+              roles: ["Admin", "Superadmin", "Team Leader"],
+            },
+            {
+              key: "/pdf-to-word",
+              icon: <FileWordOutlined />,
+              label: "PDF to Word",
+              roles: ["Admin", "Superadmin", "Team Leader"],
+            },
           ],
         },
         {
           key: "/super-admin",
           icon: <UserSwitchOutlined />,
           label: collapsed ? null : "User Manage",
-          roles: ["Superadmin", "Admin", "Employee" , "Team Leader"],
+          roles: ["Superadmin", "Admin", "Employee", "Team Leader"],
           children: [
-            { 
+            {
               key: "/management",
               icon: <UsergroupAddOutlined />,
               label: "User Management",
               roles: ["Superadmin"],
             },
-            
             {
               key: "/profile",
               icon: <UserOutlined />,
@@ -142,9 +164,9 @@ const Sidebar = ({ collapsed }) => {
           alt="Logo"
           style={{
             padding: 10,
-            height: "auto", // Fixed height
-            width: collapsed ? 59 : 170, // Dynamic width based on 'collapsed'
-            transition: "all 0.3s", // Smooth transition for changes
+            height: "auto",
+            width: collapsed ? 59 : 170,
+            transition: "all 0.3s",
           }}
         />
       </div>

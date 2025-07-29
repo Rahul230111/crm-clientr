@@ -4,8 +4,9 @@ import {
   Tabs, List, Typography, Spin, Card, Descriptions, Breadcrumb, Button,
   Empty, Table, Collapse, Tag, Statistic, Row, Col
 } from 'antd';
-import { ArrowLeftOutlined, FallOutlined, FormOutlined, DollarOutlined, SolutionOutlined, BookOutlined, DashboardOutlined, HistoryOutlined } from '@ant-design/icons'; // Added HistoryOutlined for the new tab icon
-import axios from '../api/axios'; // Corrected: Importing axios directly
+import { ArrowLeftOutlined, FallOutlined, FormOutlined, DollarOutlined, SolutionOutlined, BookOutlined, DashboardOutlined, HistoryOutlined } from '@ant-design/icons';
+import axios from '../api/axios';
+import './CustomerProfile.css'; // Make sure this import is present
 
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
@@ -15,7 +16,6 @@ const CustomerProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // State for holding customer data and related records
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quotations, setQuotations] = useState([]);
@@ -23,31 +23,27 @@ const CustomerProfile = () => {
   const [followups, setFollowups] = useState([]);
   const [payments, setPayments] = useState([]);
 
-  // Effect to fetch all customer-related data on component mount or ID change
   useEffect(() => {
     setLoading(true);
-    // Use Promise.all to fetch data concurrently for efficiency
     Promise.all([
-      axios.get(`/api/accounts/${id}`), // Fetch customer details
-      axios.get(`/api/quotations/business/${id}`), // Fetch quotations related to the business
-      axios.get(`/api/invoices/business/${id}`), // Fetch invoices related to the business
-      axios.get(`/api/accounts/${id}/followups`), // Fetch follow-ups for the customer
-      axios.get(`/api/invoices/business/${id}/payments`) // Fetch payments for invoices related to the business
+      axios.get(`/api/accounts/${id}`),
+      axios.get(`/api/quotations/business/${id}`),
+      axios.get(`/api/invoices/business/${id}`),
+      axios.get(`/api/accounts/${id}/followups`),
+      axios.get(`/api/invoices/business/${id}/payments`)
     ])
       .then(([cust, q, i, f, p]) => {
         setCustomer(cust.data);
-        setQuotations(q.data || []); // Ensure array if data is null/undefined
+        setQuotations(q.data || []);
         setInvoices(i.data || []);
         setFollowups(f.data || []);
         setPayments(p.data || []);
       })
       .catch((err) => {
         console.error('Failed to load data:', err);
-        // Optionally, show a notification to the user
-        // notification.error({ message: 'Error', description: 'Failed to load customer data.' });
       })
-      .finally(() => setLoading(false)); // Set loading to false once all promises settle
-  }, [id]); // Rerun effect if customer ID changes
+      .finally(() => setLoading(false));
+  }, [id]);
 
   if (loading) {
     return (
@@ -57,7 +53,6 @@ const CustomerProfile = () => {
     );
   }
 
-  // Display 'Customer Not Found' if no customer data is returned
   if (!customer) {
     return (
       <div className="p-6 bg-white shadow-lg rounded-lg m-6">
@@ -77,18 +72,15 @@ const CustomerProfile = () => {
     );
   }
 
-  // Combine follow-ups and notes into a single history array
   const combinedHistory = [
     ...(followups.map(item => ({ ...item, type: 'Follow-up', date: item.followupDate || item.date }))),
     ...(customer.notes || []).map(item => ({ ...item, type: 'Note', date: item.timestamp }))
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  // Helper function to format currency
   const formatCurrency = (amount) => {
     return `₹${Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Helper function to format date
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
@@ -99,11 +91,10 @@ const CustomerProfile = () => {
       });
     } catch (e) {
       console.error("Error formatting date:", dateString, e);
-      return dateString; // Return original if parsing fails
+      return dateString;
     }
   };
 
-  // Helper function to format the full address from multiple fields
   const formatFullAddress = (addressObj) => {
     const addressParts = [];
     if (addressObj.addressLine1) addressParts.push(addressObj.addressLine1);
@@ -117,7 +108,6 @@ const CustomerProfile = () => {
     return addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
   };
 
-  // Calculate dashboard statistics (moved outside of the commented section if needed elsewhere)
   const totalInvoicesAmount = invoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
   const totalPaidAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
   const totalPendingAmount = totalInvoicesAmount - totalPaidAmount;
@@ -125,13 +115,12 @@ const CustomerProfile = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans">
       <Button
-        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center space-x-2"
+        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center space-x-2 customer-profile-back-button" // Added custom class
         icon={<ArrowLeftOutlined />}
         onClick={() => navigate(-1)}
       >
         Back
       </Button>
-      {/* Breadcrumb navigation */}
       <Breadcrumb
         className="mb-4 text-gray-600 mt-5 font-medium"
         items={[
@@ -140,14 +129,12 @@ const CustomerProfile = () => {
         ]}
       />
 
-      {/* Header with back button and title */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-        <Title level={2} className="text-gray-800 font-extrabold mb-0 text-center sm:text-left">
+        <Title level={2} className="text-gray-800 font-extrabold mb-0 text-center sm:text-left text-gradient-blue-purple"> {/* Added custom class */}
           {customer.businessName} Profile
         </Title>
       </div>
 
-      {/* Customer Information Panel */}
       <Card
         title={<Title level={4} className="text-gray-800 font-bold mb-0">Customer Details</Title>}
         className="shadow-xl rounded-xl mb-8 border-t-8 border-blue-600 transform hover:scale-100 transition duration-300 ease-in-out"
@@ -165,7 +152,7 @@ const CustomerProfile = () => {
               color={
                 customer.status === 'Active' ? 'green' :
                   customer.status === 'Inactive' ? 'red' :
-                    'blue' // Default color for other statuses
+                    'blue'
               }
               className="rounded-full px-3 py-1 text-sm font-medium">
               {customer.status || 'N/A'}
@@ -184,13 +171,11 @@ const CustomerProfile = () => {
         </Descriptions>
       </Card>
 
-      {/* Tabs for related data */}
       <Tabs
         defaultActiveKey="1"
         className="bg-white p-4 rounded-xl shadow-xl"
         tabBarStyle={{ marginBottom: 24 }}
       >
-        {/* Quotations Tab */}
         <TabPane
           tab={
             <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
@@ -227,7 +212,7 @@ const CustomerProfile = () => {
                           q.status === 'Approved' ? 'green' :
                             q.status === 'Pending' ? 'orange' :
                               q.status === 'Rejected' ? 'red' :
-                                'blue' 
+                                'blue'
                         }
                         className="rounded-full px-3 py-1 text-sm font-medium">
                         {q.status || 'N/A'}
@@ -272,124 +257,6 @@ const CustomerProfile = () => {
           )}
         </TabPane>
 
-        {/* Invoices Tab (unchanged) */}
-        {/* <TabPane
-          tab={
-            <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
-              <SolutionOutlined className="text-xl" />
-              <span>Invoices ({invoices.length})</span>
-            </span>
-          }
-          key="2"
-        >
-          {invoices.length === 0 ? (
-            <Empty description="No invoices found for this customer." className="py-8" />
-          ) : (
-            <Collapse
-              accordion
-              className="shadow-md rounded-lg overflow-hidden"
-              expandIconPosition="end"
-            >
-              {invoices.map((inv, idx) => (
-                <Panel
-                  header={
-                    <div className="font-semibold text-lg flex justify-between items-center py-2">
-                      <span className="text-gray-800">Invoice #{inv.invoiceNumber || 'N/A'}</span>
-                      <span className="text-green-600 text-xl font-bold">{formatCurrency(inv.totalAmount)}</span>
-                    </div>
-                  }
-                  key={inv._id || idx}
-                  className="bg-white border-b border-gray-200 rounded-lg mb-2 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 ease-in-out"
-                >
-                  <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 2 }} className="mb-4 text-gray-700">
-                    <Descriptions.Item label={<Text strong className="text-gray-600">Date</Text>}>{formatDate(inv.date)}</Descriptions.Item>
-                    <Descriptions.Item label={<Text strong className="text-gray-600">Due Date</Text>}>{formatDate(inv.dueDate)}</Descriptions.Item>
-                    <Descriptions.Item label={<Text strong className="text-gray-600">Status</Text>}>
-                      <Tag
-                        color={
-                          inv.paymentStatus === 'Paid' ? 'green' :
-                            inv.paymentStatus === 'Pending' ? 'orange' :
-                              inv.paymentStatus === 'Overdue' ? 'red' :
-                                'blue'
-                        }
-                        className="rounded-full px-3 py-1 text-sm font-medium"
-                      >
-                        {inv.paymentStatus || 'N/A'}
-                      </Tag>
-                    </Descriptions.Item>
-                    <Descriptions.Item label={<Text strong className="text-gray-600">Customer Name</Text>}>{customer.contactName || 'N/A'}</Descriptions.Item>
-                    <Descriptions.Item label={<Text strong className="text-gray-600">GSTIN</Text>}>{customer.gstNumber || 'N/A'}</Descriptions.Item>
-                    <Descriptions.Item label={<Text strong className="text-gray-600">Customer Address</Text>} span={2}>
-                      {formatFullAddress(customer)}
-                    </Descriptions.Item>
-                  </Descriptions>
-
-                  <Title level={5} className="mt-6 mb-3 text-gray-800 font-bold">Items Invoiced</Title>
-                  <Table
-                    dataSource={inv.items || []}
-                    columns={[
-                      { title: 'Product Name', dataIndex: 'productName', key: 'productName', render: text => text || 'N/A' },
-                      { title: 'Description', dataIndex: 'description', key: 'description' },
-                      { title: 'HSN/SAC', dataIndex: 'hsn', key: 'hsn' },
-                      { title: 'Qty', dataIndex: 'quantity', key: 'quantity' },
-                      {
-                        title: 'Rate (₹)',
-                        dataIndex: 'rate',
-                        key: 'rate',
-                        render: val => formatCurrency(val)
-                      },
-                      {
-                        title: 'Amount (₹)',
-                        dataIndex: 'amount',
-                        key: 'amount',
-                        render: val => formatCurrency(val)
-                      }
-                    ]}
-                    pagination={false}
-                    rowKey={(_, i) => i}
-                    size="small"
-                    className="border border-gray-200 rounded-md overflow-hidden shadow-sm"
-                  />
-                </Panel>
-              ))}
-            </Collapse>
-          )}
-        </TabPane>
-
-       
-        <TabPane
-          tab={
-            <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
-              <DollarOutlined className="text-xl" />
-              <span>Payments ({payments.length})</span>
-            </span>
-          }
-          key="3"
-        >
-          {payments.length === 0 ? (
-            <Empty description="No payments found for this customer." className="py-8" />
-          ) : (
-            <List
-              bordered
-              dataSource={payments}
-              className="rounded-lg overflow-hidden shadow-md"
-              renderItem={(item) => (
-                <List.Item className="flex items-center justify-between bg-white p-5 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-200 last:border-b-0">
-                  <div className="flex-grow flex items-center">
-                    <Text strong className="text-green-600 text-xl mr-2">{formatCurrency(item.amount)}</Text>
-                    <Text className="text-gray-700 text-base">via {item.method || 'N/A'}</Text>
-                  </div>
-                  <div className="text-sm text-gray-500 text-right">
-                    <span className="block">{formatDate(item.date)}</span>
-                    <span className="block">by {item.addedBy || 'Unknown'}</span>
-                  </div>
-                </List.Item>
-              )}
-            />
-          )}
-        </TabPane> */}
-
-      
         <TabPane
           tab={
             <span className="flex items-center space-x-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-200">
@@ -407,7 +274,7 @@ const CustomerProfile = () => {
               dataSource={combinedHistory}
               className="rounded-lg overflow-hidden shadow-md"
               renderItem={(item) => (
-                <List.Item className="flex flex-col items-start bg-white p-5 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-200 last:border-b-0">
+                <List.Item className="flex flex-col items-start bg-white p-5 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-200 last:border-b-0 customer-profile-list-item-hover"> {/* Added custom class */}
                   <div className="w-full">
                     <div className="font-semibold text-gray-800 text-base mb-2 flex items-center">
                       <span className="mr-3 text-blue-500 text-xl">

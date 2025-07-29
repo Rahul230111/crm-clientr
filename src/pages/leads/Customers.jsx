@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../api/axios';
 import {
-  Card, Input, Button, Table, Tabs, Typography, Empty, Tag, Modal, Dropdown, Menu, Popconfirm, Spin, Space // Added Space
+  Card, Input, Button, Table, Tabs, Typography, Empty, Tag, Modal, Dropdown, Menu, Popconfirm, Spin, Space, Row, Col // Added Row, Col
 } from 'antd';
 import {
   SearchOutlined, EditOutlined, MessageOutlined, CustomerServiceOutlined, DeleteOutlined, MoreOutlined, FilePdfOutlined, FileExcelOutlined
@@ -22,8 +22,8 @@ const API_URL = "/api/accounts";
 
 const Customers = () => {
   const [searchText, setSearchText] = useState('');
-  const [activeTab, setActiveTab] = useState('customer'); // Default tab for customers
-  const [customers, setCustomers] = useState([]); // This will hold the paginated customer data
+  const [activeTab, setActiveTab] = useState('customer');
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [users, setUsers] = useState([]);
@@ -41,21 +41,18 @@ const Customers = () => {
   const [selectedAccount, setSelectedAccount] = useState(null);
 
   const navigate = useNavigate();
-  const tableRef = useRef(null); // Ref for table element to capture for PDF
+  const tableRef = useRef(null);
 
-  // Get user role and ID from localStorage
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role;
   const currentUserId = user?._id;
 
-  // Pagination state
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
 
-  // Fetch customers with pagination and filters
   const fetchCustomers = async (params = {}) => {
     setLoading(true);
     try {
@@ -67,7 +64,7 @@ const Customers = () => {
         sortOrder = 'desc',
       } = params;
 
-      let apiUrl = `${API_URL}/paginated?page=${current}&pageSize=${pageSize}&search=${searchText}&status=Customer`; // Always filter by 'Customer' status
+      let apiUrl = `${API_URL}/paginated?page=${current}&pageSize=${pageSize}&search=${searchText}&status=Customer`;
 
       if (sortBy) {
         apiUrl += `&sortBy=${sortBy}`;
@@ -76,7 +73,6 @@ const Customers = () => {
         apiUrl += `&sortOrder=${sortOrder}`;
       }
 
-      // Add user ID and role for employee-specific filtering on the backend
       if (role === "Employee" && currentUserId) {
         apiUrl += `&userId=${currentUserId}&role=${role}`;
       }
@@ -101,7 +97,7 @@ const Customers = () => {
   const fetchAllUsers = async () => {
     setLoadingUsers(true);
     try {
-      const res = await axios.get('/api/accounts/users/all');
+      const res = await axios.get('/api/accounts/users');
       setUsers(res.data);
     } catch (err) {
       toast.error('Failed to load user list');
@@ -118,7 +114,7 @@ const Customers = () => {
       searchText: searchText,
     });
     fetchAllUsers();
-  }, [pagination.current, pagination.pageSize, searchText, role, currentUserId]); // Dependencies for re-fetching
+  }, [pagination.current, pagination.pageSize, searchText, role, currentUserId]);
 
   const handleEdit = (record) => {
     setCurrentCustomer(record);
@@ -139,7 +135,7 @@ const Customers = () => {
         current: pagination.current,
         pageSize: pagination.pageSize,
         searchText: searchText,
-      }); // Re-fetch data after save
+      });
     } catch (err) {
       toast.error(`Failed to ${currentCustomer?._id ? 'update' : 'create'} customer`);
       console.error("Save customer error:", err.response?.data || err.message);
@@ -166,7 +162,7 @@ const Customers = () => {
         current: pagination.current,
         pageSize: pagination.pageSize,
         searchText: searchText,
-      }); // Re-fetch data after status change
+      });
     } catch (err) {
       toast.error('Failed to update status');
       console.error("Status update error:", err.response?.data || err.message);
@@ -187,7 +183,7 @@ const Customers = () => {
         current: pagination.current,
         pageSize: pagination.pageSize,
         searchText: searchText,
-      }); // Re-fetch data after soft delete
+      });
     } catch (err) {
       toast.error('Failed to close customer account');
       console.error("Soft delete error:", err.response?.data || err.message);
@@ -211,7 +207,7 @@ const Customers = () => {
   };
 
   const exportTableToPdf = async () => {
-    const input = document.getElementById('customerTable'); // Get the table element by ID
+    const input = document.getElementById('customerTable');
     if (!input) {
       toast.error("Table content not found for PDF export.");
       return;
@@ -306,22 +302,25 @@ const Customers = () => {
       title: 'Business Name',
       dataIndex: 'businessName',
       render: (text, record) => (
-        <a onClick={() => goToCustomerProfile(record)} style={{ cursor: 'pointer', color: '#1890ff' }}>
+        <a onClick={() => goToCustomerProfile(record)} style={{ cursor: 'pointer', color: '#ef7a1b' }}> {/* Orange link */}
           {text}
         </a>
       ),
+      sorter: true, // Enable sorting
     },
-    { title: 'Contact Name', dataIndex: 'contactName' },
-    { title: 'Email Id', dataIndex: 'email' },
-    { title: 'Type', dataIndex: 'type', render: typeTag },
+    { title: 'Contact Name', dataIndex: 'contactName', sorter: true },
+    { title: 'Email Id', dataIndex: 'email', sorter: true },
+    { title: 'Type', dataIndex: 'type', render: typeTag, sorter: true },
     {
       title: 'Assigned To',
+      dataIndex: ['assignedTo', 'name'], // Direct path for sorting and display
       render: (_, record) =>
         record.assignedTo ? (
           <span>{record.assignedTo.name} ({record.assignedTo.role})</span>
         ) : (
           <em>Unassigned</em>
-        )
+        ),
+      sorter: true,
     },
     {
       title: 'Latest Note',
@@ -337,11 +336,13 @@ const Customers = () => {
     },
     {
       title: 'Status',
+      dataIndex: 'status',
       render: (_, record) => (
         <Tag color={record.status === 'Customer' ? 'blue' : 'gray'}>
           {record.status}
         </Tag>
-      )
+      ),
+      sorter: true,
     },
     {
       title: 'Actions',
@@ -379,16 +380,12 @@ const Customers = () => {
     }
   ];
 
-  // Handler for Ant Design Table pagination, sorting, and filtering changes
   const handleTableChange = (newPagination, filters, sorter) => {
-    // Update pagination state
     setPagination(newPagination);
 
-    // Prepare sort parameters if sorting is applied
     const sortBy = sorter.field;
     const sortOrder = sorter.order === 'ascend' ? 'asc' : (sorter.order === 'descend' ? 'desc' : undefined);
 
-    // Re-fetch accounts with updated parameters
     fetchCustomers({
       current: newPagination.current,
       pageSize: newPagination.pageSize,
@@ -401,43 +398,58 @@ const Customers = () => {
   return (
     <div>
       <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: '10px' }}>
-          <Title level={4}>Customers</Title>
-          <Input
-            placeholder="Search by Business Name, Contact Name or Email"
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => {
-              setSearchText(e.target.value);
-              setPagination({ ...pagination, current: 1 }); // Reset to first page on search
-            }}
-            style={{ width: '100%', maxWidth: 150 }}
-          />
-          <Space>
-            <Button icon={<FilePdfOutlined />} onClick={exportTableToPdf} style={{ marginBottom: 16, backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
-            >
-              Export to PDF
-            </Button>
-            <Button icon={<FileExcelOutlined />} onClick={exportTableToExcel} style={{ marginBottom: 16, backgroundColor: '#ef7a1b', borderColor: '#orange', color: 'white' }}
-            >
-              Export to Excel
-            </Button>
-          </Space>
-        </div>
+        <Row gutter={[16, 16]} align="middle" style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={8} lg={6}>
+            <Title level={4} style={{ margin: 0 }}>Customers</Title>
+          </Col>
+          <Col xs={24} sm={12} md={8} lg={6}>
+            <Input
+              placeholder="Search by Business Name, Contact Name or Email"
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => {
+                setSearchText(e.target.value);
+                setPagination({ ...pagination, current: 1 });
+              }}
+              style={{ width: '100%' }}
+            />
+          </Col>
+          <Col xs={24} sm={24} md={8} lg={12} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Space wrap>
+              <Button
+                icon={<FilePdfOutlined />}
+                onClick={exportTableToPdf}
+                style={{ backgroundColor: '#ef7a1b', borderColor: '#ef7a1b', color: 'white' }}
+                className="orange-button" // Add a class for custom styling
+              >
+                Export to PDF
+              </Button>
+              <Button
+                icon={<FileExcelOutlined />}
+                onClick={exportTableToExcel}
+                style={{ backgroundColor: '#ef7a1b', borderColor: '#ef7a1b', color: 'white' }}
+                className="orange-button" // Add a class for custom styling
+              >
+                Export to Excel
+              </Button>
+            </Space>
+          </Col>
+        </Row>
 
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           <TabPane tab={`All Customers (${pagination.total})`} key="customer">
             {loading ? (
               <Spin size="large" style={{ display: 'block', margin: '50px auto' }} />
             ) : customers.length > 0 ? (
-              <div id="customerTable"> {/* Added ID for PDF export */}
+              <div id="customerTable">
                 <Table
                   columns={columns}
-                  dataSource={customers} // Use the paginated 'customers' state
+                  dataSource={customers}
                   rowKey="_id"
-                  pagination={pagination} // Pass the pagination state
-                  onChange={handleTableChange} // Handle table changes
-                  scroll={{ x: 'max-content' }}
+                  pagination={pagination}
+                  onChange={handleTableChange}
+                  scroll={{ x: 'max-content' }} // Ensures horizontal scroll on smaller screens
+                  className="customers-table" // Add a class for custom styling
                 />
               </div>
             ) : (

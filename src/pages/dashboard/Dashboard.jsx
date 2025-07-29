@@ -113,6 +113,11 @@ const Dashboard = () => {
   // New state for Calendar Modal visibility
   const [isCalendarModalVisible, setIsCalendarModalVisible] = useState(false);
 
+  // User and Role from local storage for conditional fetching
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role;
+  const currentUserId = user?._id;
+
   // Dummy trend data for DashboardMetricCard - these would ideally be dynamic.
   const totalInvoiceTrendData = [
     { x: "2024-01-01", y: 1000, category: "trend" },
@@ -250,10 +255,16 @@ const Dashboard = () => {
       const monthStart = monthMoment.startOf("month");
       const monthEnd = monthMoment.endOf("month");
 
+      // Conditionally add assignedTo query parameter if the user is an employee
+      const accountApiUrl = role === 'employee' ? `/api/accounts?assignedTo=${currentUserId}` : "/api/accounts";
+      const quotationApiUrl = role === 'employee' ? `/api/quotations?assignedTo=${currentUserId}` : "/api/quotations";
+      // Assuming invoices are not directly assigned, or fetching all is acceptable
+      const invoiceApiUrl = "/api/invoices";
+
       const [quotRes, accRes, invRes] = await Promise.all([
-        axios.get("/api/quotations"),
-        axios.get("/api/accounts"),
-        axios.get("/api/invoices"),
+        axios.get(quotationApiUrl),
+        axios.get(accountApiUrl),
+        axios.get(invoiceApiUrl),
       ]);
 
       // --- FIX START ---
@@ -371,7 +382,7 @@ const Dashboard = () => {
             case 'socialmedia':
               sourceKey = 'socialmedia';
               break;
-            
+
             case 'online':
               sourceKey = 'online';
               break;
@@ -476,6 +487,7 @@ const Dashboard = () => {
     };
 
     // Account Follow-ups
+    // Pass only the already filtered accounts to avoid fetching follow-ups for non-assigned accounts
     const accountFollowUpPromises = accounts.map(async (account) => {
       try {
         const res = await axios.get(`/api/accounts/${account._id}/followups`);
@@ -497,6 +509,7 @@ const Dashboard = () => {
     });
 
     // Quotation Follow-ups
+    // Pass only the already filtered quotations
     const quotationFollowUpPromises = quotations.map(async (quotation) => {
       try {
         const res = await axios.get(
@@ -520,6 +533,7 @@ const Dashboard = () => {
     });
 
     // Invoice Follow-ups
+    // Pass only the already filtered invoices
     const invoiceFollowUpPromises = invoices.map(async (invoice) => {
       try {
         const res = await axios.get(`/api/invoices/${invoice._id}/followups`);
@@ -582,7 +596,7 @@ const Dashboard = () => {
   useEffect(() => {
     // Initial fetch using the default selectedMonth (current month)
     fetchAllDashboardData(selectedMonth);
-  }, [selectedMonth]); // Re-fetch data when selectedMonth changes
+  }, [selectedMonth, role, currentUserId]); // Re-fetch data when selectedMonth, role or currentUserId changes
 
   const applyFollowUpFilter = (filterType, followUps, setFilteredState) => {
     const today = dayjs().startOf("day");
@@ -993,7 +1007,7 @@ const Dashboard = () => {
                   quotationsSentPie + // Added to total count
                   customersPie +
                   closedAccountsPie} )</span>
-               
+
                 <Button onClick={() => setIsCalendarModalVisible(true)}>
                   <CalendarOutlined /> Select Month
                 </Button>
@@ -1194,7 +1208,7 @@ const Dashboard = () => {
 
       </Row>
       {/* <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-      
+
         <Col xs={24} lg={12}>
           <Card
             title={
@@ -1234,7 +1248,7 @@ const Dashboard = () => {
                 }
                 pagination={false}
                 locale={{ emptyText: "No invoice follow-ups in this category" }}
-                scroll={{ x: 'max-content' }} 
+                scroll={{ x: 'max-content' }}
               />
             </div>
           </Card>
@@ -1294,17 +1308,17 @@ const Dashboard = () => {
 
       {/* Calendar Selection Modal */}
        <Modal
-        title={`Select Month for Account Status (${selectedMonth.format('MMMM YYYY')})`} 
+        title={`Select Month for Account Status (${selectedMonth.format('MMMM YYYY')})`}
         open={isCalendarModalVisible}
         onCancel={() => setIsCalendarModalVisible(false)}
-        footer={null} 
+        footer={null}
       >
         <Calendar
-          value={selectedMonth} 
+          value={selectedMonth}
           onSelect={handleCalendarSelect}
-          mode="month" 
-          style={{ width: '100%', height: 'auto' }} 
-         
+          mode="month"
+          style={{ width: '100%', height: 'auto' }}
+
           onPanelChange={(value, mode) => {
             if (mode === 'month') {
                 setSelectedMonth(value);

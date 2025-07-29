@@ -28,6 +28,7 @@ const UserManagement = React.lazy(() => import('../pages/user/UserManagement'));
 // Corrected: Import DepartmentManagement and TeamManagement from their respective new folders
 const DepartmentManagement = React.lazy(() => import('../pages/user/DepartmentManagement'));
 const TeamManagement = React.lazy(() => import('../pages/user/TeamManagement'));
+const PdfToWordConverter = React.lazy(() => import('../pages/PdfToWordConverter'));
 
 // Import the new CombinedManagement component
 const CombinedManagement = React.lazy(() => import('../pages/user/CombinedManagement'));
@@ -42,7 +43,7 @@ export const appRoutes = [
   {
     path: '/dashboard',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin',  'Team Leader']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin','Employee',  'Team Leader']}>
         <Dashboard />
       </RoleGuard>
     ),
@@ -160,6 +161,15 @@ export const appRoutes = [
       </RoleGuard>
     ),
   },
+  {
+  path: '/pdf-to-word',
+  element: (
+    <RoleGuard allowedRoles={['Admin', 'Superadmin', 'Employee', 'Team Leader']}>
+      <PdfToWordConverter />
+    </RoleGuard>
+  ),
+},
+
   
 ];
 
