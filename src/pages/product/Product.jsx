@@ -45,7 +45,9 @@
       };
 
       useEffect(() => {
-        fetchProducts();
+        if(products.length === 0){
+          fetchProducts();
+        }
       }, []);
 
       const handleSave = () => {
@@ -162,6 +164,8 @@
           ),
         },
       ];
+
+
 
       return (
         <Layout style={{ minHeight: "100vh",background: "#ffffffff" }}>

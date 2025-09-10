@@ -1,3 +1,5 @@
+// File: src/components/Sidebar.jsx
+
 import { Menu } from "antd";
 import {
   DashboardOutlined,
@@ -11,7 +13,8 @@ import {
   SettingOutlined,
   UserSwitchOutlined,
   TableOutlined,
-  FileWordOutlined, // <-- Added for PDF to Word
+  FileWordOutlined,
+  PartitionOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import './sidebar.css';
@@ -28,7 +31,6 @@ const Sidebar = ({ collapsed }) => {
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role;
 
-  // Define menu structure with role-based access
   const rawMenuItems = [
     {
       key: "main-menu",
@@ -67,6 +69,12 @@ const Sidebar = ({ collapsed }) => {
               roles: ["Admin", "Employee", "Superadmin", "Team Leader"],
             },
             {
+                key: "/zone-view",
+                icon: <PartitionOutlined />,
+                label: "Zone View",
+                roles: ["Admin", "Employee", "Superadmin", "Team Leader"],
+            },
+            {
               key: "/quotation",
               icon: <FileTextOutlined />,
               label: "Quotations",
@@ -76,12 +84,6 @@ const Sidebar = ({ collapsed }) => {
               key: "/products",
               icon: <FileAddOutlined />,
               label: "Products",
-              roles: ["Admin", "Superadmin", "Team Leader"],
-            },
-            {
-              key: "/pdf-to-word",
-              icon: <FileWordOutlined />,
-              label: "PDF to Word",
               roles: ["Admin", "Superadmin", "Team Leader"],
             },
           ],
@@ -110,7 +112,6 @@ const Sidebar = ({ collapsed }) => {
     },
   ];
 
-  // Filter logic to include only allowed menu items
   const filterByRole = (items) => {
     return items
       .map((item) => {

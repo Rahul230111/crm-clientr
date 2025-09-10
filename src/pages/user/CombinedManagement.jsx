@@ -4,6 +4,7 @@ import { Tabs, Spin } from 'antd';
 import UserManagement from './UserManagement';
 import DepartmentManagement from './DepartmentManagement';
 import TeamManagement from './TeamManagement';
+import ZoneManagement from './ZoneManagement'; // Import the new component
 import axios from '../../api/axios';
 import toast from 'react-hot-toast';
 
@@ -13,6 +14,7 @@ const CombinedManagement = () => {
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [zones, setZones] = useState([]); // Add state for zones
   const [loading, setLoading] = useState(true);
 
   const currentUser = JSON.parse(localStorage.getItem('user'));
@@ -35,7 +37,7 @@ const CombinedManagement = () => {
       setDepartments(res.data);
     } catch {
       toast.error('Failed to load departments');
-    }
+    } 
   }, []);
 
   const fetchTeams = useCallback(async () => {
@@ -47,18 +49,28 @@ const CombinedManagement = () => {
     }
   }, []);
 
+  const fetchZones = useCallback(async () => { // Add function to fetch zones
+    try {
+      const res = await axios.get('/api/zones');
+      setZones(res.data);
+    } catch {
+      toast.error('Failed to load zones');
+    }
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
         fetchUsers(),
         fetchDepartments(),
-        fetchTeams()
+        fetchTeams(),
+        fetchZones() // Fetch zones along with other data
       ]);
       setLoading(false);
     };
     loadData();
-  }, [fetchUsers, fetchDepartments, fetchTeams]);
+  }, [fetchUsers, fetchDepartments, fetchTeams, fetchZones]);
 
   if (loading) {
     return (
@@ -77,6 +89,7 @@ const CombinedManagement = () => {
             users={users}
             departments={departments}
             teams={teams}
+            zones={zones} // Pass zones to UserManagement for the transfer form
             fetchUsers={fetchUsers}
             fetchDepartments={fetchDepartments}
             fetchTeams={fetchTeams}
@@ -104,10 +117,17 @@ const CombinedManagement = () => {
             />
           </TabPane>
         )}
-       
+        {(isSuperadmin || isAdmin) && (
+          <TabPane tab="Zone Management" key="zones">
+            <ZoneManagement
+              zones={zones}
+              fetchZones={fetchZones}
+            />
+          </TabPane>
+        )}
       </Tabs>
     </div>
   );
 };
 
-export default CombinedManagement;
+export default CombinedManagement;  

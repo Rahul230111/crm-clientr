@@ -732,76 +732,72 @@ const Dashboard = () => {
     }
   };
 
-  const columnsFollowups = [
-    { title: "S.No", render: (_, __, i) => i + 1,  width: 50 }, // Fixed to the left
-    {
-      title: "Business Name",
-      dataIndex: "parentName",
-      render: (text) => text.charAt(0).toUpperCase() + text.slice(1), // Capitalize first letter
-       // Fixed to the left
-      width: 180,
+ const columnsFollowups = [
+  { title: "S.No", render: (_, __, i) => i + 1,  width: 50 },
+  {
+    title: "Business Name",
+    dataIndex: "parentName",
+    render: (text) => text ? text.charAt(0).toUpperCase() + text.slice(1) : "N/A", // Added a check for 'text'
+    width: 180,
+  },
+  {
+    title: "Added By",
+    dataIndex: "addedBy",
+    render: (addedBy) => addedBy?.name || addedBy?.email || "Unknown",
+  },
+  {
+    title: "Date",
+    dataIndex: "followupDate",
+    render: (d) => (d ? dayjs(d).toDate().toLocaleDateString() : "N/A"),
+  },
+  {
+    title: "Status",
+    dataIndex: "status",
+    width: 100,
+    render: (status) => {
+      let color;
+      switch (status) {
+        case "pending":
+          color = "gold";
+          break;
+        case "completed":
+          color = "green";
+          break;
+        default:
+          color = "blue";
+      }
+      return <Tag color={color}>{status}</Tag>;
     },
-
-    {
-      title: "Added By",
-      dataIndex: "addedBy",
-      render: (addedBy) => addedBy?.name || addedBy?.email || "Unknown",
-    },
-    {
-      title: "Date",
-      dataIndex: "followupDate",
-      render: (d) => (d ? dayjs(d).toDate().toLocaleDateString() : "N/A"),
-    },
-    {
-      title: "Status", // Added Status column to follow-up table
-      dataIndex: "status",
-      width: 100, // Adjust width as needed
-      render: (status) => {
-        let color;
-        switch (status) {
-          case "pending":
-            color = "gold";
-            break;
-          case "completed":
-            color = "green";
-            break;
-          default:
-            color = "blue";
-        }
-        return <Tag color={color}>{status}</Tag>;
-
-      },
-    },
-    {
-      title: "Action",
-      key: "action",
-      render: (_, record) => <a onClick={() => showEditModal(record)}><EditOutlined /></a>,
-      // Fixed to the right
-      width: 80,
-    },
-    {
-      title: "View message",
-      dataIndex: "note",
-      width: 150, // Adjust width as needed
-      render: (note) => (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={{
-            maxWidth: '80px', // Adjust max-width as needed
-            whiteWhiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            marginRight: '8px'
-          }}>
-          </span>
-          {note && note.length > 0 && ( // Only show tooltip if there's a comment
-            <Tooltip title={note}>
-              <EyeOutlined style={{ cursor: 'pointer', color: '#1890ff' }} />
-            </Tooltip>
-          )}
-        </div>
-      ),
-    },
-  ];
+  },
+  {
+    title: "Action",
+    key: "action",
+    render: (_, record) => <a onClick={() => showEditModal(record)}><EditOutlined /></a>,
+    width: 80,
+  },
+  {
+    title: "View message",
+    dataIndex: "note",
+    width: 150,
+    render: (note) => (
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <span style={{
+          maxWidth: '80px',
+          whiteWhiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          marginRight: '8px'
+        }}>
+        </span>
+        {note && note.length > 0 && (
+          <Tooltip title={note}>
+            <EyeOutlined style={{ cursor: 'pointer', color: '#1890ff' }} />
+          </Tooltip>
+        )}
+      </div>
+    ),
+  },
+];
 
   const columnsAccounts = [
     { title: "S.No", render: (_, __, i) => i + 1 },
@@ -886,7 +882,7 @@ const Dashboard = () => {
     color: ["#52c41a", "#faad14", "#FFC107", "#2196F3", "#673AB7"], // Green, Orange, Yellow (for Quotations), Blue, Purple
   };
 
-  if (loading) return <Spin fullscreen />;
+  // if (loading) return <Spin fullscreen />;
 
   return (
     <div>

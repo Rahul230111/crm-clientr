@@ -41,7 +41,7 @@ const Login = () => {
         <Card className="login-card" bordered={false}>
           <h2 className="login-title">Log In  <UserOutlined style={{ background: "#f48d41", color: "white", padding: "20px",  borderRadius: "50%" }} />
 
-</h2>
+          </h2>
           <p className="login-subtitle">Welcome back! Please enter your details</p>
           <Form layout="vertical" onFinish={onFinish}>
             <Form.Item

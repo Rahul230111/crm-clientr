@@ -6,10 +6,19 @@ import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import axios from '../../api/axios';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
+import { useState } from 'react';
+import './DataTable.css';
 
 const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
   const [form] = Form.useForm();
+  const userData = localStorage.getItem("user");
 
+  let userName ;
+    if (userData) {
+      const user = JSON.parse(userData);
+      userName = user.name
+    }
+    
   useEffect(() => {
     if (visible && initialValues) {
       form.setFieldsValue({
@@ -35,6 +44,7 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
       outStock: Number(rest.outStock) || 0,
       stockLoadDate: rest.stockLoadDate ? rest.stockLoadDate.toISOString() : null,
       isActive: rest.isActive || true,
+      updatedBy: userName || "Admin",
       options: (rest.options || []).filter(opt => opt?.type?.trim() && opt?.description?.trim())
       // hsnSac is automatically included in 'rest' now
     };
@@ -53,6 +63,21 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
       toast.error('Failed to save product');
       console.error(err?.response?.data || err.message);
     }
+  };
+  
+    
+  // State for data and sorting
+
+  console.log(initialValues?.priceHistory)
+
+    const formatDate = (dateString) => {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  // Format price for display
+  const formatPrice = (price) => {
+    return `Rs. ${price.toFixed(2)}`;
   };
 
   return (
@@ -174,6 +199,46 @@ const ProductForm = ({ visible, onClose, onSave, initialValues }) => {
           </Button>
         </Form.Item>
       </Form>
+      
+      {initialValues && initialValues.priceHistory.length > 1 &&
+       <div className="data-table-container">
+      <h2>Product Price History</h2>
+      
+      {/* Filter input */}
+    
+
+      {/* Table */}
+      <table className="data-table">
+           <thead>
+          <tr>
+            <th>
+              Date
+            </th>
+            <th >
+              Price 
+            </th>
+            <th >
+              Updated By 
+                
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {initialValues.priceHistory.length > 0 &&  initialValues.priceHistory.map((item) => (
+            <tr key={item.id}>
+              <td>{formatDate(item.updatedAt)}</td>
+              <td className="price-cell">{formatPrice(item.price)}</td>
+              <td>{item.updatedBy}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {initialValues.priceHistory.length === 0 && (
+        <div className="no-results">No matching records found</div>
+      )}
+    </div>
+    }
     </Drawer>
   );
 };
