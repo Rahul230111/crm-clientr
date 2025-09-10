@@ -14,7 +14,11 @@ import {
   message,
   Spin,
   Empty,
-  Table
+  Table,
+  Modal,
+  Form,
+  Input as AntInput,
+  DatePicker
 } from "antd";
 import {
   SearchOutlined,
@@ -25,8 +29,12 @@ import {
   ShoppingCartOutlined,
   SendOutlined
 } from "@ant-design/icons";
-
+import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import dayjs from "dayjs";
+import EnquiryForm from "./EnquiryForm";
 const { Title, Text } = Typography;
+const { TextArea } = AntInput;
 
 const Leads = () => {
   const [searchText, setSearchText] = useState("");
@@ -36,7 +44,39 @@ const Leads = () => {
   const [loading, setLoading] = useState(false);
   const [quotations, setQuotations] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [form] = Form.useForm();
   const searchRef = useRef(null);
+  const [userAccount, setUserAccount] = useState({});
+  const navigate = useNavigate();
+  const [formVisible, setFormVisible] = useState(false);
+  const [selectedQuotation, setSelectedQuotation] = useState(null);
+  // Get Params id
+  const { id } = useParams();
+  const userData = localStorage.getItem("user");
+  
+  let userName = "";
+  let userId = "";
+  if (userData) {
+    const user = JSON.parse(userData);
+    userName = user.name;
+    userId = user._id || user.id;
+  }
+
+  const fetchUserAcc = async () => {
+    try {
+      const { data } = await axios.get(`/api/accounts/${id}`);
+      setUserAccount(data);
+    } catch (err) {
+      toast.error("Failed to load account details");
+    }
+  };
+
+  useEffect(() => {
+    if (Object.keys(userAccount).length === 0) {
+      fetchUserAcc();
+    }
+  }, []);
 
   // Format price as INR
   const formatPrice = (price) => {
@@ -55,7 +95,7 @@ const Leads = () => {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    }).format(date);
+    }).format(new Date(date));
   };
 
   // Close dropdown when clicking outside
@@ -72,77 +112,48 @@ const Leads = () => {
     };
   }, []);
 
-  // Mock data fetch - replace with your API call
+  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // Replace with actual API call
         const { data } = await axios.get("/api/product");
-        
-        // Make sure each product has a unique identifier
         const productsWithId = data.map((product, index) => ({
           ...product,
-          // Use product._id if available from API, otherwise create a unique id
           uniqueId: product._id || product.id || `product-${index}`
         }));
-        
         setAllProducts(productsWithId);
       } catch (error) {
         message.error("Failed to fetch products");
         console.error("API Error:", error);
-        
-        // Fallback to mock data if API fails
-        const mockProducts = [
-          { uniqueId: 1, productName: "Laptop", description: "High performance laptop", price: 59999 },
-          { uniqueId: 2, productName: "Smartphone", description: "Latest smartphone model", price: 25999 },
-          { uniqueId: 3, productName: "Headphones", description: "Noise cancelling headphones", price: 4499 },
-          { uniqueId: 4, productName: "Monitor", description: "27-inch 4K monitor", price: 27999 },
-          { uniqueId: 5, productName: "Keyboard", description: "Mechanical RGB keyboard", price: 3499 },
-        ];
-        setAllProducts(mockProducts);
       } finally {
         setLoading(false);
       }
     };
 
-    // Load mock quotations data
-    const loadQuotations = () => {
-      const mockQuotations = [
-        {
-          id: 1,
-          createdAt: new Date('2023-10-15T14:30:00'),
-          companyName: "ABC Technologies Pvt. Ltd.",
-          createdBy: "John Doe",
-          amount: 125999
-        },
-        {
-          id: 2,
-          createdAt: new Date('2023-10-16T10:15:00'),
-          companyName: "XYZ Solutions",
-          createdBy: "Jane Smith",
-          amount: 85999
-        },
-        {
-          id: 3,
-          createdAt: new Date('2023-10-17T16:45:00'),
-          companyName: "Global Enterprises",
-          createdBy: "Robert Johnson",
-          amount: 210499
-        }
-      ];
-      setQuotations(mockQuotations);
-    };
-
     fetchProducts();
-    loadQuotations();
   }, []);
+
+  // Fetch quotations
+  const fetchQuotations = async () => {
+    try {
+      const { data } = await axios.get(`/api/quotations/business/${id}`);
+      setQuotations(data);
+    } catch (error) {
+      console.error("Failed to fetch quotations:", error);
+      message.error("Failed to load quotations");
+    }
+  };
+
+  useEffect(() => {
+    fetchQuotations();
+  }, [id]);
 
   // Filter products based on search text
   useEffect(() => {
     if (searchText) {
       const filtered = allProducts.filter(product => 
-        product.productName.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.productName?.toLowerCase().includes(searchText.toLowerCase()) ||
         (product.description && product.description.toLowerCase().includes(searchText.toLowerCase()))
       );
       setFilteredProducts(filtered);
@@ -154,7 +165,6 @@ const Leads = () => {
   }, [searchText, allProducts]);
 
   const addToCart = (product) => {
-    // Use uniqueId for comparison instead of id
     const existingItem = cart.find(item => item.uniqueId === product.uniqueId);
     
     if (existingItem) {
@@ -164,7 +174,16 @@ const Leads = () => {
           : item
       ));
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      setCart([...cart, { 
+        ...product, 
+        quantity: 1,
+        productId: product._id || product.id,
+        description: product.description || product.productName,
+        hsnSac: product.hsnSac || "",
+        quantityType: product.quantityType || "",
+        rate: product.price || 0,
+        specifications: product.specifications || []
+      }]);
     }
     
     setSearchText("");
@@ -199,8 +218,12 @@ const Leads = () => {
     message.info(`${item.productName} removed from cart`);
   };
 
+  const calculateSubTotal = () => {
+    return cart.reduce((total, item) => total + (item.rate * item.quantity), 0);
+  };
+
   const calculateTotal = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return calculateSubTotal(); // No tax calculation
   };
 
   const handleSendQuotation = () => {
@@ -209,22 +232,58 @@ const Leads = () => {
       return;
     }
     
-    // Create new quotation
-    const newQuotation = {
-      id: quotations.length + 1,
-      createdAt: new Date(),
-      companyName: "New Customer", // In a real app, this would come from a form
-      createdBy: "Current User",   // In a real app, this would be the logged in user
-      amount: calculateTotal()
-    };
-    
-    setQuotations([newQuotation, ...quotations]);
-    setCart([]);
-    message.success("Quotation sent successfully!");
+    setIsModalVisible(true);
   };
 
-  // Table columns for quotations
+  const handleCreateQuotation = async (values) => {
+    try {
+      // Format customer address from userAccount data
+      const customerAddress = `${userAccount.addressLine1 || ''} ${userAccount.addressLine2 || ''}, ${userAccount.city || ''}, ${userAccount.state || ''}, ${userAccount.pincode || ''}, ${userAccount.country || ''}`;
+      
+      const quotationData = {
+        businessId: id,
+        businessName: userAccount.businessName,
+        businessType: userAccount.type,
+        businessInfo: `${userAccount.businessName}\n${userAccount.contactName}\n${userAccount.addressLine1} ${userAccount.addressLine2}`,
+        gstin: userAccount.gstNumber || "",
+        quotationNumber: `Q-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        date: values.date.format('YYYY-MM-DD'),
+        validUntil: values.validUntil.format('YYYY-MM-DD'),
+        customerName: userAccount.contactName || userAccount.businessName,
+        customerEmail: userAccount.email,
+        customerAddress: customerAddress,
+        items: cart,
+        subTotal: calculateSubTotal(),
+        tax: 0, // No tax
+        total: calculateTotal(),
+        createdDate: new Date().toISOString(),
+        notes: values.note ? [{ text: values.note, timestamp: new Date().toLocaleString(), author: userName }] : [],
+        gstType: "none", 
+        createdBy: userName,
+        createdById : userId
+      };
+
+      const { data } = await axios.post("/api/quotations", quotationData);
+      
+      message.success("Quotation created successfully!");
+      setIsModalVisible(false);
+      form.resetFields();
+      setCart([]);
+      fetchQuotations(); 
+      
+    } catch (error) {
+      console.error("Error creating quotation:", error);
+      message.error("Failed to create quotation");
+    }
+  };
+
+  // Table columns for quotations - Updated to show Created By instead of Customer Name
   const quotationColumns = [
+    {
+      title: 'Quotation Number',
+      dataIndex: 'quotationNumber',
+      key: 'quotationNumber',
+    },
     {
       title: 'Created At',
       dataIndex: 'createdAt',
@@ -234,21 +293,27 @@ const Leads = () => {
       defaultSortOrder: 'descend',
     },
     {
-      title: 'Company Name',
-      dataIndex: 'companyName',
-      key: 'companyName',
-    },
-    {
       title: 'Created By',
       dataIndex: 'createdBy',
-      key: 'createdBy',
+      key: 'createdBy'
     },
     {
       title: 'Amount',
-      dataIndex: 'amount',
-      key: 'amount',
+      dataIndex: 'total',
+      key: 'total',
       render: (amount) => formatPrice(amount),
-      sorter: (a, b) => a.amount - b.amount,
+      sorter: (a, b) => a.total - b.total,
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => (
+        <Badge 
+          status={status === 'Sent' ? 'success' : 'processing'} 
+          text={status || 'Draft'} 
+        />
+      ),
     },
   ];
 
@@ -256,14 +321,12 @@ const Leads = () => {
     <Card 
       title={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>Product Quotation</Title>
+          <Title level={4} style={{ margin: 0 }}>{userAccount.businessName || ""}</Title>
           <Button
             type="primary"
             icon={<BackwardFilled />}
             style={{ backgroundColor: "#ef7a1b", borderColor: "#ef7a1b", color: "white" }}
-            onClick={() => {
-              // Handle back navigation
-            }}
+            onClick={() => navigate(-1)}
           >
             Back
           </Button>
@@ -271,8 +334,8 @@ const Leads = () => {
       }
     >
       <Row gutter={24}>
-        {/* Left side - Product Search and Cart (6/12 width) */}
-        <Col xs={24} lg={12}>
+        {/* Left side - Product Search and Cart (10/24 width) */}
+        <Col xs={24} lg={10}>
           <div ref={searchRef} style={{ position: 'relative', marginBottom: 16 }}>
             <Input
               placeholder="Search Product Name or Description"
@@ -303,146 +366,251 @@ const Leads = () => {
                 overflowY: 'auto'
               }}>
                 {loading ? (
-                  <div style={{ textAlign: 'center', padding: '20px' }}>
-                    <Spin size="small" />
-                  </div>
-                ) : filteredProducts.length === 0 ? (
-                  <Empty 
-                    image={Empty.PRESENTED_IMAGE_SIMPLE} 
-                    description="No products found" 
-                    style={{ padding: '16px' }}
-                  />
-                ) : (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      <Spin size="small" />
+                    </div>
+                  ) : filteredProducts.length === 0 ? (
+                    <Empty 
+                      image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                      description="No products found" 
+                      style={{ padding: '16px' }}
+                    />
+                  ) : (
+                    <List
+                      size="small"
+                      dataSource={filteredProducts}
+                      renderItem={product => (
+                        <List.Item
+                          style={{ padding: '8px 16px', cursor: 'pointer' }}
+                          onClick={() => addToCart(product)}
+                        >
+                          <List.Item.Meta
+                            title={product.productName}
+                            description={
+                              <div>
+                                <div>{product.description}</div>
+                                <div style={{ marginTop: 5 }}>
+                                  <Text strong>{formatPrice(product.price)}</Text>
+                                </div>
+                              </div>
+                            }
+                          />
+                          <Button 
+                            type="primary" 
+                            size="small"
+                            icon={<PlusOutlined />}
+                          >
+                            Add
+                          </Button>
+                        </List.Item>
+                      )}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <Divider />
+            
+            <div style={{ padding: '16px', background: '#f9f9f9', borderRadius: '8px'}}>
+              <Title level={5}>Selected Products</Title>
+              {cart.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 10, justifyItems:"center", alignItems:"center" }}>
+                  <ShoppingCartOutlined style={{ fontSize: 24, color: '#ddd' }} />
+                  <p style={{ color: '#999', marginTop: 5 }}>No products selected</p>
+                  <Text type="secondary">Search for products above to add them to your quotation</Text>
+                </div>
+              ) : (
+                <>
                   <List
                     size="small"
-                    dataSource={filteredProducts}
-                    renderItem={product => (
+                    dataSource={cart}
+                    renderItem={item => (
                       <List.Item
-                        style={{ padding: '8px 16px', cursor: 'pointer' }}
-                        onClick={() => addToCart(product)}
+                        actions={[
+                          <Button 
+                            size="small"
+                            icon={<MinusOutlined />}
+                            onClick={() => decreaseQuantity(item.uniqueId)}
+                          />,
+                          <span style={{ fontWeight: 'bold' }}>{item.quantity}</span>,
+                          <Button 
+                            size="small"
+                            icon={<PlusOutlined />}
+                            onClick={() => increaseQuantity(item.uniqueId)}
+                          />,
+                          <Button 
+                            size="small"
+                            icon={<DeleteOutlined />} 
+                            danger 
+                            onClick={() => removeFromCart(item.uniqueId)}
+                          />
+                        ]}
                       >
                         <List.Item.Meta
-                          title={product.productName}
+                          title={item.productName}
                           description={
                             <div>
-                              <div>{product.description}</div>
+                              <div>{formatPrice(item.rate)} each</div>
                               <div style={{ marginTop: 5 }}>
-                                <Text strong>{formatPrice(product.price)}</Text>
+                                <Text strong>Subtotal: {formatPrice(item.rate * item.quantity)}</Text>
                               </div>
                             </div>
                           }
                         />
-                        <Button 
-                          type="primary" 
-                          size="small"
-                          icon={<PlusOutlined />}
-                        >
-                          Add
-                        </Button>
                       </List.Item>
                     )}
                   />
-                )}
-              </div>
-            )}
-          </div>
-          
-          <Divider />
-          
-          <div style={{ padding: '16px', background: '#f9f9f9', borderRadius: '8px' }}>
-            <Title level={5}>Selected Products</Title>
-            {cart.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 10 }}>
-                <ShoppingCartOutlined style={{ fontSize: 24, color: '#ddd' }} />
-                <p style={{ color: '#999', marginTop: 5 }}>No products selected</p>
-                <Text type="secondary">Search for products above to add them to your quotation</Text>
-              </div>
-            ) : (
-              <>
-                <List
-                  size="small"
-                  dataSource={cart}
-                  renderItem={item => (
-                    <List.Item
-                      actions={[
-                        <Button 
-                          size="small"
-                          icon={<MinusOutlined />}
-                          onClick={() => decreaseQuantity(item.uniqueId)}
-                        />,
-                        <span style={{ fontWeight: 'bold' }}>{item.quantity}</span>,
-                        <Button 
-                          size="small"
-                          icon={<PlusOutlined />}
-                          onClick={() => increaseQuantity(item.uniqueId)}
-                        />,
-                        <Button 
-                          size="small"
-                          icon={<DeleteOutlined />} 
-                          danger 
-                          onClick={() => removeFromCart(item.uniqueId)}
-                        />
-                      ]}
+                  <Divider />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text strong>Total: {formatPrice(calculateTotal())}</Text>
+                    <Button 
+                      type="primary" 
+                      icon={<SendOutlined />}
+                      size="large"
+                      style={{ backgroundColor: "#ef7a1b", borderColor: "#ef7a1b" }}
+                      onClick={handleSendQuotation}
                     >
-                      <List.Item.Meta
-                        title={item.productName}
-                        description={
-                          <div>
-                            <div>{formatPrice(item.price)} each</div>
-                            <div style={{ marginTop: 5 }}>
-                              <Text strong>Subtotal: {formatPrice(item.price * item.quantity)}</Text>
-                            </div>
-                          </div>
-                        }
-                      />
-                    </List.Item>
-                  )}
+                      Create Quotation
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </Col>
+          
+          {/* Right side - Quotations Grid (14/24 width) */}
+          <Col xs={24} lg={14}>
+            <Card title="Quotations">
+              {quotations.length > 0 ? (
+                <Table
+                  dataSource={quotations}
+                  columns={quotationColumns}
+                  rowKey="_id"
+                  pagination={{ pageSize: 5 }}
+                  size="middle"
+                  scroll={{ x: true }}
+                  onRow={(record) => ({
+                    onClick: () => {
+                       setSelectedQuotation(record);
+                       setFormVisible(true);
+                    },
+                  })}
                 />
-                <Divider />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text strong>Total: {formatPrice(calculateTotal())}</Text>
-                  <Button 
-                    type="primary" 
-                    icon={<SendOutlined />}
-                    size="large"
-                    style={{ backgroundColor: "#ef7a1b", borderColor: "#ef7a1b" }}
-                    onClick={handleSendQuotation}
-                  >
-                    Send Quotation
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </Col>
-        
-        {/* Right side - Quotations Grid (6/12 width) */}
-        <Col xs={24} lg={12}>
-          <Card title="Quotations">
-            {quotations.length > 0 ? (
-              <Table
-                dataSource={quotations}
-                columns={quotationColumns}
-                rowKey="id"
-                pagination={{ pageSize: 5 }}
-                size="middle"
-                scroll={{ x: true }}
-              />
-            ) : (
-              <Empty
-                description="No quotations yet"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              >
-                <Text type="secondary">
-                  Create your first quotation by adding products and clicking "Send Quotation"
-                </Text>
-              </Empty>
-            )}
-          </Card>
-        </Col>
-      </Row>
-    </Card>
-  );
+              ) : (
+                <Empty
+                  description="No quotations yet"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                >
+                  <Text type="secondary">
+                    Create your first quotation by adding products and clicking "Create Quotation"
+                  </Text>
+                </Empty>
+              )}
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Quotation Creation Modal */}
+        <Modal
+          title="Create Quotation"
+          open={isModalVisible}
+          onCancel={() => setIsModalVisible(false)}
+          footer={null}
+          width={600}
+        >
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleCreateQuotation}
+            initialValues={{
+              date: dayjs(),
+              validUntil: dayjs().add(7, 'day'),
+              customerName: userAccount.contactName || userAccount.businessName,
+              customerEmail: userAccount.email,
+              customerAddress: `${userAccount.addressLine1 || ''} ${userAccount.addressLine2 || ''}, ${userAccount.city || ''}, ${userAccount.state || ''}, ${userAccount.pincode || ''}`
+            }}
+          >
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="customerName"
+                  label="Customer Name"
+                >
+                  <Input placeholder="Enter customer name" readOnly />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="customerEmail"
+                  label="Customer Email"
+                >
+                  <Input placeholder="Enter customer email" readOnly />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item
+              name="customerAddress"
+              label="Customer Address"
+            >
+              <TextArea rows={2} placeholder="Enter customer address" readOnly />
+            </Form.Item>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="date"
+                  label="Quotation Date"
+                  rules={[{ required: true, message: 'Please select date' }]}
+                >
+                  <DatePicker style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="validUntil"
+                  label="Valid Until"
+                  rules={[{ required: true, message: 'Please select validity date' }]}
+                >
+                  <DatePicker style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item
+              name="note"
+              label="Notes"
+              rules={[{ required: true, message: 'Please add notes' }]}
+            >
+              <TextArea rows={3} placeholder="Add any additional notes (required)" />
+            </Form.Item>
+
+            <Divider />
+            
+            <div style={{ marginBottom: 16 }}>
+              <Text strong>Order Summary:</Text>
+              <div>Total: {formatPrice(calculateTotal())}</div>
+            </div>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" style={{ marginRight: 8 }}>
+                Forward To Quotation Team
+              </Button>
+              <Button onClick={() => setIsModalVisible(false)}>
+                Cancel
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+           <EnquiryForm
+                visible={formVisible}
+                onClose={() => setFormVisible(false)}
+                quotation={selectedQuotation}
+            />
+      </Card>
+    );
 };
 
 export default Leads;
