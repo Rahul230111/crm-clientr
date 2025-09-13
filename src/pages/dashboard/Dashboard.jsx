@@ -56,7 +56,7 @@ const Dashboard = () => {
   const [allAccountFollowUps, setAllAccountFollowUps] = useState([]);
   const [allQuotationFollowUps, setAllQuotationFollowUps] = useState([]);
   const [allInvoiceFollowUps, setAllInvoiceFollowUps] = useState([]);
-
+  const [zones, setZones] = useState([]);
   const [filteredAccountFollowups, setFilteredAccountFollowups] = useState([]);
   const [filteredQuotationFollowups, setFilteredQuotationFollowups] = useState([]);
   const [filteredInvoiceFollowups, setFilteredInvoiceFollowups] = useState([]); // State for filtered invoice follow-ups
@@ -199,6 +199,27 @@ const Dashboard = () => {
     { x: "2024-06-01", y: 14, category: "trend" },
   ];
 
+
+  //  fetch zones
+      const fetchZones = async () => {
+     
+        try {
+            const response = await axios.get("/api/zones");
+            setZones(response.data);
+        } catch (error) {
+            console.error("Error fetching zones:", error);
+            toast.error("Failed to load zones.");
+        } finally {
+            
+        }
+    };
+
+    useEffect(()=> {
+      if(zones.length === 0) {
+        fetchZones()
+      }
+    })
+  
   /**
    * Returns the appropriate Ant Design Icon for a given source type.
    * Ensures all defined source types have a specific icon and provides a fallback.
@@ -886,8 +907,34 @@ const Dashboard = () => {
 
   return (
     <div>
-      <Title level={2}>Dashboard</Title>
+     <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+        }}
+      >
+        <Title level={2} style={{ margin: 0 }}>
+          Dashboard
+        </Title>
 
+        <Select
+          defaultValue="all"
+          style={{ width: 150 }}
+          onChange={(value) => {
+              setFilterValue(value);
+              setPagination({ ...pagination, current: 1 });
+          }}
+          >
+          <Option value="all">All Zones</Option>
+          {zones.map((zone) => (
+              <Option key={zone._id} value={zone._id}>
+              {zone.name}
+              </Option>
+          ))}
+          </Select>
+      </div>
       {/* Metric Cards for Business Accounts, Converted Customers, and Total Invoice Amount */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={12} lg={5}>

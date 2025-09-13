@@ -41,7 +41,7 @@ const EnquiryForm = ({ visible, onClose, quotation }) => {
 
   return (
     <Drawer
-      title='Quotation Details'
+      title='Specification Details'
       width={850}
       onClose={onClose}
       open={visible}
@@ -129,40 +129,41 @@ const EnquiryForm = ({ visible, onClose, quotation }) => {
 
           {/* Products List */}
           <Title level={5}>Products</Title>
-          <List
-            size="small"
-            dataSource={quotation.items}
-            renderItem={(item, index) => (
-              <List.Item>
-                <List.Item.Meta
-                  title={`${index + 1}. ${item.productName || item.description}`}
-                  description={
-                    <div>
-                      {item.specifications && item.specifications.length > 0 && (
-                        <div style={{ marginBottom: 8 }}>
-                          {item.specifications.map((spec, i) => (
-                            <Tag key={i} color="blue">{spec.name}: {spec.value}</Tag>
-                          ))}
-                        </div>
-                      )}
-                      <div>
-                        <Text>HSN/SAC: {item.hsnSac || 'N/A'}</Text>
-                      </div>
-                      <div>
-                        <Text>Quantity: {item.quantity} {item.quantityType}</Text>
-                      </div>
-                      <div>
-                        <Text>Rate: {formatPrice(item.rate)}</Text>
-                      </div>
-                    </div>
-                  }
-                />
-                <div>
-                  <Text strong>{formatPrice(item.rate * item.quantity)}</Text>
-                </div>
-              </List.Item>
+       <List
+  size="small"
+  dataSource={quotation.items}
+  renderItem={(item, index) => (
+    <List.Item>
+      <List.Item.Meta
+        title={`${index + 1}. ${item.productName || item.description}`}
+        description={
+          <div>
+            {/* Line 1 - Specifications */}
+            {item.specifications && item.specifications.length > 0 && (
+              <div style={{ marginBottom: 4 }}>
+                {item.specifications.map((spec, i) => (
+                  <Tag key={i} color="blue">
+                    {spec.name}: {spec.value}
+                  </Tag>
+                ))}
+              </div>
             )}
-          />
+
+            {/* Line 2 - Other Details */}
+            <div>
+              <Text type="secondary">
+                HSN/SAC: {item.hsnSac || 'N/A'} | Quantity: {item.quantity} {item.quantityType} | Rate: {formatPrice(item.rate)}
+              </Text>
+            </div>
+          </div>
+        }
+      />
+      <div>
+        <Text strong>{formatPrice(item.rate * item.quantity)}</Text>
+      </div>
+    </List.Item>
+  )}
+/>
 
           <Divider />
 
@@ -173,9 +174,9 @@ const EnquiryForm = ({ visible, onClose, quotation }) => {
                 <Descriptions.Item label="Subtotal">
                   {formatPrice(quotation.subTotal)}
                 </Descriptions.Item>
-                <Descriptions.Item label="Tax">
+                {/* <Descriptions.Item label="Tax">
                   {formatPrice(quotation.tax)}
-                </Descriptions.Item>
+                </Descriptions.Item> */}
                 <Descriptions.Item label="Total">
                   <Text strong>{formatPrice(quotation.total)}</Text>
                 </Descriptions.Item>
