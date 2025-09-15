@@ -162,9 +162,6 @@ ${business.email || ""}
       return;
     }
 
-    // setLoading(true); // Removed, parent's isSaving handles this
-    // The loading toast is now managed by the parent's handleSave
-    // const toastId = toast.loading("Saving quotation...");
 
     const timestamp = new Date().toLocaleString();
     const newNote = values.noteText
@@ -193,8 +190,6 @@ ${business.email || ""}
       customerEmail: values.customerEmail,
     };
 
-    // Delegate the actual saving (axios call) to the parent component
-    // The parent will handle the loading state and toast messages related to the API call
     try {
       await onSave(quotation);
       // The parent (QuotationPage) will show success toast and close drawer

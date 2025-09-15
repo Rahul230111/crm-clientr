@@ -1,5 +1,5 @@
 // File: src/components/leads/EnquiryForm.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Form,
@@ -11,9 +11,12 @@ import {
   Select,
   Row,
   Col,
+  Badge,
   Divider,
   Switch,
+  Table,
   Card,
+  Empty,
   Typography,
   message,
   Steps,
@@ -22,16 +25,21 @@ import {
 import {
   UploadOutlined,
   LeftOutlined,
+  BackwardFilled,
   RightOutlined
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
+import myImage from "../../assets/image.png";
+import EnquiryForm from "./EnquiryForm";
 
 const { Option } = Select;
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Step } = Steps;
 
-const EnquiryInnerPage = ({ onClose, quotation }) => {
+const EnquiryInnerPage = ({ quotation }) => {
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [isHazardousOther, setIsHazardousOther] = useState(false);
@@ -41,24 +49,74 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
   const [enquiryType, setEnquiryType] = useState(null);
   const [howGetEnquiry, setHowGetEnquiry] = useState(null);
   const [visible, setVisible] = useState(false);
+  const [userAccount, setUserAccount] = useState({});
+  const [stepValues, setStepValues] = useState({});
+  const [enquiryData, setEnquiryData] = useState([]);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const userData = localStorage.getItem("user");
+  const [selectedQuotation, setSelectedQuotation] = useState(null)
+  const [formVisible, setFormVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false)
+  let userName = "";
+  let userId = "";
+  if (userData) {
+    const user = JSON.parse(userData);
+    userName = user.name;
+    userId = user._id || user.id;
+  }
 
-  // Scope questions with switches
+  const fetchUserAcc = async () => {
+    try {
+      const { data } = await axios.get(`/api/accounts/${id}`);
+      setUserAccount(data);
+    } catch (err) {
+      message.error("Failed to load account details");
+    }
+  };
+
+  
+  const fetchEnquiryData = async () => {
+    try {
+      const response = await axios.get(`https://crmserver-lmg7w.ondigitalocean.app/api/enquiry/${id}`);
+      setEnquiryData(response.data.data);
+      console.log(response.data.data)
+    } catch (err) {
+      message.error("Failed to load account details");
+    }
+  };
+
+    useEffect(() => {
+      fetchEnquiryData();
+    }, [id]);
+
+  useEffect(() => {
+    if (Object.keys(userAccount).length === 0) {
+      fetchUserAcc();
+    }
+  }, []);
+
+  const onClose = () => {
+    setVisible(false)
+  }
+
+  // Scope questions with titles
   const scopeQuestions = [
-    "Stability certification",
-    "SFU at Floor level",
-    "Ladders, Scaffolding, Platforms",
-    "Civil works",
-    "Unloading",
-    "Provision of Cable upto DSL Level",
-    "Third Party inspection & Certification",
-    "Chemical Anchoring",
-    "Storage & Security",
-    "Transportation",
-    "Foundation Works",
-    "Supervision for Erection & Commissioning",
-    "Erection & Commissioning",
-    "Mobile crane arrangement for Unloading",
-    "Mobile crane arrangement for E&C"
+    { title: "Stability certification", key: "stabilityCertification" },
+    { title: "SFU at Floor level", key: "sfuAtFloorLevel" },
+    { title: "Ladders, Scaffolding, Platforms", key: "laddersScaffolding" },
+    { title: "Civil works", key: "civilWorks" },
+    { title: "Unloading", key: "unloading" },
+    { title: "Provision of Cable upto DSL Level", key: "cableProvision" },
+    { title: "Third Party inspection & Certification", key: "thirdPartyInspection" },
+    { title: "Chemical Anchoring", key: "chemicalAnchoring" },
+    { title: "Storage & Security", key: "storageSecurity" },
+    { title: "Transportation", key: "transportation" },
+    { title: "Foundation Works", key: "foundationWorks" },
+    { title: "Supervision for Erection & Commissioning", key: "supervision" },
+    { title: "Erection & Commissioning", key: "erectionCommissioning" },
+    { title: "Mobile crane arrangement for Unloading", key: "mobileCraneUnloading" },
+    { title: "Mobile crane arrangement for E&C", key: "mobileCraneEC" }
   ];
 
   const equipmentOptions = [
@@ -77,42 +135,111 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
   const handleCancel = () => {
     form.resetFields();
     setCurrentStep(0);
+    setStepValues({});
     onClose();
+    setVisible(false);
   };
 
-  const handleSubmit = async (values) => {
-    try {
-      // Format dates before submission
-      const formattedValues = {
-        ...values,
-        targetDate: values.targetDate ? values.targetDate.format('YYYY-MM-DD') : null,
-        enquiryDate: values.enquiryDate ? values.enquiryDate.format('YYYY-MM-DD') : null
-      };
+const handleSubmit = async () => {
+  setSubmitting(true)
+  try {
+    // Validate current step fields first
+    const currentStepValues = await form.validateFields(steps[currentStep].fields);
 
-      // Submit to Google Sheets via AppScript
-      const response = await fetch('YOUR_APPSCRIPT_WEB_APP_URL', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formattedValues),
-      });
+    // Combine all stored step values with current step values
+    const allValues = { ...stepValues, ...currentStepValues };
 
-      if (response.ok) {
-        message.success('Enquiry submitted successfully!');
-        handleCancel();
-      } else {
-        throw new Error('Submission failed');
+    // Clean up undefined values and format dates
+    const formattedValues = Object.keys(allValues).reduce((acc, key) => {
+      const value = allValues[key];
+
+      // Skip undefined values
+      if (value === undefined || value === null) {
+        return acc;
       }
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      message.error('Failed to submit enquiry. Please try again.');
+
+      // Handle date formatting
+      if (value instanceof dayjs) {
+        acc[key] = value.format('YYYY-MM-DD');
+      } else if (typeof value === 'object' && value.fileList) {
+        // Handle upload files
+        acc[key] = value.fileList;
+      } else {
+        acc[key] = value;
+      }
+
+      return acc;
+    }, {});
+
+    // Add scope values directly to the main output (not nested)
+    scopeQuestions.forEach((question, index) => {
+      const scopeValue = formattedValues[`scope_${index}`];
+      if (scopeValue !== undefined) {
+        formattedValues[question.key] = scopeValue;
+      }
+    });
+
+    // Remove individual scope fields from main output
+    scopeQuestions.forEach((_, index) => {
+      delete formattedValues[`scope_${index}`];
+    });
+
+    // ✅ Add createdBy and customerId
+    formattedValues.createdBy = userName;
+    formattedValues.customerId = userAccount._id;
+
+    const response = await fetch("https://crmserver-lmg7w.ondigitalocean.app/submit-to-google-sheet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formattedValues),
+    });
+
+    const result = await response.text();
+    if(response.status === 200){
+      onClose()
+      fetchEnquiryData()
     }
+  
+
+  } catch (error) {
+    console.error("Error submitting form:", error);
+    message.error("Failed to submit enquiry. Please try again.");
+  }
+};
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(price);
   };
+
+  // Format date and time
+  const formatDateTime = (date) => {
+    return new Intl.DateTimeFormat('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(date));
+  };
+
 
   const nextStep = () => {
     form.validateFields(steps[currentStep].fields)
-      .then(() => {
+      .then((values) => {
+        // Clean up undefined values before storing
+        const cleanedValues = Object.keys(values).reduce((acc, key) => {
+          if (values[key] !== undefined && values[key] !== null) {
+            acc[key] = values[key];
+          }
+          return acc;
+        }, {});
+        
+        // Store current step values before moving to next step
+        setStepValues(prev => ({ ...prev, ...cleanedValues }));
         setCurrentStep(currentStep + 1);
       })
       .catch((error) => {
@@ -123,6 +250,41 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
   const prevStep = () => {
     setCurrentStep(currentStep - 1);
   };
+
+    const quotationColumns = [
+   
+    {
+      title: 'Created At',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date) => formatDateTime(date),
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+      defaultSortOrder: 'descend',
+    },
+    {
+      title: 'Created By',
+      dataIndex: 'createdBy',
+      key: 'createdBy'
+    },
+    // {
+    //   title: 'Amount',
+    //   dataIndex: 'total',
+    //   key: 'total',
+    //   render: (amount) => formatPrice(amount),
+    //   sorter: (a, b) => a.total - b.total,
+    // },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => (
+        <Badge 
+          status={status === 'Sent' ? 'success' : 'processing'} 
+          text={status || 'Draft'} 
+        />
+      ),
+    },
+  ];
 
   const steps = [
     {
@@ -173,7 +335,12 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
             name="businessCard"
             label="Upload client's business card"
             valuePropName="fileList"
-           
+            getValueFromEvent={(e) => {
+              if (Array.isArray(e)) {
+                return e;
+              }
+              return e && e.fileList;
+            }}
           >
             <Upload
               listType="picture"
@@ -263,6 +430,7 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
+              <Title level={5} style={{ marginBottom: 16 }}>Enquiry Weightage</Title>
               <Form.Item
                 name="howKnowUs"
                 label="How do you know us?"
@@ -325,7 +493,7 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
       )
     },
     {
-      title: 'Equipment Details',
+      title: 'Equipment & Basic Requirements',
       fields: ['deliveryLeadTime', 'finalizationDate', 'otherCranes', 'isHazardous', 
               'hazardousOther', 'operationLocation', 'equipmentApplication', 
               'liftingTime', 'operationTime', 'dailyOperationTime', 'equipment'],
@@ -338,7 +506,11 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="finalizationDate" label="When it will be finalized?">
+              <Form.Item
+                name="finalizationDate"
+                label="When it will be finalized?"
+                rules={[{ required: true, message: 'Please select finalization date!' }]}
+              >
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
@@ -348,6 +520,7 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
             <Input placeholder="List other crane makes used" />
           </Form.Item>
 
+          <Title level={5} style={{ marginBottom: 16 }}>Basic Requirement</Title>
           <Form.Item
             name="isHazardous"
             label="Is Hazardous area?"
@@ -364,7 +537,7 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
             <Form.Item
               name="hazardousOther"
               label="Please specify"
-              rules={[{ required: true, message: 'Please specify the hazardous type!' }]}
+              rules={[{ required: isHazardousOther, message: 'Please specify the hazardous type!' }]}
             >
               <Input placeholder="Specify hazardous type" />
             </Form.Item>
@@ -403,14 +576,13 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
                 />
               </Form.Item>
               <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <Text type="secondary">[Space for lifting time diagram image]</Text>
+                <img src={myImage} width="100%" alt="Logo" />
               </div>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item
                 name="operationTime"
                 label="Operation time per cycle in sec. (t1+t2+t3+t4)"
-                rules={[{ required: true, message: 'Please enter operation time!' }]}
               >
                 <InputNumber 
                   min={0} 
@@ -418,8 +590,8 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
                   placeholder="Enter time in seconds" 
                 />
               </Form.Item>
-              <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <Text type="secondary">[Space for operation cycle diagram image]</Text>
+               <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <img src={myImage} width="100%" alt="Logo" />
               </div>
             </Col>
           </Row>
@@ -448,13 +620,15 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
       )
     },
     {
-      title: 'Technical Specifications',
+      title: 'Technical Specifications & Scope',
       fields: ['accessories', 'accessoriesOther', 'valueAdded', 'valueAddedOther', 
-              'scopeQuestions', 'dutyClass', 'capacity', 'quantity', 'tableSize', 
+              'dutyClass', 'capacity', 'quantity', 'tableSize', 
               'travelLength', 'railLevel', 'siteLayout', 'jobType', 'maxWeight', 
-              'maxHeight', 'maxLoadingHeight', 'heightConstraints', 'remarks'],
+              'maxHeight', 'maxLoadingHeight', 'heightConstraints', 'remarks',
+              ...scopeQuestions.map((_, index) => `scope_${index}`)],
       content: (
         <>
+          <Title level={5} style={{ marginBottom: 16 }}>Transfer Trolley - Scope of Supply & Work and Technical Specification</Title>
           <Form.Item name="accessories" label="Accessories">
             <Radio.Group onChange={(e) => setIsAccessoriesOther(e.target.value === 'other')}>
               <Radio value="cableReeling">Cable Reeling Drum</Radio>
@@ -464,7 +638,11 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
           </Form.Item>
 
           {isAccessoriesOther && (
-            <Form.Item name="accessoriesOther" label="Please specify">
+            <Form.Item 
+              name="accessoriesOther" 
+              label="Please specify"
+              rules={[{ required: isAccessoriesOther, message: 'Please specify accessory!' }]}
+            >
               <Input placeholder="Specify accessory" />
             </Form.Item>
           )}
@@ -478,7 +656,11 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
           </Form.Item>
 
           {isValueAddedOther && (
-            <Form.Item name="valueAddedOther" label="Please specify">
+            <Form.Item 
+              name="valueAddedOther" 
+              label="Please specify"
+              rules={[{ required: isValueAddedOther, message: 'Please specify value added item!' }]}
+            >
               <Input placeholder="Specify value added item" />
             </Form.Item>
           )}
@@ -491,8 +673,9 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
               <Form.Item 
                 key={index} 
                 name={`scope_${index}`}
-                label={question}
+                label={question.title}
                 style={{ marginBottom: 12 }}
+                rules={[{ required: true, message: 'Please select scope for this item!' }]}
               >
                 <Radio.Group>
                   <Radio value="mcipl">MCIPL's Scope</Radio>
@@ -566,7 +749,17 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
             </Select>
           </Form.Item>
 
-          <Form.Item name="siteLayout" label="Site Layout">
+          <Form.Item 
+            name="siteLayout" 
+            label="Site Layout"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => {
+              if (Array.isArray(e)) {
+                return e;
+              }
+              return e && e.fileList;
+            }}
+          >
             <Upload
               multiple
               maxCount={10}
@@ -582,6 +775,7 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
             </Upload>
           </Form.Item>
 
+          <Title level={5} style={{ marginBottom: 16 }}>Additional Details</Title>
           <Form.Item name="jobType" label="Type of Job">
             <Input placeholder="Enter job type" />
           </Form.Item>
@@ -641,8 +835,61 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
   ];
 
   return (
-    <>
-    <Button onClick={()=> setVisible(true)}> Click</Button>
+     <Card 
+      title={
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={4} style={{ margin: 0 }}>{userAccount.businessName || "Loading ..."}</Title>
+          <Button
+            type="primary"
+            icon={<BackwardFilled />}
+            style={{ backgroundColor: "#ef7a1b", borderColor: "#ef7a1b", color: "white" }}
+            onClick={() => navigate(-1)}
+          >
+            Back
+          </Button>
+        </div>
+      }
+    >
+     <Row gutter={24}>
+            <Col xs={24} lg={10}>
+            <h3>Create Enquiry Section</h3>
+            <div style={{textAlign:"center", marginTop:"50px"}}>
+              <Button onClick={()=> setVisible(true)}> Enquiry Form</Button> 
+            </div>
+           
+            </Col>
+              
+            <Col xs={24} lg={14}>
+                  <Card title="Enquiry">
+              {enquiryData.length > 0 ? (
+                <Table
+                  dataSource={enquiryData}
+                  columns={quotationColumns}
+                  rowKey="_id"
+                  pagination={{ pageSize: 5 }}
+                  size="middle"
+                  scroll={{ x: true }}
+                  onRow={(record) => ({
+                    onClick: () => {
+                       setSelectedQuotation(record);
+                       setFormVisible(true);
+                    },
+                  })}
+                />
+              ) : (
+                <Empty
+                  description="No Enquiry yet"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                >
+                  {/* <Text type="secondary">
+                    Create your first quotation by adding products and clicking "Create Quotation"
+                  </Text> */}
+                </Empty>
+              )}
+            </Card>
+            </Col>
+     </Row>
+    
     <Modal
       title={
         <div>
@@ -673,9 +920,9 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
           <Button 
             key="submit" 
             type="primary" 
-            onClick={() => form.submit()}
+            onClick={handleSubmit}
           >
-            Submit
+            {submitting ? "Submitting ..." : Submit}
           </Button>
         )
       ].filter(Boolean)}
@@ -684,18 +931,23 @@ const EnquiryInnerPage = ({ onClose, quotation }) => {
       <Form
         form={form}
         layout="vertical"
-        onFinish={handleSubmit}
         initialValues={{
-          // Set initial values if editing an existing quotation
           ...quotation,
           targetDate: quotation?.targetDate ? dayjs(quotation.targetDate) : null,
-          enquiryDate: quotation?.enquiryDate ? dayjs(quotation.enquiryDate) : null
+          enquiryDate: quotation?.enquiryDate ? dayjs(quotation.enquiryDate) : null,
+          finalizationDate: quotation?.finalizationDate ? dayjs(quotation.finalizationDate) : null
         }}
       >
         {steps[currentStep].content}
       </Form>
     </Modal>
-    </>
+      <EnquiryForm
+                visible={formVisible}
+                onClose={() => setFormVisible(false)}
+                enquiry={selectedQuotation}
+            />
+          
+    </Card>
   );
 };
 
