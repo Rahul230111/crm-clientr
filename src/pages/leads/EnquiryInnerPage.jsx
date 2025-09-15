@@ -33,6 +33,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../api/axios"
 import myImage from "../../assets/image.png";
 import EnquiryForm from "./EnquiryForm";
+import Dropzone from "react-dropzone";
+import imageCompression from 'browser-image-compression';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -58,6 +60,7 @@ const EnquiryInnerPage = ({ quotation }) => {
   const [selectedQuotation, setSelectedQuotation] = useState(null)
   const [formVisible, setFormVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false)
+  const [uploadedCardFile, setUploadedCardFile] = useState(null)
   let userName = "";
   let userId = "";
   if (userData) {
@@ -66,6 +69,8 @@ const EnquiryInnerPage = ({ quotation }) => {
     userId = user._id || user.id;
   }
 
+  const [files2, setFiles2] = useState([]);
+  const [siteLayoutFiles, setSiteLayoutFiles] = useState([]);
   const fetchUserAcc = async () => {
     try {
       const { data } = await axios.get(`/api/accounts/${id}`);
@@ -99,6 +104,54 @@ const EnquiryInnerPage = ({ quotation }) => {
   const onClose = () => {
     setVisible(false)
   }
+
+   const compressImage = async (file) => {
+    const options = {
+      maxSizeMB: 0.05, // 50 KB
+      maxWidthOrHeight: 1024,
+      useWebWorker: true, 
+    };
+  
+    try {
+      const compressedFile = await imageCompression(file, options);
+      return new File([compressedFile], file.name, { type: file.type });
+    } catch (error) {
+      console.error("Image compression failed:", error);
+      throw error; 
+    }
+  };
+
+
+  // dropzone
+    const handleDropChange = async(acceptedFiles) => {
+    
+    const file = acceptedFiles[0]
+    console.log(file)
+    if(!file) return;
+    try{
+      const compressedFile = await compressImage(file);
+      const newFile = {
+        name:compressedFile.name,
+        type:compressedFile.type,
+        file:compressedFile,
+        preview: URL.createObjectURL(compressedFile)
+      }
+      setFiles2([newFile]),
+      setUploadedCardFile(newFile)
+    }catch(error){
+      console.error("Error compressing file:", error);
+    }
+  }
+
+  const handleSiteLayoutDrop = (acceptedFiles) => {
+  const mappedFiles = acceptedFiles.map((file) => ({
+    name: file.name,
+    type: file.type,
+    file: file,
+    preview: URL.createObjectURL(file),
+  }));
+  setSiteLayoutFiles((prev) => [...prev, ...mappedFiles]);
+};
 
   // Scope questions with titles
   const scopeQuestions = [
@@ -141,79 +194,72 @@ const EnquiryInnerPage = ({ quotation }) => {
   };
 
 const handleSubmit = async () => {
-  setSubmitting(true)
+  setSubmitting(true);
   try {
-    // Validate current step fields first
     const currentStepValues = await form.validateFields(steps[currentStep].fields);
-
-    // Combine all stored step values with current step values
     const allValues = { ...stepValues, ...currentStepValues };
 
-    // Clean up undefined values and format dates
-    const formattedValues = Object.keys(allValues).reduce((acc, key) => {
+    // Prepare FormData (instead of JSON)
+    const formData = new FormData();
+
+    for (const key of Object.keys(allValues)) {
       const value = allValues[key];
+      if (!value) continue;
 
-      // Skip undefined values
-      if (value === undefined || value === null) {
-        return acc;
-      }
-
-      // Handle date formatting
       if (value instanceof dayjs) {
-        acc[key] = value.format('YYYY-MM-DD');
-      } else if (typeof value === 'object' && value.fileList) {
-        // Handle upload files
-        acc[key] = value.fileList;
+        formData.append(key, value.format("YYYY-MM-DD"));
+      } else if (typeof value === "object" && value.fileList) {
+        // Append each file
+        value.fileList.forEach((file) => {
+          formData.append(key, file.originFileObj);
+        });
       } else {
-        acc[key] = value;
+        formData.append(key, value);
       }
-
-      return acc;
-    }, {});
-
-    // Add scope values directly to the main output (not nested)
-    scopeQuestions.forEach((question, index) => {
-      const scopeValue = formattedValues[`scope_${index}`];
-      if (scopeValue !== undefined) {
-        formattedValues[question.key] = scopeValue;
-      }
-    });
-
-    // Remove individual scope fields from main output
-    scopeQuestions.forEach((_, index) => {
-      delete formattedValues[`scope_${index}`];
-    });
-
-    // ✅ Add createdBy and customerId
-    formattedValues.createdBy = userName;
-    formattedValues.customerId = userAccount._id;
-
-    const response = await fetch("https://crmserver-lmg7w.ondigitalocean.app/submit-to-google-sheet", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formattedValues),
-    });
-
-    const result = await response.text();
-    if(response.status === 200){
-      onClose()
-      fetchEnquiryData()
     }
-  
 
+    // Add extra values
+    scopeQuestions.forEach((q, i) => {
+      if (allValues[`scope_${i}`] !== undefined) {
+        formData.append(q.key, allValues[`scope_${i}`]);
+      }
+    });
+
+    formData.append("createdBy", userName);
+    formData.append("customerId", userAccount._id);
+
+    if (uploadedCardFile) {
+      formData.append("businessCard", uploadedCardFile.file);
+    }
+
+      siteLayoutFiles.forEach((f) => {
+      formData.append("siteLayout", f.file);
+    });
+
+    const response = await fetch(
+      "http://localhost:5000/submit-to-google-sheet",
+      {
+        method: "POST",
+        body: formData, // no Content-Type, browser sets it
+      }
+    );
+
+    const result = await response.json();
+    if (response.ok && result.success) {
+      message.success("Enquiry submitted successfully!");
+      onClose();
+      fetchEnquiryData();
+    } else {
+      throw new Error(result.message || "Failed to submit enquiry");
+    }
   } catch (error) {
     console.error("Error submitting form:", error);
     message.error("Failed to submit enquiry. Please try again.");
+  } finally {
+    setSubmitting(false);
   }
 };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(price);
-  };
 
   // Format date and time
   const formatDateTime = (date) => {
@@ -333,7 +379,7 @@ const handleSubmit = async () => {
 
           <Form.Item
             name="businessCard"
-            label="Upload client's business card"
+            label=""
             valuePropName="fileList"
             getValueFromEvent={(e) => {
               if (Array.isArray(e)) {
@@ -342,25 +388,33 @@ const handleSubmit = async () => {
               return e && e.fileList;
             }}
           >
-            <Upload
-              listType="picture"
-              maxCount={1}
-              beforeUpload={(file) => {
-                const isImage = file.type.startsWith('image/');
-                const isLt1M = file.size / 1024 / 1024 < 1;
-                
-                if (!isImage) {
-                  message.error('You can only upload image files!');
-                }
-                if (!isLt1M) {
-                  message.error('Image must be smaller than 1MB!');
-                }
-                
-                return isImage && isLt1M ? false : Upload.LIST_IGNORE;
-              }}
-            >
-              <Button icon={<UploadOutlined />}>Click to upload</Button>
-            </Upload>
+           <label className="form-label">Upload client's business card</label>
+                <Dropzone onDrop={(acceptedFiles) => handleDropChange(acceptedFiles, setFiles2)} maxFiles={1}>
+                  {({ getRootProps, getInputProps }) => (
+                    <section>
+                      <div {...getRootProps()} className="dropzone upload-zone dz-clickable">
+                        <input {...getInputProps()} />
+                        {files2.length === 0 && (
+                          <div style={{textAlign:"center", marginTop:"20px"}}>
+                            {/* <span className="dz-message-text">Drag and drop file</span>
+                            <span className="dz-message-or">or</span> */}
+                            <Button color="primary">SELECT</Button>
+                          </div>
+                        )}
+                        {files2.map((file) => (
+                          <div
+                            key={file.name}
+                            className="dz-preview dz-processing dz-image-preview dz-error dz-complete"
+                          >
+                            <div >
+                              <img style={{width:"150px"}} src={file.preview} alt="preview" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </Dropzone>
           </Form.Item>
 
           <Divider>Primary Contact Person</Divider>
@@ -760,19 +814,35 @@ const handleSubmit = async () => {
               return e && e.fileList;
             }}
           >
-            <Upload
-              multiple
-              maxCount={10}
-              beforeUpload={(file) => {
-                const isLt10M = file.size / 1024 / 1024 < 10;
-                if (!isLt10M) {
-                  message.error('File must be smaller than 10MB!');
-                }
-                return isLt10M ? false : Upload.LIST_IGNORE;
-              }}
-            >
-              <Button icon={<UploadOutlined />}>Click to upload (Max 10 files, 10MB each)</Button>
-            </Upload>
+           <Dropzone onDrop={handleSiteLayoutDrop} maxFiles={10}>
+            {({ getRootProps, getInputProps }) => (
+              <section>
+                <div {...getRootProps()} className="dropzone upload-zone dz-clickable">
+                  <input {...getInputProps()} />
+                  {siteLayoutFiles.length === 0 && (
+                    <div style={{ textAlign: "center", marginTop: "20px" }}>
+                      <Button type="dashed">Upload Site Layout Files</Button>
+                    </div>
+                  )}
+                  {siteLayoutFiles.length > 0 && (
+                    <div className="dz-preview-container">
+                      {siteLayoutFiles.map((file, index) => (
+                        <div key={index} className="dz-preview dz-processing dz-file-preview dz-complete">
+                          {file.type.startsWith("image/") ? (
+                            <img style={{ width: "100px" }} src={file.preview} alt={file.name} />
+                          ) : (
+                            <div style={{ padding: "5px", border: "1px solid #ddd", borderRadius: "5px" }}>
+                              📄 {file.name}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+          </Dropzone>
           </Form.Item>
 
           <Title level={5} style={{ marginBottom: 16 }}>Additional Details</Title>
@@ -903,6 +973,8 @@ const handleSubmit = async () => {
       }
       open={visible}
       onCancel={handleCancel}
+      maskClosable={false}  
+  keyboard={false}  
       footer={[
         <Button key="cancel" onClick={handleCancel}>
           Cancel
