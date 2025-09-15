@@ -237,7 +237,7 @@ const handleSubmit = async () => {
     });
 
     const response = await fetch(
-      "http://localhost:5000/submit-to-google-sheet",
+      "https://crmserver-lmg7w.ondigitalocean.app/submit-to-google-sheet",
       {
         method: "POST",
         body: formData, // no Content-Type, browser sets it
