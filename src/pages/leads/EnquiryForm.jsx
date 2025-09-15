@@ -93,7 +93,7 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
     <Drawer
       title={
         <Space>
-          <UserOutlined style={{ color: '#1890ff', fontSize: isMobile ? 18 : 20 }} />
+          {/* <UserOutlined style={{ color: '#1890ff', fontSize: isMobile ? 18 : 20 }} /> */}
           <span style={{ fontWeight: 600, fontSize: isMobile ? 16 : 18 }}>Enquiry Details</span>
         </Space>
       }
@@ -281,10 +281,10 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
               >
                 <Space direction="vertical" style={{ width: '100%' }} size="middle">
                   {[
-                    { icon: <CalendarOutlined />, label: 'Enquiry Date', value: enquiry.enquiryDate },
-                    { icon: <ClockCircleOutlined />, label: 'Target Date', value: enquiry.targetDate },
-                    { icon: <CalendarOutlined />, label: 'Finalization Date', value: enquiry.finalizationDate },
-                    { icon: <ClockCircleOutlined />, label: 'Delivery Lead Time', value: enquiry.deliveryLeadTime }
+                    { icon: <CalendarOutlined />, label: 'Enquiry Date : ', value: enquiry.enquiryDate },
+                    { icon: <ClockCircleOutlined />, label: 'Target Date : ', value: enquiry.targetDate },
+                    { icon: <CalendarOutlined />, label: 'Finalization Date : ', value: enquiry.finalizationDate },
+                    { icon: <ClockCircleOutlined />, label: 'Delivery Lead Time : ', value: enquiry.deliveryLeadTime }
                   ].map((item, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                       {React.cloneElement(item.icon, { style: { color: '#1890ff', fontSize: 16, flexShrink: 0 } })}
@@ -301,7 +301,7 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
 
               {/* Additional Services */}
               <Card 
-                title={<Space><ApartmentOutlined />Additional Services</Space>} 
+                title={<Space><ApartmentOutlined />Scopes's</Space>} 
                 bordered={false} 
                 style={cardStyle}
                 headStyle={{ 

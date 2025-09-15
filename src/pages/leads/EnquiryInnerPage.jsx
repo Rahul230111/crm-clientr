@@ -30,7 +30,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "../../api/axios"
 import myImage from "../../assets/image.png";
 import EnquiryForm from "./EnquiryForm";
 
@@ -78,7 +78,7 @@ const EnquiryInnerPage = ({ quotation }) => {
   
   const fetchEnquiryData = async () => {
     try {
-      const response = await axios.get(`https://crmserver-lmg7w.ondigitalocean.app/api/enquiry/${id}`);
+      const response = await axios.get(`/api/enquiry/${id}`);
       setEnquiryData(response.data.data);
       console.log(response.data.data)
     } catch (err) {
@@ -922,7 +922,7 @@ const handleSubmit = async () => {
             type="primary" 
             onClick={handleSubmit}
           >
-            {submitting ? "Submitting ..." : Submit}
+            {submitting ? "Submitting ..." : "Submit"}
           </Button>
         )
       ].filter(Boolean)}
