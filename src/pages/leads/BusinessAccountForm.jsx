@@ -332,8 +332,8 @@ const BusinessAccountForm = ({ visible, onClose, onSave, initialValues, allUsers
                     <Form.Item name="country" label="Country" rules={[{ required: true, message: 'Please enter country' }]}>
                         <Input placeholder="Country" />
                     </Form.Item>
-                    <Form.Item name="website" label="Website URL" rules={[{ type: 'url', message: 'Invalid URL format' }]}>
-                        <Input placeholder="https://www.example.com" />
+                    <Form.Item name="website" label="Industry Type" rules={[{  message: '' }]}>
+                        <Input placeholder="Enter Industry Type" />
                     </Form.Item>
 
                     <Form.Item name="type" label="Lead Type" rules={[{ required: true, message: 'Please select a lead type' }]}>

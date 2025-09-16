@@ -20,7 +20,7 @@ const TopNavbar = ({ collapsed, setCollapsed }) => {
 
 
   dayjs.extend(relativeTime);
-  // fetch notification
+  
 // fetch notification
 const fetchNotification = async () => {
   try {
@@ -43,44 +43,11 @@ const fetchNotification = async () => {
   }
 };
 
-
   useEffect(()=> {
     if(notificationData.length === 0){
       fetchNotification()
     }
   },[])
-
-  // Sample notification data
-  const notifications = [
-    {
-      id: 1,
-      title: 'New Enquiry Arrived',
-      description: 'New Enquiry Arrived to Qt team',
-      time: '2 minutes ago',
-      read: false
-    },
-    // {
-    //   id: 2,
-    //   title: 'Project Update',
-    //   description: 'Your project has been approved by the team',
-    //   time: '1 hour ago',
-    //   read: false
-    // },
-    // {
-    //   id: 3,
-    //   title: 'Meeting Reminder',
-    //   description: 'Team meeting starts in 30 minutes',
-    //   time: '3 hours ago',
-    //   read: true
-    // },
-    // {
-    //   id: 4,
-    //   title: 'System Alert',
-    //   description: 'System maintenance scheduled for tomorrow',
-    //   time: '5 hours ago',
-    //   read: true
-    // }
-  ];
 
   const handleLogout = () => {
     localStorage.clear();
@@ -122,7 +89,7 @@ const fetchNotification = async () => {
     <div className="notification-dropdown">
       <div className="notification-header">
         <h4>Notifications</h4>
-        <a onClick={handleMarkAllAsRead}>Mark all as read</a>
+        {/* <a onClick={handleMarkAllAsRead}>Mark all as read</a> */}
       </div>
       <Divider style={{ margin: '8px 0' }} />
       <div className="notification-list">
@@ -149,7 +116,7 @@ const fetchNotification = async () => {
       </div>
       <Divider style={{ margin: '8px 0' }} />
       <div className="notification-footer">
-        <a onClick={handleViewAllNotifications}>View all notifications</a>
+        {/* <a onClick={handleViewAllNotifications}>View all notifications</a> */}
       </div>
     </div>
   );
@@ -174,9 +141,9 @@ const fetchNotification = async () => {
           trigger={['click']}
           overlayClassName="notification-dropdown-overlay"
         >
-          <div style={{cursor: 'pointer'}}>
+          <div style={{cursor: 'pointer', marginTop:"5px"}}>
             <Badge count={notificationData?.length} size="small" offset={[-5, 5]}>
-              <BellOutlined style={{ fontSize: '18px' }} />
+              <BellOutlined style={{ fontSize: '20px' }} />
             </Badge>
           </div>
         </Dropdown>

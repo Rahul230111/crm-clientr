@@ -196,10 +196,11 @@ const EnquiryInnerPage = ({ quotation }) => {
 const handleSubmit = async () => {
   setSubmitting(true);
   try {
+    // validate all visible step fields
     const currentStepValues = await form.validateFields(steps[currentStep].fields);
     const allValues = { ...stepValues, ...currentStepValues };
 
-    // Prepare FormData (instead of JSON)
+    // Prepare FormData
     const formData = new FormData();
 
     for (const key of Object.keys(allValues)) {
@@ -209,7 +210,6 @@ const handleSubmit = async () => {
       if (value instanceof dayjs) {
         formData.append(key, value.format("YYYY-MM-DD"));
       } else if (typeof value === "object" && value.fileList) {
-        // Append each file
         value.fileList.forEach((file) => {
           formData.append(key, file.originFileObj);
         });
@@ -218,13 +218,16 @@ const handleSubmit = async () => {
       }
     }
 
-    // Add extra values
+    // 🔑 Instead of appending scope values twice,
+    // map them directly from form values to their `q.key`
     scopeQuestions.forEach((q, i) => {
-      if (allValues[`scope_${i}`] !== undefined) {
-        formData.append(q.key, allValues[`scope_${i}`]);
+      const selected = allValues[`scope_${i}`];
+      if (selected !== undefined) {
+        formData.append(q.key, selected);
       }
     });
 
+    // extra values
     formData.append("createdBy", userName);
     formData.append("customerId", userAccount._id);
 
@@ -232,7 +235,7 @@ const handleSubmit = async () => {
       formData.append("businessCard", uploadedCardFile.file);
     }
 
-      siteLayoutFiles.forEach((f) => {
+    siteLayoutFiles.forEach((f) => {
       formData.append("siteLayout", f.file);
     });
 
@@ -240,7 +243,7 @@ const handleSubmit = async () => {
       "https://crmserver-lmg7w.ondigitalocean.app/submit-to-google-sheet",
       {
         method: "POST",
-        body: formData, // no Content-Type, browser sets it
+        body: formData,
       }
     );
 
