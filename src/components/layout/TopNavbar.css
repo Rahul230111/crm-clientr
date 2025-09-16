@@ -1,6 +1,7 @@
 .top-navbar-container {
   display: flex;
-    justify-content: flex-end;  align-items: center;
+  justify-content: flex-end;
+  align-items: center;
   height: 64px;
   padding: 0 16px;
   background: #fff;
@@ -20,14 +21,178 @@
     display: flex;
     align-items: center;
   }
-.top-navbar-container {
-  display: flex;
-    justify-content: space-between; 
- 
-}
+  
+  .top-navbar-container {
+    justify-content: space-between;
+  }
 
   .moblelogo {
     display: block;
     width: 150px;
+  }
+}
+
+/* Notification dropdown styles */
+.notification-dropdown {
+  width: 250px;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.notification-header h4 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.notification-header a {
+  color: #1890ff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.notification-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.notification-item:hover {
+  background-color: #f5f5f5;
+}
+
+.notification-item.unread {
+  background-color: #f0f8ff;
+}
+
+.notification-item.unread:hover {
+  background-color: #e6f7ff;
+}
+
+.notification-title {
+  padding: 0px 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.notification-description {
+  padding:0px 20px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #666;
+}
+
+.notification-time {
+    padding:0px 20px;
+  color: #999;
+  font-size: 11px;
+  margin-top: 4px;
+  display: block;
+}
+
+.notification-footer {
+  padding: 8px 16px;
+  text-align: center;
+}
+
+.notification-footer a {
+  color: #1890ff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* Mobile responsiveness for notification dropdown */
+@media (max-width: 576px) {
+  .notification-dropdown {
+    width: 90vw;
+    max-width: 250px;
+    right: auto !important;
+    left: auto !important;
+    transform: none !important;
+  }
+  
+  .notification-header {
+    padding: 10px 12px;
+  }
+  
+  .notification-header h4 {
+    font-size: 15px;
+  }
+  
+  .notification-item {
+    padding: 10px 12px;
+  }
+  
+  .notification-title {
+    font-size: 13px;
+  }
+  
+  .notification-description {
+    font-size: 12px;
+  }
+  
+  .notification-time {
+    font-size: 11px;
+  }
+  
+  .notification-list {
+    max-height: 50vh;
+  }
+}
+
+/* Very small mobile devices */
+@media (max-width: 350px) {
+  .notification-dropdown {
+    width: 95vw;
+    max-width: 280px;
+  }
+  
+  .notification-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .notification-header h4 {
+    font-size: 14px;
+  }
+  
+  .notification-header a {
+    font-size: 11px;
+  }
+  
+  .notification-item {
+    padding: 8px 10px;
+  }
+  
+  .notification-title {
+    font-size: 12px;
+  }
+  
+  .notification-description {
+    font-size: 11px;
+  }
+  
+  .notification-time {
+    font-size: 10px;
+  }
+  
+  .notification-footer a {
+    font-size: 12px;
   }
 }
