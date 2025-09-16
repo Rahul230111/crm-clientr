@@ -125,22 +125,23 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
               <Col xs={24} md={12}>
                 <Space size="middle" align="start" direction={isMobile ? "vertical" : "horizontal"}>
                   <div>
-                    <Title level={isMobile ? 3 : 2} style={{ margin: 0, fontWeight: 600 }}>{enquiry.clientName || 'Unnamed Client'}</Title>
+                    {/* <Title level={isMobile ? 3 : 2} style={{ margin: 0, fontWeight: 600 }}>{enquiry.clientName || 'Unnamed Client'}</Title>
                     <Text type="secondary" style={{ fontSize: isMobile ? 14 : 16, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <MailOutlined /> {enquiry.email || 'No email provided'}
-                    </Text>
+                    </Text> */}
                     <Space size="middle" style={{ marginTop: 12 }} wrap>
                       {renderStatusBadge(enquiry.status)}
                       {renderPriorityBadge(enquiry.priority)}
+                      <Tag icon={<CalendarOutlined />} color="blue" style={{ borderRadius: 20, padding: '6px 14px', fontWeight: 500 }}>
+                    {enquiry.enquiryType || 'General Enquiry'}
+                  </Tag>
                     </Space>
                   </div>
                 </Space>
               </Col>
               <Col xs={24} md={6}>
                 <Space direction="vertical" align={isMobile ? "start" : "end"} style={{ marginTop: isMobile ? 16 : 0 }}>
-                  <Tag icon={<CalendarOutlined />} color="blue" style={{ borderRadius: 20, padding: '6px 14px', fontWeight: 500 }}>
-                    {enquiry.enquiryType || 'General Enquiry'}
-                  </Tag>
+                  
                   <Text type="secondary" style={{ fontSize: isMobile ? 14 : 15, marginTop: 8 }}>
                     Created on {formatDate(enquiry.createdAt)}
                   </Text>
@@ -153,7 +154,7 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
             {/* Left Column */}
             <Col xs={24} lg={12}>
               {/* Client Details */}
-              <Card 
+              {/* <Card 
                 title={<Space><TeamOutlined />Client Details</Space>} 
                 bordered={false} 
                 style={cardStyle} 
@@ -180,10 +181,10 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
                     </div>
                   ))}
                 </Space>
-              </Card>
+              </Card> */}
 
               {/* Contact Info */}
-              <Card 
+              {/* <Card 
                 title={<Space><TeamOutlined />Contact Information</Space>} 
                 bordered={false} 
                 style={cardStyle}
@@ -228,7 +229,7 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
                     </Col>
                   ))}
                 </Row>
-              </Card>
+              </Card> */}
 
               {/* Equipment Requirements */}
               <Card 
@@ -263,7 +264,34 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
                   ))}
                 </Space>
               </Card>
+
+              <Card 
+                title={<Space><ApartmentOutlined />Scopes's</Space>} 
+                bordered={false} 
+                style={cardStyle}
+                headStyle={{ 
+                  borderBottom: '1px solid #f0f0f0', 
+                  fontWeight: 600,
+                  padding: isMobile ? '0 16px' : '0 24px'
+                }}
+                bodyStyle={cardBodyStyle}
+              >
+                <List
+                  size="large"
+                  dataSource={additionalServices.filter(s => s.value)}
+                  renderItem={item => (
+                    <List.Item style={{ padding: 8, border: 'none' }}>
+                      <Space wrap>
+                        {renderYesNoTag(item.value)}
+                        <Text>{item.label}</Text>
+                      </Space>
+                    </List.Item>
+                  )}
+                />
+              </Card>
+              
             </Col>
+            
 
             {/* Right Column */}
             <Col xs={24} lg={12}>
@@ -300,30 +328,7 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
               </Card>
 
               {/* Additional Services */}
-              <Card 
-                title={<Space><ApartmentOutlined />Scopes's</Space>} 
-                bordered={false} 
-                style={cardStyle}
-                headStyle={{ 
-                  borderBottom: '1px solid #f0f0f0', 
-                  fontWeight: 600,
-                  padding: isMobile ? '0 16px' : '0 24px'
-                }}
-                bodyStyle={cardBodyStyle}
-              >
-                <List
-                  size="large"
-                  dataSource={additionalServices.filter(s => s.value)}
-                  renderItem={item => (
-                    <List.Item style={{ padding: 8, border: 'none' }}>
-                      <Space wrap>
-                        {renderYesNoTag(item.value)}
-                        <Text>{item.label}</Text>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              </Card>
+              
 
               {/* Additional Info */}
               <Card 

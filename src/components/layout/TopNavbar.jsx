@@ -16,23 +16,33 @@ import relativeTime from "dayjs/plugin/relativeTime"
 const TopNavbar = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
-  const notificationCount = 5;
   const [notificationData, setNotificationData] = useState([]);
 
+
   dayjs.extend(relativeTime);
-  
   // fetch notification
-  const fetchNotification = async() => {
-    try{
-      const response = await axios.get("/api/notification")
-      if(response.status === 200){
-        setNotificationData(response.data.data)
+// fetch notification
+const fetchNotification = async () => {
+  try {
+    const response = await axios.get("/api/notification");
+    if (response.status === 200) {
+      let data = response.data.data;
+
+      if (user?.role === "QTTEAM") {
+        // QTTEAM → only QT notifications
+        data = data.filter(item => item.notificationType === "QT");
+      } else {
+        // Others → exclude QT notifications
+        data = data.filter(item => item.notificationType !== "QT");
       }
+
+      setNotificationData(data);
     }
-     catch(err){
-      console.log(err)
-      }
+  } catch (err) {
+    console.log(err);
   }
+};
+
 
   useEffect(()=> {
     if(notificationData.length === 0){
