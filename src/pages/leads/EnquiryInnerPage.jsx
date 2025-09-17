@@ -26,7 +26,8 @@ import {
   UploadOutlined,
   LeftOutlined,
   BackwardFilled,
-  RightOutlined
+  RightOutlined,
+  PlusCircleFilled
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useParams, useNavigate } from "react-router-dom";
@@ -910,29 +911,71 @@ const handleSubmit = async () => {
   return (
      <Card 
       title={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>{userAccount.businessName || "Loading ..."}</Title>
-          <Button
-            type="primary"
-            icon={<BackwardFilled />}
-            style={{ backgroundColor: "#ef7a1b", borderColor: "#ef7a1b", color: "white" }}
-            onClick={() => navigate(-1)}
-          >
-            Back
-          </Button>
-        </div>
+       <div style={{ marginBottom: "16px" }}>
+  {/* First row: Back + Create Enquiry */}
+  <Row align="middle" justify="space-between" gutter={[16, 16]}>
+    <Col xs={12} sm="auto">
+      <Button
+        type="primary"
+        icon={<BackwardFilled />}
+        style={{
+          backgroundColor: "#ef7a1b",
+          borderColor: "#ef7a1b",
+          color: "white",
+          marginTop:"10px"
+        }}
+        onClick={() => navigate(-1)}
+      >
+        Back
+      </Button>
+    </Col>
+    <Col xs={12} sm="auto" style={{ textAlign: "right" }}>
+      <Button
+        type="primary"
+        icon={<PlusCircleFilled />}
+        style={{
+          backgroundColor: "#ef7a1b",
+          borderColor: "#ef7a1b",
+          color: "white",
+          marginTop:"10px"
+        }}
+        onClick={() => setVisible(true)}
+      >
+        Create
+      </Button>
+    </Col>
+  </Row>
+
+  {/* Second row: Title (centered) */}
+  <Row justify="center" style={{ marginTop: "12px" }}>
+    <Col>
+      <Title
+        level={4}
+        style={{
+          margin: 0,
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {userAccount.businessName || "Loading ..."}
+      </Title>
+    </Col>
+  </Row>
+</div>
       }
     >
      <Row gutter={24}>
-            <Col xs={24} lg={10}>
+            {/* <Col xs={24} lg={10}>
             <h3>Create Enquiry Section</h3>
             <div style={{textAlign:"center", marginTop:"50px"}}>
               <Button onClick={()=> setVisible(true)}> Enquiry Form</Button> 
             </div>
            
-            </Col>
+            </Col> */}
               
-            <Col xs={24} lg={14}>
+            <Col xs={24} lg={24}>
                   <Card title="Enquiry">
               {enquiryData.length > 0 ? (
                 <Table
