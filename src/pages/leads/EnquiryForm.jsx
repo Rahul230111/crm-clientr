@@ -18,9 +18,11 @@ import {
   UserOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined, PushpinOutlined,
   CalendarOutlined, ClockCircleOutlined, TeamOutlined, ToolOutlined, ThunderboltOutlined,
   InfoCircleOutlined, ApartmentOutlined, ContainerOutlined, FileOutlined,
-  CheckCircleOutlined, CloseCircleOutlined 
+  CheckCircleOutlined, CloseCircleOutlined, 
+  IdcardOutlined
 } from '@ant-design/icons';
 import dayjs from "dayjs";
+import { getImageSrc } from "../../../utils/image";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -88,6 +90,48 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
   };
 
   const cardBodyStyle = { padding: isMobile ? '16px' : '20px 24px' };
+
+const handleDownload = async (fileId) => {
+  try {
+    // Call your API
+    const response = await fetch(`https://crmserver-lmg7w.ondigitalocean.app/files/${enquiry._id}/${fileId}`, {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to download file");
+    }
+
+    // Convert response to Blob
+    const blob = await response.blob();
+
+    // Create temporary download link
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+
+    // Try to get filename from response header
+    const contentDisposition = response.headers.get("content-disposition");
+    let filename = "download";
+    if (contentDisposition && contentDisposition.includes("filename=")) {
+      filename = contentDisposition
+        .split("filename=")[1]
+        .replace(/['"]/g, "")
+        .trim();
+    }
+
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // Clean up
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Download error:", error);
+  }
+};
+
 
   return (
     <Drawer
@@ -376,6 +420,52 @@ const EnquiryForm = ({ visible, onClose, enquiry }) => {
                   </div>
                 </Space>
               </Card>
+              {enquiry.businessCard?.filename &&
+              <Card 
+                title={<Space><IdcardOutlined />Business Card</Space>} 
+                bordered={false} 
+                style={cardStyle}
+                headStyle={{ 
+                  borderBottom: '1px solid #f0f0f0', 
+                  fontWeight: 600,
+                  padding: isMobile ? '0 16px' : '0 24px'
+                }}
+                bodyStyle={cardBodyStyle}
+              >
+                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <img 
+                      src={getImageSrc(enquiry.businessCard)} 
+                      alt={enquiry.businessCard?.filename || "Business Card"} 
+                      style={{ maxWidth: "100%", borderRadius: 8 }} 
+                    />
+                  </div>
+                </Space>
+              </Card>
+              }
+              {enquiry.siteLayout.length > 0 &&
+                <Card 
+                title={<Space><IdcardOutlined />Site Layouts</Space>} 
+                bordered={false} 
+                style={cardStyle}
+                headStyle={{ 
+                  borderBottom: '1px solid #f0f0f0', 
+                  fontWeight: 600,
+                  padding: isMobile ? '0 16px' : '0 24px'
+                }}
+                bodyStyle={cardBodyStyle}
+              >
+                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                   
+                    {enquiry.siteLayout.map((file)=> (
+                      <Button onClick={()=> {handleDownload(file._id)}}>{file.filename}</Button>
+                    )) }
+                  
+                  </div>
+                </Space>
+              </Card>
+              }
             </Col>
           </Row>
         </>
