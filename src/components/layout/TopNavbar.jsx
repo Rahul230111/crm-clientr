@@ -17,7 +17,7 @@ const TopNavbar = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
   const [notificationData, setNotificationData] = useState([]);
-
+  const [notificationVisible, setNotificationVisible] = useState(false);
 
   dayjs.extend(relativeTime);
   
@@ -43,6 +43,11 @@ const fetchNotification = async () => {
   }
 };
 
+  // filter messageStatus is false
+
+  const filteredNotification = notificationData?.length > 0 && notificationData.filter((item) => item.messageStatus === true)
+
+
   useEffect(()=> {
     if(notificationData.length === 0){
       fetchNotification()
@@ -58,10 +63,42 @@ const fetchNotification = async () => {
     navigate('/profile');
   };
 
-  const handleNotificationClick = (id) => {
-    // Handle notification click - mark as read, navigate, etc.
-    console.log("Notification clicked:", id);
-  };
+const handleNotificationClick = async(item) => {
+
+  if (user?.role === "QTTEAM") {
+    try{
+    const response = await axios.put(`/api/notification/changeStatus/${item._id}`)
+    
+    if(response.status === 200){
+      navigate(`/leads/enquiry/${item.clientId}`);
+      setNotificationVisible(false);
+      fetchNotification()
+    }
+    }
+    catch(err){
+
+    } 
+  } else if(user?.role !== "QTTEAM"){
+
+     try{
+    const response = await axios.put(`/api/notification/changeStatus/${item._id}`)
+    
+    if(response.status === 200){
+      navigate(`/leads/enquiry/${item.clientId}`);
+      setNotificationVisible(false);
+      fetchNotification()
+    }
+    }
+    catch(err){
+
+    } 
+    
+  } 
+  else {
+    console.log("Notification clicked:", item._id);
+  }
+};
+
 
   const handleViewAllNotifications = () => {
     navigate('/notifications');
@@ -95,11 +132,11 @@ const fetchNotification = async () => {
       <div className="notification-list">
         <List
           itemLayout="horizontal"
-          dataSource={notificationData}
+          dataSource={filteredNotification}
           renderItem={item => (
             <List.Item 
               className={item.read ? 'notification-item read' : 'notification-item unread'}
-              onClick={() => handleNotificationClick(item._id)}
+              onClick={() => handleNotificationClick(item)}
             >
               <List.Item.Meta
                 title={<span className="notification-title">{item.title}</span>}
@@ -135,19 +172,22 @@ const fetchNotification = async () => {
 
       {/* Notification bell and user avatar */}
       <Space>
-        <Dropdown 
-          overlay={notificationMenu} 
-          placement="bottomRight" 
+        <Dropdown
+          overlay={notificationMenu}
+          placement="bottomRight"
           trigger={['click']}
           overlayClassName="notification-dropdown-overlay"
+          open={notificationVisible}
+          onOpenChange={setNotificationVisible}   // for AntD v5
+          // visible={notificationVisible}
+          // onVisibleChange={setNotificationVisible}  // for AntD v4
         >
-          <div style={{cursor: 'pointer', marginTop:"5px"}}>
-            <Badge count={notificationData?.length} size="small" offset={[-5, 5]}>
+          <div style={{ cursor: 'pointer', marginTop: "5px" }}>
+            <Badge count={filteredNotification?.length} size="small" offset={[-5, 5]}>
               <BellOutlined style={{ fontSize: '20px' }} />
             </Badge>
           </div>
         </Dropdown>
-        
         <Dropdown overlay={profileMenu} placement="bottomRight" arrow>
           <Avatar
             style={{

@@ -1,5 +1,5 @@
 // File: src/components/leads/EnquiryForm.jsx
-import React from "react";
+import React, { useState } from "react";
 import { 
   Button, 
   Drawer, 
@@ -12,7 +12,8 @@ import {
   Avatar, 
   List, 
   Tag,
-  Grid
+  Grid,
+  Modal
 } from 'antd';
 import { 
   UserOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined, PushpinOutlined,
@@ -23,16 +24,24 @@ import {
 } from '@ant-design/icons';
 import dayjs from "dayjs";
 import { getImageSrc } from "../../../utils/image";
-
+import Dropzone from "react-dropzone";
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
-const EnquiryForm = ({ visible, onClose, enquiry }) => {
+const EnquiryForm = ({ visible, onClose, enquiry, fetchEnquiryData}) => {
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const user = JSON.parse(localStorage.getItem('user'));
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const isTablet = !screens.lg;
-  
+  const [files, setFiles] = useState([])
   const formatDate = (date) => dayjs(date).format('DD MMM YYYY');
+
+  const handleModalClose = () => {
+    setIsUploadModalOpen(false);
+    setFiles([])
+  };
+
 
   const renderStatusBadge = (status) => {
     const statusConfig = {
@@ -132,13 +141,105 @@ const handleDownload = async (fileId) => {
   }
 };
 
+const handleQuotationDownload = async (fileId) => {
+  try {
+    // Call your API
+    const response = await fetch(`https://crmserver-lmg7w.ondigitalocean.app/files/quotation/${enquiry._id}/${fileId}`, {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to download file");
+    }
+
+    // Convert response to Blob
+    const blob = await response.blob();
+
+    // Create temporary download link
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+
+    // Try to get filename from response header
+    const contentDisposition = response.headers.get("content-disposition");
+    let filename = "download";
+    if (contentDisposition && contentDisposition.includes("filename=")) {
+      filename = contentDisposition
+        .split("filename=")[1]
+        .replace(/['"]/g, "")
+        .trim();
+    }
+
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // Clean up
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Download error:", error);
+  }
+};
+
+
+  const handleFileDrop = (acceptedFiles) => {
+  const mappedFiles = acceptedFiles.map((file) => ({
+    name: file.name,
+    type: file.type,
+    file: file,
+    preview: URL.createObjectURL(file),
+  }));
+  setFiles((prev) => [...prev, ...mappedFiles]);
+};
+
+  const handleUploadQuotation = async () => {
+  if (files.length === 0) {
+    console.log("Please select at least one file.");
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+
+    files.forEach((f) => {
+      formData.append("files", f.file); // key must match multer field
+    });
+
+    formData.append("createdBy", user._id); 
+    
+    const response = await fetch(
+      `https://crmserver-lmg7w.ondigitalocean.app/enquiries/${enquiry._id}/quotation`,
+      {
+        method: "PUT",
+        body: formData,
+      }
+    );
+
+    const result = await response.json();
+    if (response.ok && result.success) {
+        console.log("Quotation updated successfully!");
+        setFiles([])
+        fetchEnquiryData();
+        handleModalClose()
+        
+    } else {
+      throw new Error(result.message || "Failed to update quotation");
+    }
+  } catch (error) {
+    console.error("Error updating quotation:", error);
+    console.error("Failed to update quotation. Please try again.");
+  }
+};
+
+
 
   return (
     <Drawer
       title={
         <Space>
           {/* <UserOutlined style={{ color: '#1890ff', fontSize: isMobile ? 18 : 20 }} /> */}
-          <span style={{ fontWeight: 600, fontSize: isMobile ? 16 : 18 }}>Enquiry Details</span>
+          <span style={{ fontWeight: 600, fontSize: isMobile ? 16 : 18 }}>Specifications</span>
         </Space>
       }
       width={isMobile ? '100%' : (isTablet ? 700 : 1000)}
@@ -148,13 +249,28 @@ const handleDownload = async (fileId) => {
         padding: isMobile ? '16px 16px 60px 16px' : '30px 30px 50px 30px', 
         background: '#fafafa' 
       }}
-      footer={
+     footer={
         <div style={{ textAlign: 'right' }}>
-          <Button type="primary" onClick={onClose} size={isMobile ? 'middle' : 'large'}>
+        {user.role === "QTTEAM" && 
+          <Button
+            type="primary"
+            onClick={() => setIsUploadModalOpen(true)} 
+            size={isMobile ? 'middle' : 'large'}
+            style={{ marginRight: 8 }} 
+          >
+            Upload Quotation
+          </Button>
+          }
+          <Button
+            type="primary"
+            onClick={onClose}
+            size={isMobile ? 'middle' : 'large'}
+          >
             Close
           </Button>
         </div>
       }
+
       headerStyle={{ 
         borderBottom: '1px solid #f0f0f0', 
         background: '#fff', 
@@ -466,6 +582,29 @@ const handleDownload = async (fileId) => {
                 </Space>
               </Card>
               }
+                {enquiry.quotationFile.length > 0 &&
+                <Card 
+                title={<Space><IdcardOutlined />Quotation Uploads</Space>} 
+                bordered={false} 
+                style={cardStyle}
+                headStyle={{ 
+                  borderBottom: '1px solid #f0f0f0', 
+                  fontWeight: 600,
+                  padding: isMobile ? '0 16px' : '0 24px'
+                }}
+                bodyStyle={cardBodyStyle}
+              >
+                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                   
+                    {enquiry.quotationFile.map((file)=> (
+                      <Button onClick={()=> {handleQuotationDownload(file._id)}}>{file.fileName}</Button>
+                    )) }
+                  
+                  </div>
+                </Space>
+              </Card>
+              }
             </Col>
           </Row>
         </>
@@ -474,7 +613,50 @@ const handleDownload = async (fileId) => {
           <Text type="secondary">No Enquiry data available</Text>
         </div>
       )}
+        <Modal
+        title="Upload as PDF or Doc"
+        open={isUploadModalOpen}
+        onCancel={handleModalClose}
+        footer={null} // you can add buttons here if needed
+        centered
+        >
+       
+       <Dropzone onDrop={handleFileDrop} maxFiles={10}>
+          {({ getRootProps, getInputProps }) => (
+            <section>
+              <div {...getRootProps()} className="dropzone upload-zone dz-clickable">
+                <input {...getInputProps()} />
+                {files.length === 0 && (
+                  <div style={{ textAlign: "center", marginTop: "20px" }}>
+                    <Button type="dashed">Upload Site Layout Files</Button>
+                  </div>
+                )}
+                {files.length > 0 && (
+                  <div className="dz-preview-container">
+                    {files.map((file, index) => (
+                      <div key={index} className="dz-preview dz-processing dz-file-preview dz-complete">
+                        {file.type.startsWith("image/") ? (
+                          <img style={{ width: "100px" }} src={file.preview} alt={file.name} />
+                        ) : (
+                          <div style={{ padding: "5px", border: "1px solid #ddd", borderRadius: "5px", marginTop:"30px" }}>
+                            📄 {file.name}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+        </Dropzone>
+
+        <Button style={{marginTop:"30px"}} type="primary" onClick={handleUploadQuotation}>
+          Submit
+        </Button>
+      </Modal>
     </Drawer>
+    
   );
 };
 

@@ -69,7 +69,7 @@ export const appRoutes = [
   {
     path: '/leads',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader', 'Employee']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader', 'Employee', "QTTEAM"]}>
         <Leads />
       </RoleGuard>
     ),
@@ -77,7 +77,7 @@ export const appRoutes = [
    {
     path: '/leads/enquiry/:id',
     element: (
-      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader', 'Employee']}>
+      <RoleGuard allowedRoles={['Admin', 'Superadmin' , 'Team Leader', 'Employee',"QTTEAM"]}>
         <EnquiryInnerPage/>
       </RoleGuard>
     ),

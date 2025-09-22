@@ -12,3 +12,16 @@ h2 h3{
 .body{
     background-color:#012 ;
 }
+.react-resizable {
+  position: relative;
+}
+
+.react-resizable-handle {
+  position: absolute;
+  right: -5px;   /* 👈 move to right edge */
+ 
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 1;
+}

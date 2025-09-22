@@ -54,13 +54,13 @@ const Sidebar = ({ collapsed }) => {
           key: "/application",
           icon: <AppstoreOutlined />,
           label: collapsed ? null : "Application",
-          roles: ["Admin", "Superadmin", "Team Leader", "Employee"],
+          roles: ["Admin", "Superadmin", "Team Leader", "Employee" , "QTTEAM"],
           children: [
             {
               key: "/leads",
               icon: <SolutionOutlined />,
               label: "Leads",
-              roles: ["Admin", "Employee", "Superadmin", "Team Leader"],
+              roles: ["Admin", "Employee", "Superadmin", "Team Leader", "QTTEAM"],
             },
             {
               key: "/customers",

@@ -38,11 +38,37 @@
     import FollowUpDrawer from "./FollowUpDrawer";
     import { useNavigate } from "react-router-dom";
     import { Select } from "antd";
-
+    import { Resizable } from "react-resizable";
+    import "react-resizable/css/styles.css";
     const { Title } = Typography;
     const { TabPane } = Tabs;
 
     const API_URL = "/api/accounts";
+
+    const ResizableTitle = (props) => {
+    const { onResize, width, ...restProps } = props;
+
+    if (!width) {
+        return <th {...restProps} />;
+    }
+
+    return (
+        <Resizable
+        width={width}
+        height={0}
+        handle={
+            <span
+            className="react-resizable-handle"
+            onClick={(e) => e.stopPropagation()}
+            />
+        }
+        onResize={onResize}
+        draggableOpts={{ enableUserSelectHack: false }}
+        >
+        <th {...restProps} />
+        </Resizable>
+    );
+};
 
     const Leads = () => {
         const [formVisible, setFormVisible] = useState(false);
@@ -59,7 +85,7 @@
         const navigate = useNavigate();
         // New state for filters
         const [tableFilters, setTableFilters] = useState({});
-
+        
         const [pagination, setPagination] = useState({
             current: 1,
             pageSize: 10,
@@ -406,6 +432,7 @@
                 dataIndex: "businessName",
                 key: "businessName",
                 sorter: true,
+                width: 250, 
                 filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
                 <div style={{ padding: 8 }}>
                     <Input
@@ -443,9 +470,9 @@
                 ),
                 responsive: ["xs", "sm", "md", "lg"],
                 render: (text, record) => (
-                activeTab === "Pipeline" ? (
+                record.status === "Pipeline" ? (
                     <a
-                    style={{ color: "#1890ff", cursor: "pointer" }}
+                    style={{ color: "#45484bff", cursor: "pointer" }}
                     onClick={() => navigate(`/leads/enquiry/${record._id}`)}
                     >
                     {text}
@@ -461,12 +488,14 @@
                 key: "contactName",
                 sorter: true,
                 responsive: ["md", "lg"],
+                width : 200
             },
             {
                 title: "Email",
                 dataIndex: "email",
                 key: "email",
                 responsive: ["lg"],
+                width : 300
             },
             {
                 title: "Product",
@@ -480,6 +509,7 @@
                 dataIndex: "mobileNumber",
                 key: "mobileNumber",
                 responsive: ["md", "lg"],
+                width : 150
             },
             {
                 title: "Type of Leads",
@@ -644,6 +674,25 @@
             },
         ];
 
+        const [cols, setCols] = useState(columns);
+        
+        const handleResize = (index) => (e, { size }) => {
+        const nextColumns = [...cols];
+        nextColumns[index] = {
+            ...nextColumns[index],
+            width: size.width,
+        };
+        setCols(nextColumns);
+        };
+
+        const mergedColumns = cols.map((col, index) => ({
+        ...col,
+        onHeaderCell: (column) => ({
+            width: column.width,
+            onResize: handleResize(index),
+        }),
+        }));
+
         const handleTableChange = (newPagination, filters, sorter) => {
             setPagination(newPagination);
             const sortBy = sorter.field;
@@ -761,13 +810,18 @@
                         <Spin size="large" style={{ display: 'block', margin: '50px auto' }} />
                     ) : accounts.length > 0 ? (
                         <Table
-                            columns={columns}
+                            components={{
+                                header: {
+                                cell: ResizableTitle,
+                                },
+                            }}
+                            columns={mergedColumns}
                             dataSource={accounts}
                             rowKey="_id"
                             scroll={{ x: "max-content" }}
                             pagination={pagination}
                             onChange={handleTableChange}
-                        />
+                            />
                     ) : (
                         <Empty description="No accounts found." />
                     )}

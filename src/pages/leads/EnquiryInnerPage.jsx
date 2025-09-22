@@ -127,7 +127,6 @@ const EnquiryInnerPage = ({ quotation }) => {
     const handleDropChange = async(acceptedFiles) => {
     
     const file = acceptedFiles[0]
-    console.log(file)
     if(!file) return;
     try{
       const compressedFile = await compressImage(file);
@@ -327,12 +326,18 @@ const handleSubmit = async () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Badge 
-          status={status === 'Sent' ? 'success' : 'processing'} 
-          text={status || 'Draft'} 
-        />
-      ),
+     render: (status) => {
+        let badgeStatus = "default"; // fallback
+        let text = status || "Draft";
+
+        if (status === "Sent") {
+          badgeStatus = "error"; // red
+        } else if (status === "Generated") {
+          badgeStatus = "success"; // green
+        }
+
+        return <Badge status={badgeStatus} text={text} />;
+      }
     },
   ];
 
@@ -976,7 +981,7 @@ const handleSubmit = async () => {
             </Col> */}
               
             <Col xs={24} lg={24}>
-                  <Card title="Enquiry">
+                  <Card title="Scope">
               {enquiryData.length > 0 ? (
                 <Table
                   dataSource={enquiryData}
@@ -1063,6 +1068,7 @@ const handleSubmit = async () => {
                 visible={formVisible}
                 onClose={() => setFormVisible(false)}
                 enquiry={selectedQuotation}
+                fetchEnquiryData = {fetchEnquiryData}
             />
           
     </Card>
